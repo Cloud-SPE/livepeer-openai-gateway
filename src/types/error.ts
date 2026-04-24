@@ -16,7 +16,7 @@ export type ErrorCode = z.infer<typeof ErrorCodeSchema>;
 
 export const ErrorEnvelopeSchema = z.object({
   error: z.object({
-    code: ErrorCodeSchema,
+    code: z.string().min(1),
     message: z.string().min(1),
     type: z.string().min(1),
     param: z.string().nullish(),

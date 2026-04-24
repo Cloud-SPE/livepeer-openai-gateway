@@ -30,6 +30,7 @@
     "@vitest/coverage-v8": "^1.6.1",
     "drizzle-kit": "^0.24.2",
     "eslint": "^9.39.4",
+    "openai": "^4.104.0",
     "prettier": "^3.8.3",
     "testcontainers": "^10.28.0",
     "ts-proto": "^2.11.6",

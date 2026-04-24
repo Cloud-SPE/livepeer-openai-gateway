@@ -1,5 +1,11 @@
 import { z } from 'zod';
 import type { Quote } from '../types/node.js';
+import {
+  ChatCompletionRequestSchema,
+  ChatCompletionResponseSchema,
+  type ChatCompletionRequest,
+  type ChatCompletionResponse,
+} from '../types/openai.js';
 
 export const NodeHealthResponseSchema = z.object({
   status: z.enum(['ok', 'degraded']),
@@ -37,7 +43,24 @@ export const NodeQuoteResponseSchema = z.object({
 });
 export type NodeQuoteResponse = Quote;
 
+export interface ChatCompletionCallInput {
+  url: string;
+  body: ChatCompletionRequest;
+  paymentHeaderB64: string;
+  timeoutMs: number;
+  signal?: AbortSignal;
+}
+
+export interface ChatCompletionCallResult {
+  status: number;
+  response: ChatCompletionResponse | null;
+  rawBody: string;
+}
+
+export { ChatCompletionRequestSchema, ChatCompletionResponseSchema };
+
 export interface NodeClient {
   getHealth(url: string, timeoutMs: number): Promise<NodeHealthResponse>;
   getQuote(url: string, timeoutMs: number): Promise<NodeQuoteResponse>;
+  createChatCompletion(input: ChatCompletionCallInput): Promise<ChatCompletionCallResult>;
 }

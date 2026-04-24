@@ -3,6 +3,7 @@ import {
   ChatCompletionRequestSchema,
   CustomerSchema,
   CustomerTierSchema,
+  ErrorCodeSchema,
   ErrorEnvelopeSchema,
   NodeConfigSchema,
   PricingTierSchema,
@@ -22,11 +23,14 @@ describe('types/error', () => {
     expect(parsed.error.code).toBe('balance_insufficient');
   });
 
-  it('rejects unknown error codes', () => {
-    const result = ErrorEnvelopeSchema.safeParse({
-      error: { code: 'teapot', message: 'x', type: 'x' },
+  it('envelope accepts any string code (wire-compat with OpenAI); strict enum lives in ErrorCodeSchema', () => {
+    const envResult = ErrorEnvelopeSchema.safeParse({
+      error: { code: 'invalid_api_key', message: 'x', type: 'x' },
     });
-    expect(result.success).toBe(false);
+    expect(envResult.success).toBe(true);
+
+    const strictResult = ErrorCodeSchema.safeParse('teapot');
+    expect(strictResult.success).toBe(false);
   });
 });
 
