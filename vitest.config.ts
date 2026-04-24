@@ -8,11 +8,13 @@ export default defineConfig({
     environment: 'node',
     globals: false,
     reporters: 'default',
+    testTimeout: 60_000,
+    hookTimeout: 120_000,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts', 'src/**/index.ts'],
+      exclude: ['src/**/*.test.ts', 'src/**/index.ts', 'src/**/testPg.ts'],
       thresholds: {
         lines: 75,
         branches: 75,

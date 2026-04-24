@@ -16,18 +16,26 @@
     "lint": "eslint . && node ./lint/layer-check/index.mjs",
     "fmt": "prettier --write .",
     "fmt:check": "prettier --check .",
-    "doc-lint": "echo 'doc-gardener wired in exec-plan 0001' && exit 0"
+    "doc-lint": "echo 'doc-gardener wired in exec-plan 0001' && exit 0",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node --experimental-strip-types ./scripts/migrate.ts"
   },
   "devDependencies": {
+    "@testcontainers/postgresql": "^10.28.0",
     "@types/node": "^20.19.39",
+    "@types/pg": "^8.20.0",
     "@vitest/coverage-v8": "^1.6.1",
+    "drizzle-kit": "^0.24.2",
     "eslint": "^9.39.4",
     "prettier": "^3.8.3",
+    "testcontainers": "^10.28.0",
     "typescript": "^5.4.0",
     "typescript-eslint": "^8.59.0",
     "vitest": "^1.6.1"
   },
   "dependencies": {
+    "drizzle-orm": "^0.33.0",
+    "pg": "^8.20.0",
     "zod": "^3.25.76"
   }
 }

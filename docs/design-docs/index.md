@@ -24,8 +24,8 @@ Non-negotiables that shape every decision in this repo.
 ## Architectural decisions
 
 - [architecture.md](architecture.md) — `accepted` — layer stack, domains, providers
-- `tiers.md` — _planned_ — Free vs Prepaid semantics, upgrade flow
-- `pricing-model.md` — _planned_ — rate card tiers, margin calculation, adjustment policy
+- [tiers.md](tiers.md) — `accepted` — Free vs Prepaid semantics, reserve/commit/refund, upgrade flow
+- [pricing-model.md](pricing-model.md) — `accepted` — rate card tiers, margin calculation, adjustment policy
 - `streaming-semantics.md` — _planned_ — pre-payment reservation, stream cancellation, partial success
 - `token-audit.md` — _planned_ — LocalTokenizer phases (observe → audit → enforce)
 - `retry-policy.md` — _planned_ — retry table and rationale
