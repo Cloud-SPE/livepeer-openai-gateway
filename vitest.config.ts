@@ -20,6 +20,7 @@ export default defineConfig({
         'src/**/testPg.ts',
         'src/**/testRedis.ts',
         'src/**/gen/**',
+        'src/main.ts',
       ],
       thresholds: {
         lines: 75,

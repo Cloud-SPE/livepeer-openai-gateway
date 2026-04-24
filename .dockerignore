@@ -1,0 +1,28 @@
+.git
+.github
+.gitignore
+.env
+.env.*
+node_modules
+dist
+coverage
+*.log
+*.tsbuildinfo
+
+# Docs — the harness PDF alone is ~2 MB and none of docs/ ships in the image.
+docs
+
+# Test-only files
+**/*.test.ts
+
+# Editor / OS detritus
+.vscode
+.idea
+.DS_Store
+
+# CI / lint artifacts
+lint
+
+# The bridge does not need its own scripts/ at runtime (migration runner
+# imports repo/migrate.ts directly from the src/ build output).
+scripts

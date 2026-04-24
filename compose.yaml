@@ -1,0 +1,116 @@
+# Local-dev docker-compose for the bridge.
+#
+# Usage:
+#   cp .env.example .env               # edit the secrets marked REQUIRED
+#   docker compose up --build
+#
+# The PayerDaemon is deliberately NOT built or pulled here — it lives in a
+# sibling repo (`livepeer-payment-library`) and is language-agnostic. Bring
+# your own daemon sidecar and have it write its unix socket into the shared
+# `payer-socket` volume at /run/payer-daemon/daemon.sock. See the commented
+# `payer-daemon` service below for the expected wiring.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${PGUSER:-bridge}
+      POSTGRES_PASSWORD: ${PGPASSWORD:-bridge_dev_password}
+      POSTGRES_DB: ${PGDATABASE:-bridge}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', '${PGUSER:-bridge}']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  bridge:
+    build:
+      context: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      HOST: '0.0.0.0'
+      PORT: '8080'
+
+      # Database
+      PGHOST: postgres
+      PGPORT: '5432'
+      PGUSER: ${PGUSER:-bridge}
+      PGPASSWORD: ${PGPASSWORD:-bridge_dev_password}
+      PGDATABASE: ${PGDATABASE:-bridge}
+
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+
+      # Auth (pepper must be ≥ 16 chars)
+      API_KEY_PEPPER: ${API_KEY_PEPPER:?set API_KEY_PEPPER (>= 16 chars)}
+      API_KEY_ENV_PREFIX: ${API_KEY_ENV_PREFIX:-test}
+
+      # PayerDaemon (external sidecar; socket shared via named volume)
+      PAYER_DAEMON_SOCKET: /run/payer-daemon/daemon.sock
+
+      # Stripe (use test-mode keys for local dev)
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:?set STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:?set STRIPE_WEBHOOK_SECRET}
+      STRIPE_SUCCESS_URL: ${STRIPE_SUCCESS_URL:-http://localhost:8080/success}
+      STRIPE_CANCEL_URL: ${STRIPE_CANCEL_URL:-http://localhost:8080/cancel}
+
+      # Admin
+      ADMIN_TOKEN: ${ADMIN_TOKEN:?set ADMIN_TOKEN (>= 32 chars)}
+      ADMIN_IP_ALLOWLIST: ${ADMIN_IP_ALLOWLIST:-}
+
+      NODES_CONFIG_PATH: /app/nodes.yaml
+      BRIDGE_AUTO_MIGRATE: 'true'
+    volumes:
+      - ./nodes.yaml:/app/nodes.yaml:ro
+      - payer-socket:/run/payer-daemon
+    ports:
+      - '8080:8080'
+    healthcheck:
+      test:
+        - 'CMD'
+        - 'node'
+        - '-e'
+        - "require('http').get('http://127.0.0.1:8080/healthz',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # -----------------------------------------------------------------------------
+  # PayerDaemon sidecar. Not wired by default because the image doesn't exist
+  # yet. When `livepeer-payment-library` publishes a sender-mode image, flip
+  # this block on and point `image:` at it. The socket lives on a shared
+  # named volume so the bridge can reach it at /run/payer-daemon/daemon.sock.
+  # -----------------------------------------------------------------------------
+  # payer-daemon:
+  #   image: livepeer-payment-daemon:latest
+  #   command:
+  #     - '--mode=sender'
+  #     - '--socket=/run/payer-daemon/daemon.sock'
+  #     - '--keystore=/etc/livepeer/keystore'
+  #     - '--data=/var/lib/payer-daemon'
+  #   environment:
+  #     PAYER_KEYSTORE_PASSPHRASE: ${PAYER_KEYSTORE_PASSPHRASE:?set PAYER_KEYSTORE_PASSPHRASE}
+  #   volumes:
+  #     - payer-socket:/run/payer-daemon
+  #     - ./payer-keystore:/etc/livepeer/keystore:ro
+  #     - payer-data:/var/lib/payer-daemon
+
+volumes:
+  pgdata:
+  payer-socket:
+  # payer-data:  # uncomment alongside payer-daemon service
