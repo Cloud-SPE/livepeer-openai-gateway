@@ -29,14 +29,14 @@ export function hexToBytes(hex: string): Buffer {
 
 export function domainTicketParamsToWire(t: DomainTicketParams): WireTicketParams {
   const expirationParams: WireTicketExpirationParams = {
-    creationRound: 0n,
-    creationRoundBlockHash: Buffer.alloc(0),
+    creationRound: t.expirationParams.creationRound,
+    creationRoundBlockHash: hexToBytes(t.expirationParams.creationRoundBlockHash),
   };
   return {
     recipient: hexToBytes(t.recipient),
     faceValue: bigintToBigEndianBytes(t.faceValueWei),
     winProb: hexToBigEndian(t.winProb),
-    recipientRandHash: hexToBytes(t.expirationParamsHash),
+    recipientRandHash: hexToBytes(t.recipientRandHash),
     seed: hexToBytes(t.seed),
     expirationBlock: bigintToBigEndianBytes(t.expirationBlock),
     expirationParams,
@@ -44,13 +44,18 @@ export function domainTicketParamsToWire(t: DomainTicketParams): WireTicketParam
 }
 
 export function wireTicketParamsToDomain(w: WireTicketParams): DomainTicketParams {
+  const exp = w.expirationParams;
   return {
     recipient: bytesToHex(w.recipient),
     faceValueWei: bigEndianBytesToBigint(w.faceValue),
     winProb: bigEndianToHex(w.winProb),
+    recipientRandHash: bytesToHex(w.recipientRandHash),
     seed: bytesToHex(w.seed),
     expirationBlock: bigEndianBytesToBigint(w.expirationBlock),
-    expirationParamsHash: bytesToHex(w.recipientRandHash),
+    expirationParams: {
+      creationRound: exp?.creationRound ?? 0n,
+      creationRoundBlockHash: exp ? bytesToHex(exp.creationRoundBlockHash) : '0x',
+    },
   };
 }
 

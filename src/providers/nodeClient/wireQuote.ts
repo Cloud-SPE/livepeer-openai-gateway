@@ -31,18 +31,13 @@ export function wireQuoteToDomain(wire: NodeQuoteResponseWire): Quote {
       recipient: wire.ticket_params.recipient as `0x${string}`,
       faceValueWei: wire.ticket_params.face_value_wei,
       winProb: wire.ticket_params.win_prob,
+      recipientRandHash: wire.ticket_params.recipient_rand_hash,
       seed: wire.ticket_params.seed,
       expirationBlock: wire.ticket_params.expiration_block,
-      // The bridge's current TicketParams.expirationParamsHash is a
-      // legacy field from the pre-0018 wire. The worker emits the
-      // structured expiration_params instead; we synthesize a stable
-      // deterministic key from its fields for the bridge's internal
-      // use (session keying, etc.). Format: "<round>:<blockHash>" —
-      // values passed through verbatim.
-      expirationParamsHash:
-        wire.ticket_params.expiration_params.creation_round.toString() +
-        ':' +
-        wire.ticket_params.expiration_params.creation_round_block_hash,
+      expirationParams: {
+        creationRound: BigInt(wire.ticket_params.expiration_params.creation_round),
+        creationRoundBlockHash: wire.ticket_params.expiration_params.creation_round_block_hash,
+      },
     },
     priceInfo: {
       pricePerUnitWei: first.price_per_work_unit_wei,

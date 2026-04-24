@@ -52,18 +52,27 @@ describe('convert: TicketParams domain ↔ wire', () => {
     recipient: '0x' + 'aa'.repeat(20),
     faceValueWei: 1_000_000n,
     winProb: '100',
+    recipientRandHash: '0x' + 'ef'.repeat(16),
     seed: '0x' + 'cd'.repeat(16),
     expirationBlock: 12345n,
-    expirationParamsHash: '0x' + 'ef'.repeat(16),
+    expirationParams: {
+      creationRound: 42n,
+      creationRoundBlockHash: '0x' + 'ca'.repeat(32),
+    },
   };
 
-  it('domain → wire preserves recipient, faceValue, expirationBlock round-trip', () => {
+  it('domain → wire preserves every field', () => {
     const wire = domainTicketParamsToWire(domain);
     expect(wire.recipient.length).toBe(20);
     expect(bigEndianBytesToBigint(wire.faceValue)).toBe(domain.faceValueWei);
     expect(bigEndianBytesToBigint(wire.expirationBlock)).toBe(domain.expirationBlock);
     expect(bytesToHex(wire.recipient)).toBe(domain.recipient.toLowerCase());
-    expect(bytesToHex(wire.recipientRandHash)).toBe(domain.expirationParamsHash.toLowerCase());
+    expect(bytesToHex(wire.recipientRandHash)).toBe(domain.recipientRandHash.toLowerCase());
+    expect(bytesToHex(wire.seed)).toBe(domain.seed.toLowerCase());
+    expect(wire.expirationParams!.creationRound).toBe(domain.expirationParams.creationRound);
+    expect(bytesToHex(wire.expirationParams!.creationRoundBlockHash)).toBe(
+      domain.expirationParams.creationRoundBlockHash.toLowerCase(),
+    );
   });
 
   it('wire → domain round-trips to same values', () => {
@@ -72,6 +81,10 @@ describe('convert: TicketParams domain ↔ wire', () => {
     expect(back.recipient).toBe(domain.recipient.toLowerCase());
     expect(back.faceValueWei).toBe(domain.faceValueWei);
     expect(back.expirationBlock).toBe(domain.expirationBlock);
-    expect(back.expirationParamsHash).toBe(domain.expirationParamsHash.toLowerCase());
+    expect(back.recipientRandHash).toBe(domain.recipientRandHash.toLowerCase());
+    expect(back.expirationParams.creationRound).toBe(domain.expirationParams.creationRound);
+    expect(back.expirationParams.creationRoundBlockHash).toBe(
+      domain.expirationParams.creationRoundBlockHash.toLowerCase(),
+    );
   });
 });

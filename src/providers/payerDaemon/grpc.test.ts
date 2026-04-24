@@ -123,9 +123,13 @@ const ticketParams = {
   recipient: '0x' + 'aa'.repeat(20),
   faceValueWei: 1_000_000n,
   winProb: '100',
+  recipientRandHash: '0x' + 'ef'.repeat(16),
   seed: '0x' + 'cd'.repeat(16),
   expirationBlock: 100n,
-  expirationParamsHash: '0x' + 'ef'.repeat(16),
+  expirationParams: {
+    creationRound: 42n,
+    creationRoundBlockHash: '0x' + 'ca'.repeat(32),
+  },
 };
 
 describe('grpc payer daemon client (fake server over unix socket)', () => {
