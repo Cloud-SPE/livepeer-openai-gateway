@@ -1,0 +1,43 @@
+# gitleaks — repo-wide secret scan. Runs in CI (see .github/workflows/lint.yml).
+# This config layers on top of gitleaks' built-in default ruleset; we only
+# add allowlist entries for project-specific false positives.
+
+title = "openai-livepeer-bridge"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allowlist test-fixture values and documented placeholders"
+
+paths = [
+  # Test fixtures use obviously-fake sentinel values.
+  '''.*\.test\.ts$''',
+  '''src/service/billing/testPg\.ts''',
+  '''src/service/rateLimit/testRedis\.ts''',
+  # Generated protobuf stubs contain no secrets but do contain long hex tokens
+  # (ABI-style identifiers) that occasionally trip on entropy checks.
+  '''src/providers/payerDaemon/gen/.*''',
+  # Auto-generated migration SQL.
+  '''migrations/.*''',
+  # Lock files.
+  '''package-lock\.json$''',
+  # Documented placeholders in .env.example.
+  '''\.env\.example$''',
+]
+
+regexes = [
+  # Test peppers are deliberately labeled "pepper-for-tests-*" or similar.
+  '''pepper-for-tests?-\d+''',
+  '''pepper-for-http-tests-\d+''',
+  '''stream-pepper-\d+''',
+  '''e2e-pepper-\d+''',
+  '''topup-test-pepper-\d+''',
+  # Fake Stripe IDs used in tests (cs_test_, sk_test_, whsec_ prefixes).
+  '''cs_test_[A-Za-z0-9_]+''',
+  '''sk_test_[A-Za-z0-9_]*''',
+  '''whsec_[A-Za-z0-9_]*''',
+  '''evt_[A-Za-z0-9_]+''',
+  # Eth-address placeholders in tests (0x + 40 hex, all same digit).
+  '''0x(aa|bb|cc|dd|ee|ff){20}''',
+]

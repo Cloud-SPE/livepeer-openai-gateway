@@ -42,7 +42,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: check design-doc frontmatter
-        run: |
-          # Full implementation tracked in exec-plan 0001-repo-scaffold (doc-gardener)
-          echo "doc-lint placeholder"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci --ignore-scripts || npm install --ignore-scripts
+      - run: npm run doc-lint
+
+  proto-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci --ignore-scripts || npm install --ignore-scripts
+      - name: regen + assert no drift against committed stubs
+        run: npm run proto:check
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

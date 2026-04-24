@@ -5,7 +5,7 @@
 // source: livepeer/payments/v1/payee_daemon.proto
 
 /* eslint-disable */
-import { BinaryReader, BinaryWriter } from '@bufbuild/protobuf/wire';
+import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
 import {
   type CallOptions,
   type ChannelCredentials,
@@ -17,10 +17,10 @@ import {
   type Metadata,
   type ServiceError,
   type UntypedServiceImplementation,
-} from '@grpc/grpc-js';
-import { PriceInfo, TicketParams } from './types.js';
+} from "@grpc/grpc-js";
+import { PriceInfo, TicketParams } from "./types.js";
 
-export const protobufPackage = 'livepeer.payments.v1';
+export const protobufPackage = "livepeer.payments.v1";
 
 export interface GetQuoteRequest {
   /** ETH address of the sender asking for a quote. */
@@ -110,7 +110,8 @@ export interface PayeeDaemonCloseSessionRequest {
   workId: string;
 }
 
-export interface PayeeDaemonCloseSessionResponse {}
+export interface PayeeDaemonCloseSessionResponse {
+}
 
 export interface ListPendingRedemptionsRequest {
   /** Optional: filter to tickets queued on or after this Unix epoch seconds. */
@@ -154,54 +155,50 @@ export enum GetRedemptionStatusResponse_Status {
   UNRECOGNIZED = -1,
 }
 
-export function getRedemptionStatusResponse_StatusFromJSON(
-  object: any,
-): GetRedemptionStatusResponse_Status {
+export function getRedemptionStatusResponse_StatusFromJSON(object: any): GetRedemptionStatusResponse_Status {
   switch (object) {
     case 0:
-    case 'STATUS_UNSPECIFIED':
+    case "STATUS_UNSPECIFIED":
       return GetRedemptionStatusResponse_Status.STATUS_UNSPECIFIED;
     case 1:
-    case 'STATUS_QUEUED':
+    case "STATUS_QUEUED":
       return GetRedemptionStatusResponse_Status.STATUS_QUEUED;
     case 2:
-    case 'STATUS_SUBMITTED':
+    case "STATUS_SUBMITTED":
       return GetRedemptionStatusResponse_Status.STATUS_SUBMITTED;
     case 3:
-    case 'STATUS_CONFIRMED':
+    case "STATUS_CONFIRMED":
       return GetRedemptionStatusResponse_Status.STATUS_CONFIRMED;
     case 4:
-    case 'STATUS_FAILED':
+    case "STATUS_FAILED":
       return GetRedemptionStatusResponse_Status.STATUS_FAILED;
     case -1:
-    case 'UNRECOGNIZED':
+    case "UNRECOGNIZED":
     default:
       return GetRedemptionStatusResponse_Status.UNRECOGNIZED;
   }
 }
 
-export function getRedemptionStatusResponse_StatusToJSON(
-  object: GetRedemptionStatusResponse_Status,
-): string {
+export function getRedemptionStatusResponse_StatusToJSON(object: GetRedemptionStatusResponse_Status): string {
   switch (object) {
     case GetRedemptionStatusResponse_Status.STATUS_UNSPECIFIED:
-      return 'STATUS_UNSPECIFIED';
+      return "STATUS_UNSPECIFIED";
     case GetRedemptionStatusResponse_Status.STATUS_QUEUED:
-      return 'STATUS_QUEUED';
+      return "STATUS_QUEUED";
     case GetRedemptionStatusResponse_Status.STATUS_SUBMITTED:
-      return 'STATUS_SUBMITTED';
+      return "STATUS_SUBMITTED";
     case GetRedemptionStatusResponse_Status.STATUS_CONFIRMED:
-      return 'STATUS_CONFIRMED';
+      return "STATUS_CONFIRMED";
     case GetRedemptionStatusResponse_Status.STATUS_FAILED:
-      return 'STATUS_FAILED';
+      return "STATUS_FAILED";
     case GetRedemptionStatusResponse_Status.UNRECOGNIZED:
     default:
-      return 'UNRECOGNIZED';
+      return "UNRECOGNIZED";
   }
 }
 
 function createBaseGetQuoteRequest(): GetQuoteRequest {
-  return { sender: Buffer.alloc(0), capability: '' };
+  return { sender: Buffer.alloc(0), capability: "" };
 }
 
 export const GetQuoteRequest: MessageFns<GetQuoteRequest> = {
@@ -209,7 +206,7 @@ export const GetQuoteRequest: MessageFns<GetQuoteRequest> = {
     if (message.sender.length !== 0) {
       writer.uint32(10).bytes(message.sender);
     }
-    if (message.capability !== '') {
+    if (message.capability !== "") {
       writer.uint32(18).string(message.capability);
     }
     return writer;
@@ -250,7 +247,7 @@ export const GetQuoteRequest: MessageFns<GetQuoteRequest> = {
   fromJSON(object: any): GetQuoteRequest {
     return {
       sender: isSet(object.sender) ? Buffer.from(bytesFromBase64(object.sender)) : Buffer.alloc(0),
-      capability: isSet(object.capability) ? globalThis.String(object.capability) : '',
+      capability: isSet(object.capability) ? globalThis.String(object.capability) : "",
     };
   },
 
@@ -259,7 +256,7 @@ export const GetQuoteRequest: MessageFns<GetQuoteRequest> = {
     if (message.sender.length !== 0) {
       obj.sender = base64FromBytes(message.sender);
     }
-    if (message.capability !== '') {
+    if (message.capability !== "") {
       obj.capability = message.capability;
     }
     return obj;
@@ -271,7 +268,7 @@ export const GetQuoteRequest: MessageFns<GetQuoteRequest> = {
   fromPartial<I extends Exact<DeepPartial<GetQuoteRequest>, I>>(object: I): GetQuoteRequest {
     const message = createBaseGetQuoteRequest();
     message.sender = object.sender ?? Buffer.alloc(0);
-    message.capability = object.capability ?? '';
+    message.capability = object.capability ?? "";
     return message;
   },
 };
@@ -328,13 +325,13 @@ export const GetQuoteResponse: MessageFns<GetQuoteResponse> = {
       ticketParams: isSet(object.ticketParams)
         ? TicketParams.fromJSON(object.ticketParams)
         : isSet(object.ticket_params)
-          ? TicketParams.fromJSON(object.ticket_params)
-          : undefined,
+        ? TicketParams.fromJSON(object.ticket_params)
+        : undefined,
       priceInfo: isSet(object.priceInfo)
         ? PriceInfo.fromJSON(object.priceInfo)
         : isSet(object.price_info)
-          ? PriceInfo.fromJSON(object.price_info)
-          : undefined,
+        ? PriceInfo.fromJSON(object.price_info)
+        : undefined,
     };
   },
 
@@ -354,20 +351,18 @@ export const GetQuoteResponse: MessageFns<GetQuoteResponse> = {
   },
   fromPartial<I extends Exact<DeepPartial<GetQuoteResponse>, I>>(object: I): GetQuoteResponse {
     const message = createBaseGetQuoteResponse();
-    message.ticketParams =
-      object.ticketParams !== undefined && object.ticketParams !== null
-        ? TicketParams.fromPartial(object.ticketParams)
-        : undefined;
-    message.priceInfo =
-      object.priceInfo !== undefined && object.priceInfo !== null
-        ? PriceInfo.fromPartial(object.priceInfo)
-        : undefined;
+    message.ticketParams = (object.ticketParams !== undefined && object.ticketParams !== null)
+      ? TicketParams.fromPartial(object.ticketParams)
+      : undefined;
+    message.priceInfo = (object.priceInfo !== undefined && object.priceInfo !== null)
+      ? PriceInfo.fromPartial(object.priceInfo)
+      : undefined;
     return message;
   },
 };
 
 function createBaseProcessPaymentRequest(): ProcessPaymentRequest {
-  return { paymentBytes: Buffer.alloc(0), workId: '' };
+  return { paymentBytes: Buffer.alloc(0), workId: "" };
 }
 
 export const ProcessPaymentRequest: MessageFns<ProcessPaymentRequest> = {
@@ -375,7 +370,7 @@ export const ProcessPaymentRequest: MessageFns<ProcessPaymentRequest> = {
     if (message.paymentBytes.length !== 0) {
       writer.uint32(10).bytes(message.paymentBytes);
     }
-    if (message.workId !== '') {
+    if (message.workId !== "") {
       writer.uint32(18).string(message.workId);
     }
     return writer;
@@ -418,13 +413,13 @@ export const ProcessPaymentRequest: MessageFns<ProcessPaymentRequest> = {
       paymentBytes: isSet(object.paymentBytes)
         ? Buffer.from(bytesFromBase64(object.paymentBytes))
         : isSet(object.payment_bytes)
-          ? Buffer.from(bytesFromBase64(object.payment_bytes))
-          : Buffer.alloc(0),
+        ? Buffer.from(bytesFromBase64(object.payment_bytes))
+        : Buffer.alloc(0),
       workId: isSet(object.workId)
         ? globalThis.String(object.workId)
         : isSet(object.work_id)
-          ? globalThis.String(object.work_id)
-          : '',
+        ? globalThis.String(object.work_id)
+        : "",
     };
   },
 
@@ -433,7 +428,7 @@ export const ProcessPaymentRequest: MessageFns<ProcessPaymentRequest> = {
     if (message.paymentBytes.length !== 0) {
       obj.paymentBytes = base64FromBytes(message.paymentBytes);
     }
-    if (message.workId !== '') {
+    if (message.workId !== "") {
       obj.workId = message.workId;
     }
     return obj;
@@ -442,23 +437,16 @@ export const ProcessPaymentRequest: MessageFns<ProcessPaymentRequest> = {
   create<I extends Exact<DeepPartial<ProcessPaymentRequest>, I>>(base?: I): ProcessPaymentRequest {
     return ProcessPaymentRequest.fromPartial(base ?? ({} as any));
   },
-  fromPartial<I extends Exact<DeepPartial<ProcessPaymentRequest>, I>>(
-    object: I,
-  ): ProcessPaymentRequest {
+  fromPartial<I extends Exact<DeepPartial<ProcessPaymentRequest>, I>>(object: I): ProcessPaymentRequest {
     const message = createBaseProcessPaymentRequest();
     message.paymentBytes = object.paymentBytes ?? Buffer.alloc(0);
-    message.workId = object.workId ?? '';
+    message.workId = object.workId ?? "";
     return message;
   },
 };
 
 function createBaseProcessPaymentResponse(): ProcessPaymentResponse {
-  return {
-    sender: Buffer.alloc(0),
-    creditedEv: Buffer.alloc(0),
-    balance: Buffer.alloc(0),
-    winnersQueued: 0,
-  };
+  return { sender: Buffer.alloc(0), creditedEv: Buffer.alloc(0), balance: Buffer.alloc(0), winnersQueued: 0 };
 }
 
 export const ProcessPaymentResponse: MessageFns<ProcessPaymentResponse> = {
@@ -532,16 +520,14 @@ export const ProcessPaymentResponse: MessageFns<ProcessPaymentResponse> = {
       creditedEv: isSet(object.creditedEv)
         ? Buffer.from(bytesFromBase64(object.creditedEv))
         : isSet(object.credited_ev)
-          ? Buffer.from(bytesFromBase64(object.credited_ev))
-          : Buffer.alloc(0),
-      balance: isSet(object.balance)
-        ? Buffer.from(bytesFromBase64(object.balance))
+        ? Buffer.from(bytesFromBase64(object.credited_ev))
         : Buffer.alloc(0),
+      balance: isSet(object.balance) ? Buffer.from(bytesFromBase64(object.balance)) : Buffer.alloc(0),
       winnersQueued: isSet(object.winnersQueued)
         ? globalThis.Number(object.winnersQueued)
         : isSet(object.winners_queued)
-          ? globalThis.Number(object.winners_queued)
-          : 0,
+        ? globalThis.Number(object.winners_queued)
+        : 0,
     };
   },
 
@@ -562,14 +548,10 @@ export const ProcessPaymentResponse: MessageFns<ProcessPaymentResponse> = {
     return obj;
   },
 
-  create<I extends Exact<DeepPartial<ProcessPaymentResponse>, I>>(
-    base?: I,
-  ): ProcessPaymentResponse {
+  create<I extends Exact<DeepPartial<ProcessPaymentResponse>, I>>(base?: I): ProcessPaymentResponse {
     return ProcessPaymentResponse.fromPartial(base ?? ({} as any));
   },
-  fromPartial<I extends Exact<DeepPartial<ProcessPaymentResponse>, I>>(
-    object: I,
-  ): ProcessPaymentResponse {
+  fromPartial<I extends Exact<DeepPartial<ProcessPaymentResponse>, I>>(object: I): ProcessPaymentResponse {
     const message = createBaseProcessPaymentResponse();
     message.sender = object.sender ?? Buffer.alloc(0);
     message.creditedEv = object.creditedEv ?? Buffer.alloc(0);
@@ -580,7 +562,7 @@ export const ProcessPaymentResponse: MessageFns<ProcessPaymentResponse> = {
 };
 
 function createBaseDebitBalanceRequest(): DebitBalanceRequest {
-  return { sender: Buffer.alloc(0), workId: '', workUnits: 0n };
+  return { sender: Buffer.alloc(0), workId: "", workUnits: 0n };
 }
 
 export const DebitBalanceRequest: MessageFns<DebitBalanceRequest> = {
@@ -588,14 +570,12 @@ export const DebitBalanceRequest: MessageFns<DebitBalanceRequest> = {
     if (message.sender.length !== 0) {
       writer.uint32(10).bytes(message.sender);
     }
-    if (message.workId !== '') {
+    if (message.workId !== "") {
       writer.uint32(18).string(message.workId);
     }
     if (message.workUnits !== 0n) {
       if (BigInt.asIntN(64, message.workUnits) !== message.workUnits) {
-        throw new globalThis.Error(
-          'value provided for field message.workUnits of type int64 too large',
-        );
+        throw new globalThis.Error("value provided for field message.workUnits of type int64 too large");
       }
       writer.uint32(24).int64(message.workUnits);
     }
@@ -648,13 +628,13 @@ export const DebitBalanceRequest: MessageFns<DebitBalanceRequest> = {
       workId: isSet(object.workId)
         ? globalThis.String(object.workId)
         : isSet(object.work_id)
-          ? globalThis.String(object.work_id)
-          : '',
+        ? globalThis.String(object.work_id)
+        : "",
       workUnits: isSet(object.workUnits)
         ? BigInt(object.workUnits)
         : isSet(object.work_units)
-          ? BigInt(object.work_units)
-          : 0n,
+        ? BigInt(object.work_units)
+        : 0n,
     };
   },
 
@@ -663,7 +643,7 @@ export const DebitBalanceRequest: MessageFns<DebitBalanceRequest> = {
     if (message.sender.length !== 0) {
       obj.sender = base64FromBytes(message.sender);
     }
-    if (message.workId !== '') {
+    if (message.workId !== "") {
       obj.workId = message.workId;
     }
     if (message.workUnits !== 0n) {
@@ -675,12 +655,10 @@ export const DebitBalanceRequest: MessageFns<DebitBalanceRequest> = {
   create<I extends Exact<DeepPartial<DebitBalanceRequest>, I>>(base?: I): DebitBalanceRequest {
     return DebitBalanceRequest.fromPartial(base ?? ({} as any));
   },
-  fromPartial<I extends Exact<DeepPartial<DebitBalanceRequest>, I>>(
-    object: I,
-  ): DebitBalanceRequest {
+  fromPartial<I extends Exact<DeepPartial<DebitBalanceRequest>, I>>(object: I): DebitBalanceRequest {
     const message = createBaseDebitBalanceRequest();
     message.sender = object.sender ?? Buffer.alloc(0);
-    message.workId = object.workId ?? '';
+    message.workId = object.workId ?? "";
     message.workUnits = object.workUnits ?? 0n;
     return message;
   },
@@ -723,11 +701,7 @@ export const DebitBalanceResponse: MessageFns<DebitBalanceResponse> = {
   },
 
   fromJSON(object: any): DebitBalanceResponse {
-    return {
-      balance: isSet(object.balance)
-        ? Buffer.from(bytesFromBase64(object.balance))
-        : Buffer.alloc(0),
-    };
+    return { balance: isSet(object.balance) ? Buffer.from(bytesFromBase64(object.balance)) : Buffer.alloc(0) };
   },
 
   toJSON(message: DebitBalanceResponse): unknown {
@@ -741,9 +715,7 @@ export const DebitBalanceResponse: MessageFns<DebitBalanceResponse> = {
   create<I extends Exact<DeepPartial<DebitBalanceResponse>, I>>(base?: I): DebitBalanceResponse {
     return DebitBalanceResponse.fromPartial(base ?? ({} as any));
   },
-  fromPartial<I extends Exact<DeepPartial<DebitBalanceResponse>, I>>(
-    object: I,
-  ): DebitBalanceResponse {
+  fromPartial<I extends Exact<DeepPartial<DebitBalanceResponse>, I>>(object: I): DebitBalanceResponse {
     const message = createBaseDebitBalanceResponse();
     message.balance = object.balance ?? Buffer.alloc(0);
     return message;
@@ -751,25 +723,20 @@ export const DebitBalanceResponse: MessageFns<DebitBalanceResponse> = {
 };
 
 function createBaseSufficientBalanceRequest(): SufficientBalanceRequest {
-  return { sender: Buffer.alloc(0), workId: '', minWorkUnits: 0n };
+  return { sender: Buffer.alloc(0), workId: "", minWorkUnits: 0n };
 }
 
 export const SufficientBalanceRequest: MessageFns<SufficientBalanceRequest> = {
-  encode(
-    message: SufficientBalanceRequest,
-    writer: BinaryWriter = new BinaryWriter(),
-  ): BinaryWriter {
+  encode(message: SufficientBalanceRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.sender.length !== 0) {
       writer.uint32(10).bytes(message.sender);
     }
-    if (message.workId !== '') {
+    if (message.workId !== "") {
       writer.uint32(18).string(message.workId);
     }
     if (message.minWorkUnits !== 0n) {
       if (BigInt.asIntN(64, message.minWorkUnits) !== message.minWorkUnits) {
-        throw new globalThis.Error(
-          'value provided for field message.minWorkUnits of type int64 too large',
-        );
+        throw new globalThis.Error("value provided for field message.minWorkUnits of type int64 too large");
       }
       writer.uint32(24).int64(message.minWorkUnits);
     }
@@ -822,13 +789,13 @@ export const SufficientBalanceRequest: MessageFns<SufficientBalanceRequest> = {
       workId: isSet(object.workId)
         ? globalThis.String(object.workId)
         : isSet(object.work_id)
-          ? globalThis.String(object.work_id)
-          : '',
+        ? globalThis.String(object.work_id)
+        : "",
       minWorkUnits: isSet(object.minWorkUnits)
         ? BigInt(object.minWorkUnits)
         : isSet(object.min_work_units)
-          ? BigInt(object.min_work_units)
-          : 0n,
+        ? BigInt(object.min_work_units)
+        : 0n,
     };
   },
 
@@ -837,7 +804,7 @@ export const SufficientBalanceRequest: MessageFns<SufficientBalanceRequest> = {
     if (message.sender.length !== 0) {
       obj.sender = base64FromBytes(message.sender);
     }
-    if (message.workId !== '') {
+    if (message.workId !== "") {
       obj.workId = message.workId;
     }
     if (message.minWorkUnits !== 0n) {
@@ -846,17 +813,13 @@ export const SufficientBalanceRequest: MessageFns<SufficientBalanceRequest> = {
     return obj;
   },
 
-  create<I extends Exact<DeepPartial<SufficientBalanceRequest>, I>>(
-    base?: I,
-  ): SufficientBalanceRequest {
+  create<I extends Exact<DeepPartial<SufficientBalanceRequest>, I>>(base?: I): SufficientBalanceRequest {
     return SufficientBalanceRequest.fromPartial(base ?? ({} as any));
   },
-  fromPartial<I extends Exact<DeepPartial<SufficientBalanceRequest>, I>>(
-    object: I,
-  ): SufficientBalanceRequest {
+  fromPartial<I extends Exact<DeepPartial<SufficientBalanceRequest>, I>>(object: I): SufficientBalanceRequest {
     const message = createBaseSufficientBalanceRequest();
     message.sender = object.sender ?? Buffer.alloc(0);
-    message.workId = object.workId ?? '';
+    message.workId = object.workId ?? "";
     message.minWorkUnits = object.minWorkUnits ?? 0n;
     return message;
   },
@@ -867,10 +830,7 @@ function createBaseSufficientBalanceResponse(): SufficientBalanceResponse {
 }
 
 export const SufficientBalanceResponse: MessageFns<SufficientBalanceResponse> = {
-  encode(
-    message: SufficientBalanceResponse,
-    writer: BinaryWriter = new BinaryWriter(),
-  ): BinaryWriter {
+  encode(message: SufficientBalanceResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.sufficient !== false) {
       writer.uint32(8).bool(message.sufficient);
     }
@@ -915,9 +875,7 @@ export const SufficientBalanceResponse: MessageFns<SufficientBalanceResponse> = 
   fromJSON(object: any): SufficientBalanceResponse {
     return {
       sufficient: isSet(object.sufficient) ? globalThis.Boolean(object.sufficient) : false,
-      balance: isSet(object.balance)
-        ? Buffer.from(bytesFromBase64(object.balance))
-        : Buffer.alloc(0),
+      balance: isSet(object.balance) ? Buffer.from(bytesFromBase64(object.balance)) : Buffer.alloc(0),
     };
   },
 
@@ -932,14 +890,10 @@ export const SufficientBalanceResponse: MessageFns<SufficientBalanceResponse> = 
     return obj;
   },
 
-  create<I extends Exact<DeepPartial<SufficientBalanceResponse>, I>>(
-    base?: I,
-  ): SufficientBalanceResponse {
+  create<I extends Exact<DeepPartial<SufficientBalanceResponse>, I>>(base?: I): SufficientBalanceResponse {
     return SufficientBalanceResponse.fromPartial(base ?? ({} as any));
   },
-  fromPartial<I extends Exact<DeepPartial<SufficientBalanceResponse>, I>>(
-    object: I,
-  ): SufficientBalanceResponse {
+  fromPartial<I extends Exact<DeepPartial<SufficientBalanceResponse>, I>>(object: I): SufficientBalanceResponse {
     const message = createBaseSufficientBalanceResponse();
     message.sufficient = object.sufficient ?? false;
     message.balance = object.balance ?? Buffer.alloc(0);
@@ -948,7 +902,7 @@ export const SufficientBalanceResponse: MessageFns<SufficientBalanceResponse> = 
 };
 
 function createBaseGetBalanceRequest(): GetBalanceRequest {
-  return { sender: Buffer.alloc(0), workId: '' };
+  return { sender: Buffer.alloc(0), workId: "" };
 }
 
 export const GetBalanceRequest: MessageFns<GetBalanceRequest> = {
@@ -956,7 +910,7 @@ export const GetBalanceRequest: MessageFns<GetBalanceRequest> = {
     if (message.sender.length !== 0) {
       writer.uint32(10).bytes(message.sender);
     }
-    if (message.workId !== '') {
+    if (message.workId !== "") {
       writer.uint32(18).string(message.workId);
     }
     return writer;
@@ -1000,8 +954,8 @@ export const GetBalanceRequest: MessageFns<GetBalanceRequest> = {
       workId: isSet(object.workId)
         ? globalThis.String(object.workId)
         : isSet(object.work_id)
-          ? globalThis.String(object.work_id)
-          : '',
+        ? globalThis.String(object.work_id)
+        : "",
     };
   },
 
@@ -1010,7 +964,7 @@ export const GetBalanceRequest: MessageFns<GetBalanceRequest> = {
     if (message.sender.length !== 0) {
       obj.sender = base64FromBytes(message.sender);
     }
-    if (message.workId !== '') {
+    if (message.workId !== "") {
       obj.workId = message.workId;
     }
     return obj;
@@ -1022,7 +976,7 @@ export const GetBalanceRequest: MessageFns<GetBalanceRequest> = {
   fromPartial<I extends Exact<DeepPartial<GetBalanceRequest>, I>>(object: I): GetBalanceRequest {
     const message = createBaseGetBalanceRequest();
     message.sender = object.sender ?? Buffer.alloc(0);
-    message.workId = object.workId ?? '';
+    message.workId = object.workId ?? "";
     return message;
   },
 };
@@ -1064,11 +1018,7 @@ export const GetBalanceResponse: MessageFns<GetBalanceResponse> = {
   },
 
   fromJSON(object: any): GetBalanceResponse {
-    return {
-      balance: isSet(object.balance)
-        ? Buffer.from(bytesFromBase64(object.balance))
-        : Buffer.alloc(0),
-    };
+    return { balance: isSet(object.balance) ? Buffer.from(bytesFromBase64(object.balance)) : Buffer.alloc(0) };
   },
 
   toJSON(message: GetBalanceResponse): unknown {
@@ -1090,18 +1040,15 @@ export const GetBalanceResponse: MessageFns<GetBalanceResponse> = {
 };
 
 function createBasePayeeDaemonCloseSessionRequest(): PayeeDaemonCloseSessionRequest {
-  return { sender: Buffer.alloc(0), workId: '' };
+  return { sender: Buffer.alloc(0), workId: "" };
 }
 
 export const PayeeDaemonCloseSessionRequest: MessageFns<PayeeDaemonCloseSessionRequest> = {
-  encode(
-    message: PayeeDaemonCloseSessionRequest,
-    writer: BinaryWriter = new BinaryWriter(),
-  ): BinaryWriter {
+  encode(message: PayeeDaemonCloseSessionRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.sender.length !== 0) {
       writer.uint32(10).bytes(message.sender);
     }
-    if (message.workId !== '') {
+    if (message.workId !== "") {
       writer.uint32(18).string(message.workId);
     }
     return writer;
@@ -1145,8 +1092,8 @@ export const PayeeDaemonCloseSessionRequest: MessageFns<PayeeDaemonCloseSessionR
       workId: isSet(object.workId)
         ? globalThis.String(object.workId)
         : isSet(object.work_id)
-          ? globalThis.String(object.work_id)
-          : '',
+        ? globalThis.String(object.work_id)
+        : "",
     };
   },
 
@@ -1155,15 +1102,13 @@ export const PayeeDaemonCloseSessionRequest: MessageFns<PayeeDaemonCloseSessionR
     if (message.sender.length !== 0) {
       obj.sender = base64FromBytes(message.sender);
     }
-    if (message.workId !== '') {
+    if (message.workId !== "") {
       obj.workId = message.workId;
     }
     return obj;
   },
 
-  create<I extends Exact<DeepPartial<PayeeDaemonCloseSessionRequest>, I>>(
-    base?: I,
-  ): PayeeDaemonCloseSessionRequest {
+  create<I extends Exact<DeepPartial<PayeeDaemonCloseSessionRequest>, I>>(base?: I): PayeeDaemonCloseSessionRequest {
     return PayeeDaemonCloseSessionRequest.fromPartial(base ?? ({} as any));
   },
   fromPartial<I extends Exact<DeepPartial<PayeeDaemonCloseSessionRequest>, I>>(
@@ -1171,7 +1116,7 @@ export const PayeeDaemonCloseSessionRequest: MessageFns<PayeeDaemonCloseSessionR
   ): PayeeDaemonCloseSessionRequest {
     const message = createBasePayeeDaemonCloseSessionRequest();
     message.sender = object.sender ?? Buffer.alloc(0);
-    message.workId = object.workId ?? '';
+    message.workId = object.workId ?? "";
     return message;
   },
 };
@@ -1181,10 +1126,7 @@ function createBasePayeeDaemonCloseSessionResponse(): PayeeDaemonCloseSessionRes
 }
 
 export const PayeeDaemonCloseSessionResponse: MessageFns<PayeeDaemonCloseSessionResponse> = {
-  encode(
-    _: PayeeDaemonCloseSessionResponse,
-    writer: BinaryWriter = new BinaryWriter(),
-  ): BinaryWriter {
+  encode(_: PayeeDaemonCloseSessionResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     return writer;
   },
 
@@ -1213,14 +1155,10 @@ export const PayeeDaemonCloseSessionResponse: MessageFns<PayeeDaemonCloseSession
     return obj;
   },
 
-  create<I extends Exact<DeepPartial<PayeeDaemonCloseSessionResponse>, I>>(
-    base?: I,
-  ): PayeeDaemonCloseSessionResponse {
+  create<I extends Exact<DeepPartial<PayeeDaemonCloseSessionResponse>, I>>(base?: I): PayeeDaemonCloseSessionResponse {
     return PayeeDaemonCloseSessionResponse.fromPartial(base ?? ({} as any));
   },
-  fromPartial<I extends Exact<DeepPartial<PayeeDaemonCloseSessionResponse>, I>>(
-    _: I,
-  ): PayeeDaemonCloseSessionResponse {
+  fromPartial<I extends Exact<DeepPartial<PayeeDaemonCloseSessionResponse>, I>>(_: I): PayeeDaemonCloseSessionResponse {
     const message = createBasePayeeDaemonCloseSessionResponse();
     return message;
   },
@@ -1231,15 +1169,10 @@ function createBaseListPendingRedemptionsRequest(): ListPendingRedemptionsReques
 }
 
 export const ListPendingRedemptionsRequest: MessageFns<ListPendingRedemptionsRequest> = {
-  encode(
-    message: ListPendingRedemptionsRequest,
-    writer: BinaryWriter = new BinaryWriter(),
-  ): BinaryWriter {
+  encode(message: ListPendingRedemptionsRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.since !== 0n) {
       if (BigInt.asIntN(64, message.since) !== message.since) {
-        throw new globalThis.Error(
-          'value provided for field message.since of type int64 too large',
-        );
+        throw new globalThis.Error("value provided for field message.since of type int64 too large");
       }
       writer.uint32(8).int64(message.since);
     }
@@ -1282,9 +1215,7 @@ export const ListPendingRedemptionsRequest: MessageFns<ListPendingRedemptionsReq
     return obj;
   },
 
-  create<I extends Exact<DeepPartial<ListPendingRedemptionsRequest>, I>>(
-    base?: I,
-  ): ListPendingRedemptionsRequest {
+  create<I extends Exact<DeepPartial<ListPendingRedemptionsRequest>, I>>(base?: I): ListPendingRedemptionsRequest {
     return ListPendingRedemptionsRequest.fromPartial(base ?? ({} as any));
   },
   fromPartial<I extends Exact<DeepPartial<ListPendingRedemptionsRequest>, I>>(
@@ -1301,10 +1232,7 @@ function createBaseListPendingRedemptionsResponse(): ListPendingRedemptionsRespo
 }
 
 export const ListPendingRedemptionsResponse: MessageFns<ListPendingRedemptionsResponse> = {
-  encode(
-    message: ListPendingRedemptionsResponse,
-    writer: BinaryWriter = new BinaryWriter(),
-  ): BinaryWriter {
+  encode(message: ListPendingRedemptionsResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     for (const v of message.redemptions) {
       PendingRedemption.encode(v!, writer.uint32(10).fork()).join();
     }
@@ -1351,9 +1279,7 @@ export const ListPendingRedemptionsResponse: MessageFns<ListPendingRedemptionsRe
     return obj;
   },
 
-  create<I extends Exact<DeepPartial<ListPendingRedemptionsResponse>, I>>(
-    base?: I,
-  ): ListPendingRedemptionsResponse {
+  create<I extends Exact<DeepPartial<ListPendingRedemptionsResponse>, I>>(base?: I): ListPendingRedemptionsResponse {
     return ListPendingRedemptionsResponse.fromPartial(base ?? ({} as any));
   },
   fromPartial<I extends Exact<DeepPartial<ListPendingRedemptionsResponse>, I>>(
@@ -1388,9 +1314,7 @@ export const PendingRedemption: MessageFns<PendingRedemption> = {
     }
     if (message.queuedAt !== 0n) {
       if (BigInt.asIntN(64, message.queuedAt) !== message.queuedAt) {
-        throw new globalThis.Error(
-          'value provided for field message.queuedAt of type int64 too large',
-        );
+        throw new globalThis.Error("value provided for field message.queuedAt of type int64 too large");
       }
       writer.uint32(32).int64(message.queuedAt);
     }
@@ -1461,19 +1385,19 @@ export const PendingRedemption: MessageFns<PendingRedemption> = {
       ticketHash: isSet(object.ticketHash)
         ? Buffer.from(bytesFromBase64(object.ticketHash))
         : isSet(object.ticket_hash)
-          ? Buffer.from(bytesFromBase64(object.ticket_hash))
-          : Buffer.alloc(0),
+        ? Buffer.from(bytesFromBase64(object.ticket_hash))
+        : Buffer.alloc(0),
       sender: isSet(object.sender) ? Buffer.from(bytesFromBase64(object.sender)) : Buffer.alloc(0),
       faceValue: isSet(object.faceValue)
         ? Buffer.from(bytesFromBase64(object.faceValue))
         : isSet(object.face_value)
-          ? Buffer.from(bytesFromBase64(object.face_value))
-          : Buffer.alloc(0),
+        ? Buffer.from(bytesFromBase64(object.face_value))
+        : Buffer.alloc(0),
       queuedAt: isSet(object.queuedAt)
         ? BigInt(object.queuedAt)
         : isSet(object.queued_at)
-          ? BigInt(object.queued_at)
-          : 0n,
+        ? BigInt(object.queued_at)
+        : 0n,
       attempts: isSet(object.attempts) ? globalThis.Number(object.attempts) : 0,
     };
   },
@@ -1517,10 +1441,7 @@ function createBaseGetRedemptionStatusRequest(): GetRedemptionStatusRequest {
 }
 
 export const GetRedemptionStatusRequest: MessageFns<GetRedemptionStatusRequest> = {
-  encode(
-    message: GetRedemptionStatusRequest,
-    writer: BinaryWriter = new BinaryWriter(),
-  ): BinaryWriter {
+  encode(message: GetRedemptionStatusRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.ticketHash.length !== 0) {
       writer.uint32(10).bytes(message.ticketHash);
     }
@@ -1556,8 +1477,8 @@ export const GetRedemptionStatusRequest: MessageFns<GetRedemptionStatusRequest> 
       ticketHash: isSet(object.ticketHash)
         ? Buffer.from(bytesFromBase64(object.ticketHash))
         : isSet(object.ticket_hash)
-          ? Buffer.from(bytesFromBase64(object.ticket_hash))
-          : Buffer.alloc(0),
+        ? Buffer.from(bytesFromBase64(object.ticket_hash))
+        : Buffer.alloc(0),
     };
   },
 
@@ -1569,14 +1490,10 @@ export const GetRedemptionStatusRequest: MessageFns<GetRedemptionStatusRequest> 
     return obj;
   },
 
-  create<I extends Exact<DeepPartial<GetRedemptionStatusRequest>, I>>(
-    base?: I,
-  ): GetRedemptionStatusRequest {
+  create<I extends Exact<DeepPartial<GetRedemptionStatusRequest>, I>>(base?: I): GetRedemptionStatusRequest {
     return GetRedemptionStatusRequest.fromPartial(base ?? ({} as any));
   },
-  fromPartial<I extends Exact<DeepPartial<GetRedemptionStatusRequest>, I>>(
-    object: I,
-  ): GetRedemptionStatusRequest {
+  fromPartial<I extends Exact<DeepPartial<GetRedemptionStatusRequest>, I>>(object: I): GetRedemptionStatusRequest {
     const message = createBaseGetRedemptionStatusRequest();
     message.ticketHash = object.ticketHash ?? Buffer.alloc(0);
     return message;
@@ -1584,21 +1501,18 @@ export const GetRedemptionStatusRequest: MessageFns<GetRedemptionStatusRequest> 
 };
 
 function createBaseGetRedemptionStatusResponse(): GetRedemptionStatusResponse {
-  return { status: 0, txHash: Buffer.alloc(0), error: '' };
+  return { status: 0, txHash: Buffer.alloc(0), error: "" };
 }
 
 export const GetRedemptionStatusResponse: MessageFns<GetRedemptionStatusResponse> = {
-  encode(
-    message: GetRedemptionStatusResponse,
-    writer: BinaryWriter = new BinaryWriter(),
-  ): BinaryWriter {
+  encode(message: GetRedemptionStatusResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.status !== 0) {
       writer.uint32(8).int32(message.status);
     }
     if (message.txHash.length !== 0) {
       writer.uint32(18).bytes(message.txHash);
     }
-    if (message.error !== '') {
+    if (message.error !== "") {
       writer.uint32(26).string(message.error);
     }
     return writer;
@@ -1650,9 +1564,9 @@ export const GetRedemptionStatusResponse: MessageFns<GetRedemptionStatusResponse
       txHash: isSet(object.txHash)
         ? Buffer.from(bytesFromBase64(object.txHash))
         : isSet(object.tx_hash)
-          ? Buffer.from(bytesFromBase64(object.tx_hash))
-          : Buffer.alloc(0),
-      error: isSet(object.error) ? globalThis.String(object.error) : '',
+        ? Buffer.from(bytesFromBase64(object.tx_hash))
+        : Buffer.alloc(0),
+      error: isSet(object.error) ? globalThis.String(object.error) : "",
     };
   },
 
@@ -1664,24 +1578,20 @@ export const GetRedemptionStatusResponse: MessageFns<GetRedemptionStatusResponse
     if (message.txHash.length !== 0) {
       obj.txHash = base64FromBytes(message.txHash);
     }
-    if (message.error !== '') {
+    if (message.error !== "") {
       obj.error = message.error;
     }
     return obj;
   },
 
-  create<I extends Exact<DeepPartial<GetRedemptionStatusResponse>, I>>(
-    base?: I,
-  ): GetRedemptionStatusResponse {
+  create<I extends Exact<DeepPartial<GetRedemptionStatusResponse>, I>>(base?: I): GetRedemptionStatusResponse {
     return GetRedemptionStatusResponse.fromPartial(base ?? ({} as any));
   },
-  fromPartial<I extends Exact<DeepPartial<GetRedemptionStatusResponse>, I>>(
-    object: I,
-  ): GetRedemptionStatusResponse {
+  fromPartial<I extends Exact<DeepPartial<GetRedemptionStatusResponse>, I>>(object: I): GetRedemptionStatusResponse {
     const message = createBaseGetRedemptionStatusResponse();
     message.status = object.status ?? 0;
     message.txHash = object.txHash ?? Buffer.alloc(0);
-    message.error = object.error ?? '';
+    message.error = object.error ?? "";
     return message;
   },
 };
@@ -1694,14 +1604,12 @@ export const PayeeDaemonService = {
    * result to its own PayerDaemon when starting a session.
    */
   getQuote: {
-    path: '/livepeer.payments.v1.PayeeDaemon/GetQuote' as const,
+    path: "/livepeer.payments.v1.PayeeDaemon/GetQuote" as const,
     requestStream: false as const,
     responseStream: false as const,
-    requestSerialize: (value: GetQuoteRequest): Buffer =>
-      Buffer.from(GetQuoteRequest.encode(value).finish()),
+    requestSerialize: (value: GetQuoteRequest): Buffer => Buffer.from(GetQuoteRequest.encode(value).finish()),
     requestDeserialize: (value: Buffer): GetQuoteRequest => GetQuoteRequest.decode(value),
-    responseSerialize: (value: GetQuoteResponse): Buffer =>
-      Buffer.from(GetQuoteResponse.encode(value).finish()),
+    responseSerialize: (value: GetQuoteResponse): Buffer => Buffer.from(GetQuoteResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): GetQuoteResponse => GetQuoteResponse.decode(value),
   },
   /**
@@ -1709,61 +1617,53 @@ export const PayeeDaemonService = {
    * payment's expected value, and queue any winning tickets for redemption.
    */
   processPayment: {
-    path: '/livepeer.payments.v1.PayeeDaemon/ProcessPayment' as const,
+    path: "/livepeer.payments.v1.PayeeDaemon/ProcessPayment" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: ProcessPaymentRequest): Buffer =>
       Buffer.from(ProcessPaymentRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ProcessPaymentRequest =>
-      ProcessPaymentRequest.decode(value),
+    requestDeserialize: (value: Buffer): ProcessPaymentRequest => ProcessPaymentRequest.decode(value),
     responseSerialize: (value: ProcessPaymentResponse): Buffer =>
       Buffer.from(ProcessPaymentResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ProcessPaymentResponse =>
-      ProcessPaymentResponse.decode(value),
+    responseDeserialize: (value: Buffer): ProcessPaymentResponse => ProcessPaymentResponse.decode(value),
   },
   /**
    * Debit work units from a (sender, work_id) balance after the payee has
    * actually done the work. Returns the new balance.
    */
   debitBalance: {
-    path: '/livepeer.payments.v1.PayeeDaemon/DebitBalance' as const,
+    path: "/livepeer.payments.v1.PayeeDaemon/DebitBalance" as const,
     requestStream: false as const,
     responseStream: false as const,
-    requestSerialize: (value: DebitBalanceRequest): Buffer =>
-      Buffer.from(DebitBalanceRequest.encode(value).finish()),
+    requestSerialize: (value: DebitBalanceRequest): Buffer => Buffer.from(DebitBalanceRequest.encode(value).finish()),
     requestDeserialize: (value: Buffer): DebitBalanceRequest => DebitBalanceRequest.decode(value),
     responseSerialize: (value: DebitBalanceResponse): Buffer =>
       Buffer.from(DebitBalanceResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): DebitBalanceResponse =>
-      DebitBalanceResponse.decode(value),
+    responseDeserialize: (value: Buffer): DebitBalanceResponse => DebitBalanceResponse.decode(value),
   },
   /**
    * Check whether a (sender, work_id) balance covers a minimum number of
    * work units, without debiting.
    */
   sufficientBalance: {
-    path: '/livepeer.payments.v1.PayeeDaemon/SufficientBalance' as const,
+    path: "/livepeer.payments.v1.PayeeDaemon/SufficientBalance" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: SufficientBalanceRequest): Buffer =>
       Buffer.from(SufficientBalanceRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): SufficientBalanceRequest =>
-      SufficientBalanceRequest.decode(value),
+    requestDeserialize: (value: Buffer): SufficientBalanceRequest => SufficientBalanceRequest.decode(value),
     responseSerialize: (value: SufficientBalanceResponse): Buffer =>
       Buffer.from(SufficientBalanceResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): SufficientBalanceResponse =>
-      SufficientBalanceResponse.decode(value),
+    responseDeserialize: (value: Buffer): SufficientBalanceResponse => SufficientBalanceResponse.decode(value),
   },
   /** Get the current balance for a (sender, work_id) pair. */
   getBalance: {
-    path: '/livepeer.payments.v1.PayeeDaemon/GetBalance' as const,
+    path: "/livepeer.payments.v1.PayeeDaemon/GetBalance" as const,
     requestStream: false as const,
     responseStream: false as const,
-    requestSerialize: (value: GetBalanceRequest): Buffer =>
-      Buffer.from(GetBalanceRequest.encode(value).finish()),
+    requestSerialize: (value: GetBalanceRequest): Buffer => Buffer.from(GetBalanceRequest.encode(value).finish()),
     requestDeserialize: (value: Buffer): GetBalanceRequest => GetBalanceRequest.decode(value),
-    responseSerialize: (value: GetBalanceResponse): Buffer =>
-      Buffer.from(GetBalanceResponse.encode(value).finish()),
+    responseSerialize: (value: GetBalanceResponse): Buffer => Buffer.from(GetBalanceResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): GetBalanceResponse => GetBalanceResponse.decode(value),
   },
   /**
@@ -1771,13 +1671,12 @@ export const PayeeDaemonService = {
    * forfeited.
    */
   closeSession: {
-    path: '/livepeer.payments.v1.PayeeDaemon/CloseSession' as const,
+    path: "/livepeer.payments.v1.PayeeDaemon/CloseSession" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: PayeeDaemonCloseSessionRequest): Buffer =>
       Buffer.from(PayeeDaemonCloseSessionRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): PayeeDaemonCloseSessionRequest =>
-      PayeeDaemonCloseSessionRequest.decode(value),
+    requestDeserialize: (value: Buffer): PayeeDaemonCloseSessionRequest => PayeeDaemonCloseSessionRequest.decode(value),
     responseSerialize: (value: PayeeDaemonCloseSessionResponse): Buffer =>
       Buffer.from(PayeeDaemonCloseSessionResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): PayeeDaemonCloseSessionResponse =>
@@ -1788,13 +1687,12 @@ export const PayeeDaemonService = {
    * on-chain redemption.
    */
   listPendingRedemptions: {
-    path: '/livepeer.payments.v1.PayeeDaemon/ListPendingRedemptions' as const,
+    path: "/livepeer.payments.v1.PayeeDaemon/ListPendingRedemptions" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: ListPendingRedemptionsRequest): Buffer =>
       Buffer.from(ListPendingRedemptionsRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListPendingRedemptionsRequest =>
-      ListPendingRedemptionsRequest.decode(value),
+    requestDeserialize: (value: Buffer): ListPendingRedemptionsRequest => ListPendingRedemptionsRequest.decode(value),
     responseSerialize: (value: ListPendingRedemptionsResponse): Buffer =>
       Buffer.from(ListPendingRedemptionsResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): ListPendingRedemptionsResponse =>
@@ -1805,17 +1703,15 @@ export const PayeeDaemonService = {
    * previously-identified winning ticket.
    */
   getRedemptionStatus: {
-    path: '/livepeer.payments.v1.PayeeDaemon/GetRedemptionStatus' as const,
+    path: "/livepeer.payments.v1.PayeeDaemon/GetRedemptionStatus" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: GetRedemptionStatusRequest): Buffer =>
       Buffer.from(GetRedemptionStatusRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): GetRedemptionStatusRequest =>
-      GetRedemptionStatusRequest.decode(value),
+    requestDeserialize: (value: Buffer): GetRedemptionStatusRequest => GetRedemptionStatusRequest.decode(value),
     responseSerialize: (value: GetRedemptionStatusResponse): Buffer =>
       Buffer.from(GetRedemptionStatusResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GetRedemptionStatusResponse =>
-      GetRedemptionStatusResponse.decode(value),
+    responseDeserialize: (value: Buffer): GetRedemptionStatusResponse => GetRedemptionStatusResponse.decode(value),
   },
 } as const;
 
@@ -1852,10 +1748,7 @@ export interface PayeeDaemonServer extends UntypedServiceImplementation {
    * Admin / observability: list winning tickets currently queued for
    * on-chain redemption.
    */
-  listPendingRedemptions: handleUnaryCall<
-    ListPendingRedemptionsRequest,
-    ListPendingRedemptionsResponse
-  >;
+  listPendingRedemptions: handleUnaryCall<ListPendingRedemptionsRequest, ListPendingRedemptionsResponse>;
   /**
    * Admin / observability: return the on-chain redemption status of a
    * previously-identified winning ticket.
@@ -2018,40 +1911,31 @@ export interface PayeeDaemonClient extends Client {
 
 export const PayeeDaemonClient = makeGenericClientConstructor(
   PayeeDaemonService,
-  'livepeer.payments.v1.PayeeDaemon',
+  "livepeer.payments.v1.PayeeDaemon",
 ) as unknown as {
-  new (
-    address: string,
-    credentials: ChannelCredentials,
-    options?: Partial<ClientOptions>,
-  ): PayeeDaemonClient;
+  new (address: string, credentials: ChannelCredentials, options?: Partial<ClientOptions>): PayeeDaemonClient;
   service: typeof PayeeDaemonService;
   serviceName: string;
 };
 
 function bytesFromBase64(b64: string): Uint8Array {
-  return Uint8Array.from(globalThis.Buffer.from(b64, 'base64'));
+  return Uint8Array.from(globalThis.Buffer.from(b64, "base64"));
 }
 
 function base64FromBytes(arr: Uint8Array): string {
-  return globalThis.Buffer.from(arr).toString('base64');
+  return globalThis.Buffer.from(arr).toString("base64");
 }
 
 type Builtin = Date | Function | Uint8Array | string | number | boolean | bigint | undefined;
 
-export type DeepPartial<T> = T extends Builtin
-  ? T
-  : T extends globalThis.Array<infer U>
-    ? globalThis.Array<DeepPartial<U>>
-    : T extends ReadonlyArray<infer U>
-      ? ReadonlyArray<DeepPartial<U>>
-      : T extends {}
-        ? { [K in keyof T]?: DeepPartial<T[K]> }
-        : Partial<T>;
+export type DeepPartial<T> = T extends Builtin ? T
+  : T extends globalThis.Array<infer U> ? globalThis.Array<DeepPartial<U>>
+  : T extends ReadonlyArray<infer U> ? ReadonlyArray<DeepPartial<U>>
+  : T extends {} ? { [K in keyof T]?: DeepPartial<T[K]> }
+  : Partial<T>;
 
 type KeysOfUnion<T> = T extends T ? keyof T : never;
-export type Exact<P, I extends P> = P extends Builtin
-  ? P
+export type Exact<P, I extends P> = P extends Builtin ? P
   : P & { [K in keyof P]: Exact<P[K], I[K]> } & { [K in Exclude<keyof I, KeysOfUnion<P>>]: never };
 
 function isSet(value: any): boolean {

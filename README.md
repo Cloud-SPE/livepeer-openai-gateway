@@ -1,86 +1,159 @@
 # openai-livepeer-bridge
 
-An OpenAI-compatible API service that fronts a pool of Livepeer WorkerNodes. Customers pay in USD (prepaid balance + free tier); the service pays nodes via the `livepeer-payment-library` daemon.
+An OpenAI-compatible API service that fronts a pool of Livepeer WorkerNodes. Customers pay in USD (prepaid balance + free tier); the service pays nodes in ETH via the [`livepeer-payment-library`](../livepeer-payment-library) daemon running as a sidecar.
 
-> **This is an agent-first repository.** Before making changes, start with [AGENTS.md](AGENTS.md) → [DESIGN.md](DESIGN.md) → [docs/design-docs/](docs/design-docs/).
+> **Agent-first repository.** Before making changes, read [AGENTS.md](AGENTS.md) → [DESIGN.md](DESIGN.md) → [docs/design-docs/](docs/design-docs/). Non-trivial work starts with an exec-plan in `docs/exec-plans/active/`; see [PLANS.md](PLANS.md).
 
 ## What it does
 
-- Accepts OpenAI SDK calls (custom `base_url` + API key we issue)
-- `/v1/chat/completions` streaming + non-streaming (v1)
-- Free tier (quota-capped) + Prepaid tier (USD balance, Stripe top-ups)
-- Routes to a Livepeer WorkerNode; bills the customer in USD; pays the node in ETH via probabilistic micropayments
+- **OpenAI-compatible `/v1/chat/completions`** — streaming (SSE) + non-streaming. Drop-in compatible with the official `openai` SDK via a custom `base_url` + an API key the bridge issues.
+- **Two customer tiers**: **Free** (100K-token monthly quota) and **Prepaid** (USD balance, topped up via Stripe Checkout). First top-up auto-upgrades a free customer atomically with the credit.
+- **Routes every request** to a Livepeer WorkerNode from a config-driven pool, builds a micropayment via `PayerDaemon`, forwards the call, commits billing from the node's reported usage.
+- **Fail-closed on payment-daemon outage.** Never proceeds without payment.
+- **Observation-only token audit**: `tiktoken`-based local counts cross-checked against node-reported counts; drift is metered, not enforced.
+- **Operator endpoints** under `/admin/*` for health, node inspection, customer lookup, manual refund, suspend/unsuspend, escrow view.
 
 ## Status
 
-v1 feature-complete — all twelve product exec-plans (0001–0012) plus the deployment bootstrap (0013) are in `docs/exec-plans/completed/`. Outstanding work is tracked in [docs/exec-plans/tech-debt-tracker.md](docs/exec-plans/tech-debt-tracker.md).
+**v1 feature-complete.** All fifteen exec-plans (0001 – 0015) are in [`docs/exec-plans/completed/`](docs/exec-plans/completed/). Outstanding items are durable — each is an entry in [`docs/exec-plans/tech-debt-tracker.md`](docs/exec-plans/tech-debt-tracker.md).
+
+| Plan | What it ships                                                      |
+| ---: | ------------------------------------------------------------------ |
+| 0001 | Repo scaffolding, toolchain                                        |
+| 0002 | Zod domain types + 75% coverage gate                               |
+| 0003 | CustomerLedger: atomic reserve/commit/refund, FOR UPDATE row locks |
+| 0004 | AuthLayer: HMAC-SHA-256 API keys, Fastify preHandler               |
+| 0005 | NodeBook: config loader, QuoteRefresher, circuit breaker           |
+| 0006 | PayerDaemon gRPC client + session cache                            |
+| 0007 | `/v1/chat/completions` non-streaming (end-to-end)                  |
+| 0008 | `/v1/chat/completions` streaming + retry policy                    |
+| 0009 | Redis sliding-window rate limiter + concurrency semaphore          |
+| 0010 | Stripe Checkout top-ups + signed webhook + tier upgrade            |
+| 0011 | LocalTokenizer (metric-only)                                       |
+| 0012 | Admin / ops endpoints                                              |
+| 0013 | Process entrypoint, Dockerfile, docker-compose                     |
+| 0014 | Architectural ESLint plugin (layer-check et al.)                   |
+| 0015 | doc-gardener, proto-drift, secret-scan                             |
+
+Test suite: **223 tests, 91 % statement / 80 % branch coverage** (the 75 % floor is mechanically enforced per [core belief #11](docs/design-docs/core-beliefs.md)).
+
+## Where things live
+
+```
+src/
+├── types/          Zod schemas + inferred TS types (src/types/*.ts)
+├── config/         Zod-validated env loaders (one file per concern)
+├── providers/      Cross-cutting I/O deps — the ONLY layer that may import
+│                   pg, ioredis, stripe, @grpc/*, fastify, tiktoken, viem, pino.
+│                   Interface in providers/<name>.ts; default impl in
+│                   providers/<name>/<backend>.ts.
+├── repo/           Typed DB access (Drizzle). Primitive reads/writes, no
+│                   business logic.
+├── service/        Business logic: auth, billing, routing, pricing,
+│                   nodes, payments, rateLimit, tokenAudit, admin.
+├── runtime/        HTTP surface: route registrations, preHandlers, error
+│                   envelope mapping. Only layer that speaks Fastify shape.
+└── main.ts         Single process entrypoint — wires every config +
+                    provider + service + route, runs migrations, handles
+                    SIGTERM.
+
+docs/
+├── design-docs/    Durable architectural decisions. See index.md for the
+│                   catalog; every file has {title, status, last-reviewed}.
+├── product-specs/  Customer-facing + operator-facing behavior (topup flow,
+│                   admin endpoints, etc.).
+├── exec-plans/
+│   ├── active/     In-flight work (empty in v1).
+│   ├── completed/  Every plan that shipped, with its decisions log and
+│                   artifacts — history is immutable.
+│   └── tech-debt-tracker.md  Append-only list of open items with remediation.
+├── generated/      Auto-generated; do not hand-edit.
+└── references/     External material — architecture reference, harness PDFs.
+
+migrations/         Drizzle-generated Postgres migrations.
+lint/
+├── eslint-plugin-livepeer-bridge/  Six custom ESLint rules (0014).
+└── doc-gardener/                    Docs-integrity lint (0015).
+
+Dockerfile, compose.yaml, .env.example, .gitleaks.toml  — deployment (0013, 0015).
+```
+
+## Invariants (non-negotiable)
+
+From [`docs/design-docs/core-beliefs.md`](docs/design-docs/core-beliefs.md) and [`AGENTS.md`](AGENTS.md):
+
+1. **Customer never sees wei.** All customer-facing units are USD or tokens.
+2. **Zod at boundaries.** Every HTTP body + every gRPC response parses through a Zod schema before entering `service/`.
+3. **Providers boundary.** Cross-cutting libraries only in `src/providers/`.
+4. **Atomic ledger debits.** Customer debits run under `SELECT … FOR UPDATE`. No read-modify-write.
+5. **Fail-closed on PayerDaemon outage** → 503. Never bill without payment.
+6. **Test coverage ≥ 75 %** on lines, branches, functions, statements. Ratchet only up.
+
+ESLint rules [`livepeer-bridge/layer-check`](lint/eslint-plugin-livepeer-bridge/rules/layer-check.js), [`no-cross-cutting-import`](lint/eslint-plugin-livepeer-bridge/rules/no-cross-cutting-import.js), and [`zod-at-boundary`](lint/eslint-plugin-livepeer-bridge/rules/zod-at-boundary.js) enforce the first three mechanically.
 
 ## Run locally
 
 ### With Docker (recommended)
 
-```
+```sh
 cp .env.example .env
-# fill in REQUIRED values in .env (API_KEY_PEPPER, STRIPE_*, ADMIN_TOKEN, …)
-cp docs/references/openai-bridge-architecture.md nodes.yaml.example   # reference only
+# fill the REQUIRED values: API_KEY_PEPPER, STRIPE_*, ADMIN_TOKEN
 # author your own nodes.yaml — see docs/design-docs/node-lifecycle.md
 docker compose up --build
 ```
 
-The stack brings up:
-
-- `postgres:16-alpine` (bridge's ledger)
-- `redis:7-alpine` (rate-limit + cache)
-- `bridge` (this repo, built from `Dockerfile`)
-
-The PayerDaemon is **not** included by default — it lives in a sibling repo ([`livepeer-payment-library`](../livepeer-payment-library)) and runs as a sidecar. Mount its unix socket into the shared `payer-socket` volume at `/run/payer-daemon/daemon.sock`. See the commented `payer-daemon` block in `compose.yaml` for the expected wiring; uncomment once the library publishes an image.
+Stands up `postgres:16-alpine` + `redis:7-alpine` + the bridge (built from `Dockerfile`). The PayerDaemon is **not** included by default — it's a sidecar from [`livepeer-payment-library`](../livepeer-payment-library). Mount its unix socket into the shared `payer-socket` volume at `/run/payer-daemon/daemon.sock`. Commented service block in `compose.yaml` shows the wiring.
 
 ### Without Docker
 
-```
+```sh
 npm ci
 npm run build
-# point env vars at running Postgres + Redis (and a payer daemon socket)
+# export env vars pointing at a running Postgres + Redis + PayerDaemon socket
 npm run start
 ```
 
-`npm run start` runs `dist/main.js` which loads every env-based config, constructs every provider, applies migrations if `BRIDGE_AUTO_MIGRATE=true` (default), and starts Fastify on `HOST:PORT` (default `0.0.0.0:8080`).
+`npm run start` invokes `dist/main.js`: Zod-validated env, every provider constructed, `/healthz` + `/v1/chat/completions` + `/v1/billing/topup` + `/v1/stripe/webhook` + `/admin/*` registered, migrations applied on boot unless `BRIDGE_AUTO_MIGRATE=false`, Fastify listening on `${HOST}:${PORT}` (default `0.0.0.0:8080`).
 
 ## Endpoints
 
-### Customer-facing (`Authorization: Bearer <api-key>`)
+### Customer (`Authorization: Bearer <api-key>`)
 
-| Method | Path                   | Purpose                                                      |
-| ------ | ---------------------- | ------------------------------------------------------------ |
-| `POST` | `/v1/chat/completions` | OpenAI-compatible chat; `stream=true` for SSE                |
-| `POST` | `/v1/billing/topup`    | Create a Stripe Checkout Session                             |
-| `POST` | `/v1/stripe/webhook`   | Stripe webhook receiver (signature-verified, no auth header) |
+| Method | Path                   | Purpose                                                                                                                                                                         |
+| ------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST` | `/v1/chat/completions` | OpenAI-compatible chat; `stream=true` for SSE. See [`streaming-semantics.md`](docs/design-docs/streaming-semantics.md) + [`retry-policy.md`](docs/design-docs/retry-policy.md). |
+| `POST` | `/v1/billing/topup`    | Create a Stripe Checkout Session. See [`topup-prepaid.md`](docs/product-specs/topup-prepaid.md).                                                                                |
+| `POST` | `/v1/stripe/webhook`   | Stripe webhook receiver (signature-verified, no auth header).                                                                                                                   |
 
 ### Operator (`X-Admin-Token: <ADMIN_TOKEN>`)
 
-See [`docs/product-specs/admin-endpoints.md`](docs/product-specs/admin-endpoints.md):
+Full spec in [`docs/product-specs/admin-endpoints.md`](docs/product-specs/admin-endpoints.md):
 
 - `GET /admin/health`, `/admin/nodes`, `/admin/nodes/:id`, `/admin/customers/:id`, `/admin/escrow`
 - `POST /admin/customers/:id/refund`, `/suspend`, `/unsuspend`
 
 ### Probes (no auth)
 
-- `GET /healthz` — liveness probe used by Dockerfile/compose healthchecks.
+- `GET /healthz` — liveness probe used by the Dockerfile / compose healthcheck.
 
 ## Development
 
-```
-npm run test           # vitest + coverage gate (≥ 75% on every metric)
+```sh
+npm run test           # vitest + coverage gate (≥ 75 %)
 npm run test:watch     # interactive vitest
+npm run test:nocov     # vitest without coverage (fast iterate)
 npm run typecheck      # tsc --noEmit
-npm run lint           # eslint + custom layer-check
+npm run lint           # eslint (+ 6 architectural rules from 0014)
+npm run doc-lint       # docs integrity (frontmatter, status/location, links)
+npm run proto:check    # regenerate protobuf stubs and assert no drift
 npm run fmt            # prettier --write
+npm run fmt:check      # prettier --check
 npm run db:generate    # drizzle-kit: regenerate migrations from schema
-npm run db:migrate     # apply migrations
-npm run proto:gen      # regenerate PayerDaemon TS stubs from the library proto
+npm run db:migrate     # apply migrations (also runs on boot)
+npm run proto:gen      # regenerate PayerDaemon TS stubs from sibling proto
 ```
 
-Tests require a Postgres + Redis reachable either via Testcontainers (Docker running locally) or via `TEST_PG_HOST` / `TEST_REDIS_HOST` env vars (CI uses GitHub Actions service containers).
+Tests need Postgres + Redis reachable either via **Testcontainers** (Docker running locally) or via `TEST_PG_HOST` / `TEST_REDIS_HOST` env vars (CI uses GitHub Actions service containers).
 
 ## License
 

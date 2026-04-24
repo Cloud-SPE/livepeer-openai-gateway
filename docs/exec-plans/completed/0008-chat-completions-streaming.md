@@ -2,9 +2,10 @@
 id: 0008
 slug: chat-completions-streaming
 title: /v1/chat/completions — streaming
-status: active
-owner: unassigned
+status: completed
+owner: claude
 opened: 2026-04-24
+closed: 2026-04-24
 ---
 
 ## Goal

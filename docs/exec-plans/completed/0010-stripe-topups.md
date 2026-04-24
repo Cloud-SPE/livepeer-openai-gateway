@@ -2,9 +2,10 @@
 id: 0010
 slug: stripe-topups
 title: Stripe Checkout top-ups + webhook
-status: active
-owner: unassigned
+status: completed
+owner: claude
 opened: 2026-04-24
+closed: 2026-04-24
 ---
 
 ## Goal

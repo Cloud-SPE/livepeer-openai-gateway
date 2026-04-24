@@ -28,9 +28,10 @@ Non-negotiables that shape every decision in this repo.
 - [pricing-model.md](pricing-model.md) — `accepted` — rate card tiers, margin calculation, adjustment policy
 - [node-lifecycle.md](node-lifecycle.md) — `accepted` — NodeBook config, QuoteRefresher, health/circuit-break, reload semantics
 - [payer-integration.md](payer-integration.md) — `accepted` — PayerDaemon gRPC client, session lifecycle, error mapping, fail-closed semantics
-- `streaming-semantics.md` — _planned_ — pre-payment reservation, stream cancellation, partial success
-- `token-audit.md` — _planned_ — LocalTokenizer phases (observe → audit → enforce)
-- `retry-policy.md` — _planned_ — retry table and rationale
+- [streaming-semantics.md](streaming-semantics.md) — `accepted` — SSE forwarding, include_usage injection/stripping, disconnect and partial-success
+- [retry-policy.md](retry-policy.md) — `accepted` — retry table for node dispatch (pre-first-token only)
+- [stripe-integration.md](stripe-integration.md) — `accepted` — Checkout top-ups, webhook flow, idempotency, tier upgrade
+- [token-audit.md](token-audit.md) — `accepted` — LocalTokenizer phases (observe → audit → enforce), drift metric, integration points
 - `escrow-operations.md` — _planned_ — reserve sizing, top-up, alerts
 - `reconciliation.md` — _planned_ — three-ledger relationship (customer USD, daemon EV, on-chain)
 

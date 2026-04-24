@@ -5,9 +5,9 @@
 // source: livepeer/payments/v1/types.proto
 
 /* eslint-disable */
-import { BinaryReader, BinaryWriter } from '@bufbuild/protobuf/wire';
+import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
 
-export const protobufPackage = 'livepeer.payments.v1';
+export const protobufPackage = "livepeer.payments.v1";
 
 /**
  * PriceInfo conveys pricing info for a unit of work.
@@ -108,11 +108,15 @@ export interface Payment {
    * Recipient-controlled ticket parameters. Stays the same across all tickets
    * in this payment.
    */
-  ticketParams?: TicketParams | undefined;
+  ticketParams?:
+    | TicketParams
+    | undefined;
   /** ETH address of the sender. */
   sender: Buffer;
   /** Shared expiration params for all tickets in this payment. */
-  expirationParams?: TicketExpirationParams | undefined;
+  expirationParams?:
+    | TicketExpirationParams
+    | undefined;
   /** Per-ticket sender parameters (nonce + signature). One entry per ticket. */
   ticketSenderParams: TicketSenderParams[];
   /**
@@ -123,31 +127,27 @@ export interface Payment {
 }
 
 function createBasePriceInfo(): PriceInfo {
-  return { pricePerUnit: 0n, pixelsPerUnit: 0n, capability: 0, constraint: '' };
+  return { pricePerUnit: 0n, pixelsPerUnit: 0n, capability: 0, constraint: "" };
 }
 
 export const PriceInfo: MessageFns<PriceInfo> = {
   encode(message: PriceInfo, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.pricePerUnit !== 0n) {
       if (BigInt.asIntN(64, message.pricePerUnit) !== message.pricePerUnit) {
-        throw new globalThis.Error(
-          'value provided for field message.pricePerUnit of type int64 too large',
-        );
+        throw new globalThis.Error("value provided for field message.pricePerUnit of type int64 too large");
       }
       writer.uint32(8).int64(message.pricePerUnit);
     }
     if (message.pixelsPerUnit !== 0n) {
       if (BigInt.asIntN(64, message.pixelsPerUnit) !== message.pixelsPerUnit) {
-        throw new globalThis.Error(
-          'value provided for field message.pixelsPerUnit of type int64 too large',
-        );
+        throw new globalThis.Error("value provided for field message.pixelsPerUnit of type int64 too large");
       }
       writer.uint32(16).int64(message.pixelsPerUnit);
     }
     if (message.capability !== 0) {
       writer.uint32(24).uint32(message.capability);
     }
-    if (message.constraint !== '') {
+    if (message.constraint !== "") {
       writer.uint32(34).string(message.constraint);
     }
     return writer;
@@ -206,15 +206,15 @@ export const PriceInfo: MessageFns<PriceInfo> = {
       pricePerUnit: isSet(object.pricePerUnit)
         ? BigInt(object.pricePerUnit)
         : isSet(object.price_per_unit)
-          ? BigInt(object.price_per_unit)
-          : 0n,
+        ? BigInt(object.price_per_unit)
+        : 0n,
       pixelsPerUnit: isSet(object.pixelsPerUnit)
         ? BigInt(object.pixelsPerUnit)
         : isSet(object.pixels_per_unit)
-          ? BigInt(object.pixels_per_unit)
-          : 0n,
+        ? BigInt(object.pixels_per_unit)
+        : 0n,
       capability: isSet(object.capability) ? globalThis.Number(object.capability) : 0,
-      constraint: isSet(object.constraint) ? globalThis.String(object.constraint) : '',
+      constraint: isSet(object.constraint) ? globalThis.String(object.constraint) : "",
     };
   },
 
@@ -229,7 +229,7 @@ export const PriceInfo: MessageFns<PriceInfo> = {
     if (message.capability !== 0) {
       obj.capability = Math.round(message.capability);
     }
-    if (message.constraint !== '') {
+    if (message.constraint !== "") {
       obj.constraint = message.constraint;
     }
     return obj;
@@ -243,7 +243,7 @@ export const PriceInfo: MessageFns<PriceInfo> = {
     message.pricePerUnit = object.pricePerUnit ?? 0n;
     message.pixelsPerUnit = object.pixelsPerUnit ?? 0n;
     message.capability = object.capability ?? 0;
-    message.constraint = object.constraint ?? '';
+    message.constraint = object.constraint ?? "";
     return message;
   },
 };
@@ -360,35 +360,33 @@ export const TicketParams: MessageFns<TicketParams> = {
 
   fromJSON(object: any): TicketParams {
     return {
-      recipient: isSet(object.recipient)
-        ? Buffer.from(bytesFromBase64(object.recipient))
-        : Buffer.alloc(0),
+      recipient: isSet(object.recipient) ? Buffer.from(bytesFromBase64(object.recipient)) : Buffer.alloc(0),
       faceValue: isSet(object.faceValue)
         ? Buffer.from(bytesFromBase64(object.faceValue))
         : isSet(object.face_value)
-          ? Buffer.from(bytesFromBase64(object.face_value))
-          : Buffer.alloc(0),
+        ? Buffer.from(bytesFromBase64(object.face_value))
+        : Buffer.alloc(0),
       winProb: isSet(object.winProb)
         ? Buffer.from(bytesFromBase64(object.winProb))
         : isSet(object.win_prob)
-          ? Buffer.from(bytesFromBase64(object.win_prob))
-          : Buffer.alloc(0),
+        ? Buffer.from(bytesFromBase64(object.win_prob))
+        : Buffer.alloc(0),
       recipientRandHash: isSet(object.recipientRandHash)
         ? Buffer.from(bytesFromBase64(object.recipientRandHash))
         : isSet(object.recipient_rand_hash)
-          ? Buffer.from(bytesFromBase64(object.recipient_rand_hash))
-          : Buffer.alloc(0),
+        ? Buffer.from(bytesFromBase64(object.recipient_rand_hash))
+        : Buffer.alloc(0),
       seed: isSet(object.seed) ? Buffer.from(bytesFromBase64(object.seed)) : Buffer.alloc(0),
       expirationBlock: isSet(object.expirationBlock)
         ? Buffer.from(bytesFromBase64(object.expirationBlock))
         : isSet(object.expiration_block)
-          ? Buffer.from(bytesFromBase64(object.expiration_block))
-          : Buffer.alloc(0),
+        ? Buffer.from(bytesFromBase64(object.expiration_block))
+        : Buffer.alloc(0),
       expirationParams: isSet(object.expirationParams)
         ? TicketExpirationParams.fromJSON(object.expirationParams)
         : isSet(object.expiration_params)
-          ? TicketExpirationParams.fromJSON(object.expiration_params)
-          : undefined,
+        ? TicketExpirationParams.fromJSON(object.expiration_params)
+        : undefined,
     };
   },
 
@@ -429,10 +427,9 @@ export const TicketParams: MessageFns<TicketParams> = {
     message.recipientRandHash = object.recipientRandHash ?? Buffer.alloc(0);
     message.seed = object.seed ?? Buffer.alloc(0);
     message.expirationBlock = object.expirationBlock ?? Buffer.alloc(0);
-    message.expirationParams =
-      object.expirationParams !== undefined && object.expirationParams !== null
-        ? TicketExpirationParams.fromPartial(object.expirationParams)
-        : undefined;
+    message.expirationParams = (object.expirationParams !== undefined && object.expirationParams !== null)
+      ? TicketExpirationParams.fromPartial(object.expirationParams)
+      : undefined;
     return message;
   },
 };
@@ -489,8 +486,8 @@ export const TicketSenderParams: MessageFns<TicketSenderParams> = {
       senderNonce: isSet(object.senderNonce)
         ? globalThis.Number(object.senderNonce)
         : isSet(object.sender_nonce)
-          ? globalThis.Number(object.sender_nonce)
-          : 0,
+        ? globalThis.Number(object.sender_nonce)
+        : 0,
       sig: isSet(object.sig) ? Buffer.from(bytesFromBase64(object.sig)) : Buffer.alloc(0),
     };
   },
@@ -525,9 +522,7 @@ export const TicketExpirationParams: MessageFns<TicketExpirationParams> = {
   encode(message: TicketExpirationParams, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.creationRound !== 0n) {
       if (BigInt.asIntN(64, message.creationRound) !== message.creationRound) {
-        throw new globalThis.Error(
-          'value provided for field message.creationRound of type int64 too large',
-        );
+        throw new globalThis.Error("value provided for field message.creationRound of type int64 too large");
       }
       writer.uint32(8).int64(message.creationRound);
     }
@@ -574,13 +569,13 @@ export const TicketExpirationParams: MessageFns<TicketExpirationParams> = {
       creationRound: isSet(object.creationRound)
         ? BigInt(object.creationRound)
         : isSet(object.creation_round)
-          ? BigInt(object.creation_round)
-          : 0n,
+        ? BigInt(object.creation_round)
+        : 0n,
       creationRoundBlockHash: isSet(object.creationRoundBlockHash)
         ? Buffer.from(bytesFromBase64(object.creationRoundBlockHash))
         : isSet(object.creation_round_block_hash)
-          ? Buffer.from(bytesFromBase64(object.creation_round_block_hash))
-          : Buffer.alloc(0),
+        ? Buffer.from(bytesFromBase64(object.creation_round_block_hash))
+        : Buffer.alloc(0),
     };
   },
 
@@ -595,14 +590,10 @@ export const TicketExpirationParams: MessageFns<TicketExpirationParams> = {
     return obj;
   },
 
-  create<I extends Exact<DeepPartial<TicketExpirationParams>, I>>(
-    base?: I,
-  ): TicketExpirationParams {
+  create<I extends Exact<DeepPartial<TicketExpirationParams>, I>>(base?: I): TicketExpirationParams {
     return TicketExpirationParams.fromPartial(base ?? ({} as any));
   },
-  fromPartial<I extends Exact<DeepPartial<TicketExpirationParams>, I>>(
-    object: I,
-  ): TicketExpirationParams {
+  fromPartial<I extends Exact<DeepPartial<TicketExpirationParams>, I>>(object: I): TicketExpirationParams {
     const message = createBaseTicketExpirationParams();
     message.creationRound = object.creationRound ?? 0n;
     message.creationRoundBlockHash = object.creationRoundBlockHash ?? Buffer.alloc(0);
@@ -701,24 +692,24 @@ export const Payment: MessageFns<Payment> = {
       ticketParams: isSet(object.ticketParams)
         ? TicketParams.fromJSON(object.ticketParams)
         : isSet(object.ticket_params)
-          ? TicketParams.fromJSON(object.ticket_params)
-          : undefined,
+        ? TicketParams.fromJSON(object.ticket_params)
+        : undefined,
       sender: isSet(object.sender) ? Buffer.from(bytesFromBase64(object.sender)) : Buffer.alloc(0),
       expirationParams: isSet(object.expirationParams)
         ? TicketExpirationParams.fromJSON(object.expirationParams)
         : isSet(object.expiration_params)
-          ? TicketExpirationParams.fromJSON(object.expiration_params)
-          : undefined,
+        ? TicketExpirationParams.fromJSON(object.expiration_params)
+        : undefined,
       ticketSenderParams: globalThis.Array.isArray(object?.ticketSenderParams)
         ? object.ticketSenderParams.map((e: any) => TicketSenderParams.fromJSON(e))
         : globalThis.Array.isArray(object?.ticket_sender_params)
-          ? object.ticket_sender_params.map((e: any) => TicketSenderParams.fromJSON(e))
-          : [],
+        ? object.ticket_sender_params.map((e: any) => TicketSenderParams.fromJSON(e))
+        : [],
       expectedPrice: isSet(object.expectedPrice)
         ? PriceInfo.fromJSON(object.expectedPrice)
         : isSet(object.expected_price)
-          ? PriceInfo.fromJSON(object.expected_price)
-          : undefined,
+        ? PriceInfo.fromJSON(object.expected_price)
+        : undefined,
     };
   },
 
@@ -747,48 +738,39 @@ export const Payment: MessageFns<Payment> = {
   },
   fromPartial<I extends Exact<DeepPartial<Payment>, I>>(object: I): Payment {
     const message = createBasePayment();
-    message.ticketParams =
-      object.ticketParams !== undefined && object.ticketParams !== null
-        ? TicketParams.fromPartial(object.ticketParams)
-        : undefined;
+    message.ticketParams = (object.ticketParams !== undefined && object.ticketParams !== null)
+      ? TicketParams.fromPartial(object.ticketParams)
+      : undefined;
     message.sender = object.sender ?? Buffer.alloc(0);
-    message.expirationParams =
-      object.expirationParams !== undefined && object.expirationParams !== null
-        ? TicketExpirationParams.fromPartial(object.expirationParams)
-        : undefined;
-    message.ticketSenderParams =
-      object.ticketSenderParams?.map((e) => TicketSenderParams.fromPartial(e)) || [];
-    message.expectedPrice =
-      object.expectedPrice !== undefined && object.expectedPrice !== null
-        ? PriceInfo.fromPartial(object.expectedPrice)
-        : undefined;
+    message.expirationParams = (object.expirationParams !== undefined && object.expirationParams !== null)
+      ? TicketExpirationParams.fromPartial(object.expirationParams)
+      : undefined;
+    message.ticketSenderParams = object.ticketSenderParams?.map((e) => TicketSenderParams.fromPartial(e)) || [];
+    message.expectedPrice = (object.expectedPrice !== undefined && object.expectedPrice !== null)
+      ? PriceInfo.fromPartial(object.expectedPrice)
+      : undefined;
     return message;
   },
 };
 
 function bytesFromBase64(b64: string): Uint8Array {
-  return Uint8Array.from(globalThis.Buffer.from(b64, 'base64'));
+  return Uint8Array.from(globalThis.Buffer.from(b64, "base64"));
 }
 
 function base64FromBytes(arr: Uint8Array): string {
-  return globalThis.Buffer.from(arr).toString('base64');
+  return globalThis.Buffer.from(arr).toString("base64");
 }
 
 type Builtin = Date | Function | Uint8Array | string | number | boolean | bigint | undefined;
 
-export type DeepPartial<T> = T extends Builtin
-  ? T
-  : T extends globalThis.Array<infer U>
-    ? globalThis.Array<DeepPartial<U>>
-    : T extends ReadonlyArray<infer U>
-      ? ReadonlyArray<DeepPartial<U>>
-      : T extends {}
-        ? { [K in keyof T]?: DeepPartial<T[K]> }
-        : Partial<T>;
+export type DeepPartial<T> = T extends Builtin ? T
+  : T extends globalThis.Array<infer U> ? globalThis.Array<DeepPartial<U>>
+  : T extends ReadonlyArray<infer U> ? ReadonlyArray<DeepPartial<U>>
+  : T extends {} ? { [K in keyof T]?: DeepPartial<T[K]> }
+  : Partial<T>;
 
 type KeysOfUnion<T> = T extends T ? keyof T : never;
-export type Exact<P, I extends P> = P extends Builtin
-  ? P
+export type Exact<P, I extends P> = P extends Builtin ? P
   : P & { [K in keyof P]: Exact<P[K], I[K]> } & { [K in Exclude<keyof I, KeysOfUnion<P>>]: never };
 
 function isSet(value: any): boolean {

@@ -5,7 +5,7 @@
 // source: livepeer/payments/v1/payer_daemon.proto
 
 /* eslint-disable */
-import { BinaryReader, BinaryWriter } from '@bufbuild/protobuf/wire';
+import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
 import {
   type CallOptions,
   type ChannelCredentials,
@@ -17,14 +17,16 @@ import {
   type Metadata,
   type ServiceError,
   type UntypedServiceImplementation,
-} from '@grpc/grpc-js';
-import { TicketParams } from './types.js';
+} from "@grpc/grpc-js";
+import { TicketParams } from "./types.js";
 
-export const protobufPackage = 'livepeer.payments.v1';
+export const protobufPackage = "livepeer.payments.v1";
 
 export interface StartSessionRequest {
   /** Ticket parameters as returned by the payee's `GetQuote`. */
-  ticketParams?: TicketParams | undefined;
+  ticketParams?:
+    | TicketParams
+    | undefined;
   /** Optional caller-chosen label used only in the daemon's audit log. */
   label: string;
 }
@@ -67,9 +69,11 @@ export interface PayerDaemonCloseSessionRequest {
   workId: string;
 }
 
-export interface PayerDaemonCloseSessionResponse {}
+export interface PayerDaemonCloseSessionResponse {
+}
 
-export interface GetDepositInfoRequest {}
+export interface GetDepositInfoRequest {
+}
 
 export interface GetDepositInfoResponse {
   /** Current on-chain deposit (wei, big-endian bytes). */
@@ -84,7 +88,7 @@ export interface GetDepositInfoResponse {
 }
 
 function createBaseStartSessionRequest(): StartSessionRequest {
-  return { ticketParams: undefined, label: '' };
+  return { ticketParams: undefined, label: "" };
 }
 
 export const StartSessionRequest: MessageFns<StartSessionRequest> = {
@@ -92,7 +96,7 @@ export const StartSessionRequest: MessageFns<StartSessionRequest> = {
     if (message.ticketParams !== undefined) {
       TicketParams.encode(message.ticketParams, writer.uint32(10).fork()).join();
     }
-    if (message.label !== '') {
+    if (message.label !== "") {
       writer.uint32(18).string(message.label);
     }
     return writer;
@@ -135,9 +139,9 @@ export const StartSessionRequest: MessageFns<StartSessionRequest> = {
       ticketParams: isSet(object.ticketParams)
         ? TicketParams.fromJSON(object.ticketParams)
         : isSet(object.ticket_params)
-          ? TicketParams.fromJSON(object.ticket_params)
-          : undefined,
-      label: isSet(object.label) ? globalThis.String(object.label) : '',
+        ? TicketParams.fromJSON(object.ticket_params)
+        : undefined,
+      label: isSet(object.label) ? globalThis.String(object.label) : "",
     };
   },
 
@@ -146,7 +150,7 @@ export const StartSessionRequest: MessageFns<StartSessionRequest> = {
     if (message.ticketParams !== undefined) {
       obj.ticketParams = TicketParams.toJSON(message.ticketParams);
     }
-    if (message.label !== '') {
+    if (message.label !== "") {
       obj.label = message.label;
     }
     return obj;
@@ -155,26 +159,23 @@ export const StartSessionRequest: MessageFns<StartSessionRequest> = {
   create<I extends Exact<DeepPartial<StartSessionRequest>, I>>(base?: I): StartSessionRequest {
     return StartSessionRequest.fromPartial(base ?? ({} as any));
   },
-  fromPartial<I extends Exact<DeepPartial<StartSessionRequest>, I>>(
-    object: I,
-  ): StartSessionRequest {
+  fromPartial<I extends Exact<DeepPartial<StartSessionRequest>, I>>(object: I): StartSessionRequest {
     const message = createBaseStartSessionRequest();
-    message.ticketParams =
-      object.ticketParams !== undefined && object.ticketParams !== null
-        ? TicketParams.fromPartial(object.ticketParams)
-        : undefined;
-    message.label = object.label ?? '';
+    message.ticketParams = (object.ticketParams !== undefined && object.ticketParams !== null)
+      ? TicketParams.fromPartial(object.ticketParams)
+      : undefined;
+    message.label = object.label ?? "";
     return message;
   },
 };
 
 function createBaseStartSessionResponse(): StartSessionResponse {
-  return { workId: '' };
+  return { workId: "" };
 }
 
 export const StartSessionResponse: MessageFns<StartSessionResponse> = {
   encode(message: StartSessionResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.workId !== '') {
+    if (message.workId !== "") {
       writer.uint32(10).string(message.workId);
     }
     return writer;
@@ -209,14 +210,14 @@ export const StartSessionResponse: MessageFns<StartSessionResponse> = {
       workId: isSet(object.workId)
         ? globalThis.String(object.workId)
         : isSet(object.work_id)
-          ? globalThis.String(object.work_id)
-          : '',
+        ? globalThis.String(object.work_id)
+        : "",
     };
   },
 
   toJSON(message: StartSessionResponse): unknown {
     const obj: any = {};
-    if (message.workId !== '') {
+    if (message.workId !== "") {
       obj.workId = message.workId;
     }
     return obj;
@@ -225,29 +226,25 @@ export const StartSessionResponse: MessageFns<StartSessionResponse> = {
   create<I extends Exact<DeepPartial<StartSessionResponse>, I>>(base?: I): StartSessionResponse {
     return StartSessionResponse.fromPartial(base ?? ({} as any));
   },
-  fromPartial<I extends Exact<DeepPartial<StartSessionResponse>, I>>(
-    object: I,
-  ): StartSessionResponse {
+  fromPartial<I extends Exact<DeepPartial<StartSessionResponse>, I>>(object: I): StartSessionResponse {
     const message = createBaseStartSessionResponse();
-    message.workId = object.workId ?? '';
+    message.workId = object.workId ?? "";
     return message;
   },
 };
 
 function createBaseCreatePaymentRequest(): CreatePaymentRequest {
-  return { workId: '', workUnits: 0n };
+  return { workId: "", workUnits: 0n };
 }
 
 export const CreatePaymentRequest: MessageFns<CreatePaymentRequest> = {
   encode(message: CreatePaymentRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.workId !== '') {
+    if (message.workId !== "") {
       writer.uint32(10).string(message.workId);
     }
     if (message.workUnits !== 0n) {
       if (BigInt.asIntN(64, message.workUnits) !== message.workUnits) {
-        throw new globalThis.Error(
-          'value provided for field message.workUnits of type int64 too large',
-        );
+        throw new globalThis.Error("value provided for field message.workUnits of type int64 too large");
       }
       writer.uint32(16).int64(message.workUnits);
     }
@@ -291,19 +288,19 @@ export const CreatePaymentRequest: MessageFns<CreatePaymentRequest> = {
       workId: isSet(object.workId)
         ? globalThis.String(object.workId)
         : isSet(object.work_id)
-          ? globalThis.String(object.work_id)
-          : '',
+        ? globalThis.String(object.work_id)
+        : "",
       workUnits: isSet(object.workUnits)
         ? BigInt(object.workUnits)
         : isSet(object.work_units)
-          ? BigInt(object.work_units)
-          : 0n,
+        ? BigInt(object.work_units)
+        : 0n,
     };
   },
 
   toJSON(message: CreatePaymentRequest): unknown {
     const obj: any = {};
-    if (message.workId !== '') {
+    if (message.workId !== "") {
       obj.workId = message.workId;
     }
     if (message.workUnits !== 0n) {
@@ -315,11 +312,9 @@ export const CreatePaymentRequest: MessageFns<CreatePaymentRequest> = {
   create<I extends Exact<DeepPartial<CreatePaymentRequest>, I>>(base?: I): CreatePaymentRequest {
     return CreatePaymentRequest.fromPartial(base ?? ({} as any));
   },
-  fromPartial<I extends Exact<DeepPartial<CreatePaymentRequest>, I>>(
-    object: I,
-  ): CreatePaymentRequest {
+  fromPartial<I extends Exact<DeepPartial<CreatePaymentRequest>, I>>(object: I): CreatePaymentRequest {
     const message = createBaseCreatePaymentRequest();
-    message.workId = object.workId ?? '';
+    message.workId = object.workId ?? "";
     message.workUnits = object.workUnits ?? 0n;
     return message;
   },
@@ -388,18 +383,18 @@ export const CreatePaymentResponse: MessageFns<CreatePaymentResponse> = {
       paymentBytes: isSet(object.paymentBytes)
         ? Buffer.from(bytesFromBase64(object.paymentBytes))
         : isSet(object.payment_bytes)
-          ? Buffer.from(bytesFromBase64(object.payment_bytes))
-          : Buffer.alloc(0),
+        ? Buffer.from(bytesFromBase64(object.payment_bytes))
+        : Buffer.alloc(0),
       ticketsCreated: isSet(object.ticketsCreated)
         ? globalThis.Number(object.ticketsCreated)
         : isSet(object.tickets_created)
-          ? globalThis.Number(object.tickets_created)
-          : 0,
+        ? globalThis.Number(object.tickets_created)
+        : 0,
       expectedValue: isSet(object.expectedValue)
         ? Buffer.from(bytesFromBase64(object.expectedValue))
         : isSet(object.expected_value)
-          ? Buffer.from(bytesFromBase64(object.expected_value))
-          : Buffer.alloc(0),
+        ? Buffer.from(bytesFromBase64(object.expected_value))
+        : Buffer.alloc(0),
     };
   },
 
@@ -420,9 +415,7 @@ export const CreatePaymentResponse: MessageFns<CreatePaymentResponse> = {
   create<I extends Exact<DeepPartial<CreatePaymentResponse>, I>>(base?: I): CreatePaymentResponse {
     return CreatePaymentResponse.fromPartial(base ?? ({} as any));
   },
-  fromPartial<I extends Exact<DeepPartial<CreatePaymentResponse>, I>>(
-    object: I,
-  ): CreatePaymentResponse {
+  fromPartial<I extends Exact<DeepPartial<CreatePaymentResponse>, I>>(object: I): CreatePaymentResponse {
     const message = createBaseCreatePaymentResponse();
     message.paymentBytes = object.paymentBytes ?? Buffer.alloc(0);
     message.ticketsCreated = object.ticketsCreated ?? 0;
@@ -432,15 +425,12 @@ export const CreatePaymentResponse: MessageFns<CreatePaymentResponse> = {
 };
 
 function createBasePayerDaemonCloseSessionRequest(): PayerDaemonCloseSessionRequest {
-  return { workId: '' };
+  return { workId: "" };
 }
 
 export const PayerDaemonCloseSessionRequest: MessageFns<PayerDaemonCloseSessionRequest> = {
-  encode(
-    message: PayerDaemonCloseSessionRequest,
-    writer: BinaryWriter = new BinaryWriter(),
-  ): BinaryWriter {
-    if (message.workId !== '') {
+  encode(message: PayerDaemonCloseSessionRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.workId !== "") {
       writer.uint32(10).string(message.workId);
     }
     return writer;
@@ -475,29 +465,27 @@ export const PayerDaemonCloseSessionRequest: MessageFns<PayerDaemonCloseSessionR
       workId: isSet(object.workId)
         ? globalThis.String(object.workId)
         : isSet(object.work_id)
-          ? globalThis.String(object.work_id)
-          : '',
+        ? globalThis.String(object.work_id)
+        : "",
     };
   },
 
   toJSON(message: PayerDaemonCloseSessionRequest): unknown {
     const obj: any = {};
-    if (message.workId !== '') {
+    if (message.workId !== "") {
       obj.workId = message.workId;
     }
     return obj;
   },
 
-  create<I extends Exact<DeepPartial<PayerDaemonCloseSessionRequest>, I>>(
-    base?: I,
-  ): PayerDaemonCloseSessionRequest {
+  create<I extends Exact<DeepPartial<PayerDaemonCloseSessionRequest>, I>>(base?: I): PayerDaemonCloseSessionRequest {
     return PayerDaemonCloseSessionRequest.fromPartial(base ?? ({} as any));
   },
   fromPartial<I extends Exact<DeepPartial<PayerDaemonCloseSessionRequest>, I>>(
     object: I,
   ): PayerDaemonCloseSessionRequest {
     const message = createBasePayerDaemonCloseSessionRequest();
-    message.workId = object.workId ?? '';
+    message.workId = object.workId ?? "";
     return message;
   },
 };
@@ -507,10 +495,7 @@ function createBasePayerDaemonCloseSessionResponse(): PayerDaemonCloseSessionRes
 }
 
 export const PayerDaemonCloseSessionResponse: MessageFns<PayerDaemonCloseSessionResponse> = {
-  encode(
-    _: PayerDaemonCloseSessionResponse,
-    writer: BinaryWriter = new BinaryWriter(),
-  ): BinaryWriter {
+  encode(_: PayerDaemonCloseSessionResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     return writer;
   },
 
@@ -539,14 +524,10 @@ export const PayerDaemonCloseSessionResponse: MessageFns<PayerDaemonCloseSession
     return obj;
   },
 
-  create<I extends Exact<DeepPartial<PayerDaemonCloseSessionResponse>, I>>(
-    base?: I,
-  ): PayerDaemonCloseSessionResponse {
+  create<I extends Exact<DeepPartial<PayerDaemonCloseSessionResponse>, I>>(base?: I): PayerDaemonCloseSessionResponse {
     return PayerDaemonCloseSessionResponse.fromPartial(base ?? ({} as any));
   },
-  fromPartial<I extends Exact<DeepPartial<PayerDaemonCloseSessionResponse>, I>>(
-    _: I,
-  ): PayerDaemonCloseSessionResponse {
+  fromPartial<I extends Exact<DeepPartial<PayerDaemonCloseSessionResponse>, I>>(_: I): PayerDaemonCloseSessionResponse {
     const message = createBasePayerDaemonCloseSessionResponse();
     return message;
   },
@@ -609,9 +590,7 @@ export const GetDepositInfoResponse: MessageFns<GetDepositInfoResponse> = {
     }
     if (message.withdrawRound !== 0n) {
       if (BigInt.asIntN(64, message.withdrawRound) !== message.withdrawRound) {
-        throw new globalThis.Error(
-          'value provided for field message.withdrawRound of type int64 too large',
-        );
+        throw new globalThis.Error("value provided for field message.withdrawRound of type int64 too large");
       }
       writer.uint32(24).int64(message.withdrawRound);
     }
@@ -660,17 +639,13 @@ export const GetDepositInfoResponse: MessageFns<GetDepositInfoResponse> = {
 
   fromJSON(object: any): GetDepositInfoResponse {
     return {
-      deposit: isSet(object.deposit)
-        ? Buffer.from(bytesFromBase64(object.deposit))
-        : Buffer.alloc(0),
-      reserve: isSet(object.reserve)
-        ? Buffer.from(bytesFromBase64(object.reserve))
-        : Buffer.alloc(0),
+      deposit: isSet(object.deposit) ? Buffer.from(bytesFromBase64(object.deposit)) : Buffer.alloc(0),
+      reserve: isSet(object.reserve) ? Buffer.from(bytesFromBase64(object.reserve)) : Buffer.alloc(0),
       withdrawRound: isSet(object.withdrawRound)
         ? BigInt(object.withdrawRound)
         : isSet(object.withdraw_round)
-          ? BigInt(object.withdraw_round)
-          : 0n,
+        ? BigInt(object.withdraw_round)
+        : 0n,
     };
   },
 
@@ -688,14 +663,10 @@ export const GetDepositInfoResponse: MessageFns<GetDepositInfoResponse> = {
     return obj;
   },
 
-  create<I extends Exact<DeepPartial<GetDepositInfoResponse>, I>>(
-    base?: I,
-  ): GetDepositInfoResponse {
+  create<I extends Exact<DeepPartial<GetDepositInfoResponse>, I>>(base?: I): GetDepositInfoResponse {
     return GetDepositInfoResponse.fromPartial(base ?? ({} as any));
   },
-  fromPartial<I extends Exact<DeepPartial<GetDepositInfoResponse>, I>>(
-    object: I,
-  ): GetDepositInfoResponse {
+  fromPartial<I extends Exact<DeepPartial<GetDepositInfoResponse>, I>>(object: I): GetDepositInfoResponse {
     const message = createBaseGetDepositInfoResponse();
     message.deposit = object.deposit ?? Buffer.alloc(0);
     message.reserve = object.reserve ?? Buffer.alloc(0);
@@ -713,16 +684,14 @@ export const PayerDaemonService = {
    * this payer and a specific payee (not one per HTTP call — amortize).
    */
   startSession: {
-    path: '/livepeer.payments.v1.PayerDaemon/StartSession' as const,
+    path: "/livepeer.payments.v1.PayerDaemon/StartSession" as const,
     requestStream: false as const,
     responseStream: false as const,
-    requestSerialize: (value: StartSessionRequest): Buffer =>
-      Buffer.from(StartSessionRequest.encode(value).finish()),
+    requestSerialize: (value: StartSessionRequest): Buffer => Buffer.from(StartSessionRequest.encode(value).finish()),
     requestDeserialize: (value: Buffer): StartSessionRequest => StartSessionRequest.decode(value),
     responseSerialize: (value: StartSessionResponse): Buffer =>
       Buffer.from(StartSessionResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): StartSessionResponse =>
-      StartSessionResponse.decode(value),
+    responseDeserialize: (value: Buffer): StartSessionResponse => StartSessionResponse.decode(value),
   },
   /**
    * Create a payment blob (a `Payment` with one or more tickets) covering a
@@ -730,26 +699,23 @@ export const PayerDaemonService = {
    * bytes are the exact wire-format `Payment` to hand to the payee.
    */
   createPayment: {
-    path: '/livepeer.payments.v1.PayerDaemon/CreatePayment' as const,
+    path: "/livepeer.payments.v1.PayerDaemon/CreatePayment" as const,
     requestStream: false as const,
     responseStream: false as const,
-    requestSerialize: (value: CreatePaymentRequest): Buffer =>
-      Buffer.from(CreatePaymentRequest.encode(value).finish()),
+    requestSerialize: (value: CreatePaymentRequest): Buffer => Buffer.from(CreatePaymentRequest.encode(value).finish()),
     requestDeserialize: (value: Buffer): CreatePaymentRequest => CreatePaymentRequest.decode(value),
     responseSerialize: (value: CreatePaymentResponse): Buffer =>
       Buffer.from(CreatePaymentResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): CreatePaymentResponse =>
-      CreatePaymentResponse.decode(value),
+    responseDeserialize: (value: Buffer): CreatePaymentResponse => CreatePaymentResponse.decode(value),
   },
   /** Close a session and free its nonce state. */
   closeSession: {
-    path: '/livepeer.payments.v1.PayerDaemon/CloseSession' as const,
+    path: "/livepeer.payments.v1.PayerDaemon/CloseSession" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: PayerDaemonCloseSessionRequest): Buffer =>
       Buffer.from(PayerDaemonCloseSessionRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): PayerDaemonCloseSessionRequest =>
-      PayerDaemonCloseSessionRequest.decode(value),
+    requestDeserialize: (value: Buffer): PayerDaemonCloseSessionRequest => PayerDaemonCloseSessionRequest.decode(value),
     responseSerialize: (value: PayerDaemonCloseSessionResponse): Buffer =>
       Buffer.from(PayerDaemonCloseSessionResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): PayerDaemonCloseSessionResponse =>
@@ -760,17 +726,15 @@ export const PayerDaemonService = {
    * the daemon does not fund escrow.
    */
   getDepositInfo: {
-    path: '/livepeer.payments.v1.PayerDaemon/GetDepositInfo' as const,
+    path: "/livepeer.payments.v1.PayerDaemon/GetDepositInfo" as const,
     requestStream: false as const,
     responseStream: false as const,
     requestSerialize: (value: GetDepositInfoRequest): Buffer =>
       Buffer.from(GetDepositInfoRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): GetDepositInfoRequest =>
-      GetDepositInfoRequest.decode(value),
+    requestDeserialize: (value: Buffer): GetDepositInfoRequest => GetDepositInfoRequest.decode(value),
     responseSerialize: (value: GetDepositInfoResponse): Buffer =>
       Buffer.from(GetDepositInfoResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GetDepositInfoResponse =>
-      GetDepositInfoResponse.decode(value),
+    responseDeserialize: (value: Buffer): GetDepositInfoResponse => GetDepositInfoResponse.decode(value),
   },
 } as const;
 
@@ -878,40 +842,31 @@ export interface PayerDaemonClient extends Client {
 
 export const PayerDaemonClient = makeGenericClientConstructor(
   PayerDaemonService,
-  'livepeer.payments.v1.PayerDaemon',
+  "livepeer.payments.v1.PayerDaemon",
 ) as unknown as {
-  new (
-    address: string,
-    credentials: ChannelCredentials,
-    options?: Partial<ClientOptions>,
-  ): PayerDaemonClient;
+  new (address: string, credentials: ChannelCredentials, options?: Partial<ClientOptions>): PayerDaemonClient;
   service: typeof PayerDaemonService;
   serviceName: string;
 };
 
 function bytesFromBase64(b64: string): Uint8Array {
-  return Uint8Array.from(globalThis.Buffer.from(b64, 'base64'));
+  return Uint8Array.from(globalThis.Buffer.from(b64, "base64"));
 }
 
 function base64FromBytes(arr: Uint8Array): string {
-  return globalThis.Buffer.from(arr).toString('base64');
+  return globalThis.Buffer.from(arr).toString("base64");
 }
 
 type Builtin = Date | Function | Uint8Array | string | number | boolean | bigint | undefined;
 
-export type DeepPartial<T> = T extends Builtin
-  ? T
-  : T extends globalThis.Array<infer U>
-    ? globalThis.Array<DeepPartial<U>>
-    : T extends ReadonlyArray<infer U>
-      ? ReadonlyArray<DeepPartial<U>>
-      : T extends {}
-        ? { [K in keyof T]?: DeepPartial<T[K]> }
-        : Partial<T>;
+export type DeepPartial<T> = T extends Builtin ? T
+  : T extends globalThis.Array<infer U> ? globalThis.Array<DeepPartial<U>>
+  : T extends ReadonlyArray<infer U> ? ReadonlyArray<DeepPartial<U>>
+  : T extends {} ? { [K in keyof T]?: DeepPartial<T[K]> }
+  : Partial<T>;
 
 type KeysOfUnion<T> = T extends T ? keyof T : never;
-export type Exact<P, I extends P> = P extends Builtin
-  ? P
+export type Exact<P, I extends P> = P extends Builtin ? P
   : P & { [K in keyof P]: Exact<P[K], I[K]> } & { [K in Exclude<keyof I, KeysOfUnion<P>>]: never };
 
 function isSet(value: any): boolean {

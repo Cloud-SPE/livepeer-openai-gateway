@@ -2,9 +2,10 @@
 id: 0007
 slug: chat-completions-nonstreaming
 title: /v1/chat/completions — non-streaming
-status: active
-owner: unassigned
+status: completed
+owner: claude
 opened: 2026-04-24
+closed: 2026-04-24
 ---
 
 ## Goal
