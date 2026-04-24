@@ -26,10 +26,10 @@ Non-negotiables that shape every decision in this repo.
 - [architecture.md](architecture.md) — `accepted` — layer stack, domains, providers
 - [tiers.md](tiers.md) — `accepted` — Free vs Prepaid semantics, reserve/commit/refund, upgrade flow
 - [pricing-model.md](pricing-model.md) — `accepted` — rate card tiers, margin calculation, adjustment policy
+- [node-lifecycle.md](node-lifecycle.md) — `accepted` — NodeBook config, QuoteRefresher, health/circuit-break, reload semantics
 - `streaming-semantics.md` — _planned_ — pre-payment reservation, stream cancellation, partial success
 - `token-audit.md` — _planned_ — LocalTokenizer phases (observe → audit → enforce)
 - `retry-policy.md` — _planned_ — retry table and rationale
-- `node-lifecycle.md` — _planned_ — NodeBook config, QuoteRefresher, health/circuit-break
 - `escrow-operations.md` — _planned_ — reserve sizing, top-up, alerts
 - `reconciliation.md` — _planned_ — three-ledger relationship (customer USD, daemon EV, on-chain)
 

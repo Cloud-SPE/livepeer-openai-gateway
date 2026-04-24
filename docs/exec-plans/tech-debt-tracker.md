@@ -52,6 +52,42 @@ Append-only list of known debt. Strike through when resolved; include the PR or 
 - Remediation: before public launch, source the pepper from a secret manager (AWS Secrets Manager / GCP Secret Manager / HashiCorp Vault) and zero the env var after read. Document the rotation runbook alongside the config.
 - Resolved: _(open)_
 
+### Open node discovery via Livepeer subgraph — deferred
+
+- Opened: 2026-04-24
+- Severity: low
+- Area: service/nodes
+- Description: 0005-nodebook ships the config-driven allowlist path. Open discovery (querying the Livepeer subgraph / on-chain registry to find available WorkerNodes) is deferred to v2 per `docs/references/openai-bridge-architecture.md` §11.
+- Remediation: new exec-plan when we're ready to move off allowlist-only.
+- Resolved: _(open)_
+
+### `node_health_event` retention policy — not implemented
+
+- Opened: 2026-04-24
+- Severity: low
+- Area: service/nodes / ops
+- Description: Only state-transition events are logged (one event per incident), so volume is low. At current soft-launch scale there is no retention sweep; events accumulate indefinitely. At dashboard scale or after a year of production, a retention policy (e.g., >90d rolls off) will be warranted.
+- Remediation: add a monthly cron job (or postgres partitioning) once the event count per day is measurable.
+- Resolved: _(open)_
+
+### nodes.yaml auto-reload via file-watch — deferred
+
+- Opened: 2026-04-24
+- Severity: low
+- Area: service/nodes / ops
+- Description: v1 requires SIGHUP for config reload. File-watching (`fs.watch` or `chokidar`) would give hands-off reloads but adds edge cases (editor save-rename semantics, partial writes). Kept deliberately simple for v1.
+- Remediation: pick up with the ops-tools/deployment plan; decide whether watch belongs in the bridge or in an ops sidecar.
+- Resolved: _(open)_
+
+### Routing policy (weighted random vs least-in-flight) — 0007 decision
+
+- Opened: 2026-04-24
+- Severity: low
+- Area: service/routing (future)
+- Description: `NodeBook.findNodesFor` returns admission-set sorted by weight. The actual selection policy (weighted-random, round-robin, least-in-flight) is the Router's concern in 0007-chat-completions-nonstreaming. Noted so the decision isn't buried.
+- Remediation: lock in 0007 with a decisions-log entry; likely weighted-random initially.
+- Resolved: _(open)_
+
 ### `src/types/` shape lint not enforced
 
 - Opened: 2026-04-24

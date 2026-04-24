@@ -16,6 +16,18 @@ export const usageStatus = pgEnum('usage_status', ['success', 'partial', 'failed
 export const topupStatus = pgEnum('topup_status', ['pending', 'succeeded', 'failed', 'refunded']);
 export const reservationState = pgEnum('reservation_state', ['open', 'committed', 'refunded']);
 export const reservationKind = pgEnum('reservation_kind', ['prepaid', 'free']);
+export const nodeHealthStatus = pgEnum('node_health_status', [
+  'healthy',
+  'degraded',
+  'circuit_broken',
+]);
+export const nodeHealthEventKind = pgEnum('node_health_event_kind', [
+  'circuit_opened',
+  'circuit_half_opened',
+  'circuit_closed',
+  'config_reloaded',
+  'eth_address_changed_rejected',
+]);
 
 export const customers = pgTable('customer', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -120,16 +132,44 @@ export const topups = pgTable(
   }),
 );
 
+export const nodeHealth = pgTable('node_health', {
+  nodeId: text('node_id').primaryKey(),
+  status: nodeHealthStatus('status').notNull(),
+  consecutiveFailures: integer('consecutive_failures').notNull().default(0),
+  lastSuccessAt: timestamp('last_success_at', { withTimezone: true }),
+  lastFailureAt: timestamp('last_failure_at', { withTimezone: true }),
+  circuitOpenedAt: timestamp('circuit_opened_at', { withTimezone: true }),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const nodeHealthEvents = pgTable(
+  'node_health_event',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    nodeId: text('node_id').notNull(),
+    kind: nodeHealthEventKind('kind').notNull(),
+    detail: text('detail'),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byNodeTime: index('node_health_event_node_time_idx').on(t.nodeId, t.occurredAt),
+  }),
+);
+
 export const schema = {
   customers,
   apiKeys,
   reservations,
   usageRecords,
   topups,
+  nodeHealth,
+  nodeHealthEvents,
   customerTier,
   customerStatus,
   usageStatus,
   topupStatus,
   reservationState,
   reservationKind,
+  nodeHealthStatus,
+  nodeHealthEventKind,
 };
