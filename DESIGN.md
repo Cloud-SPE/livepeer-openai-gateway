@@ -36,38 +36,38 @@ Dependency rule: each layer may import only layers **below** it, plus `providers
 
 ## Domains
 
-| Domain | Purpose |
-|---|---|
-| `service/auth` | API-key validation, customer lookup, tier resolution |
-| `service/billing` | CustomerLedger reads/writes, top-up flow, refund |
-| `service/routing` | Router: pick a WorkerNode, handle failover and retry |
-| `service/nodes` | NodeBook loader + QuoteRefresher + health checks |
-| `service/pricing` | Rate card lookup, margin calculation, drift metric |
-| `service/tokenAudit` | LocalTokenizer orchestration (v1 metric-only) |
-| `service/rateLimit` | Redis sliding window, per-customer limits |
-| `service/payments` | PayerDaemon wrapper: CreatePayment, WorkID, session lifecycle |
+| Domain               | Purpose                                                       |
+| -------------------- | ------------------------------------------------------------- |
+| `service/auth`       | API-key validation, customer lookup, tier resolution          |
+| `service/billing`    | CustomerLedger reads/writes, top-up flow, refund              |
+| `service/routing`    | Router: pick a WorkerNode, handle failover and retry          |
+| `service/nodes`      | NodeBook loader + QuoteRefresher + health checks              |
+| `service/pricing`    | Rate card lookup, margin calculation, drift metric            |
+| `service/tokenAudit` | LocalTokenizer orchestration (v1 metric-only)                 |
+| `service/rateLimit`  | Redis sliding window, per-customer limits                     |
+| `service/payments`   | PayerDaemon wrapper: CreatePayment, WorkID, session lifecycle |
 
 ## Runtime surfaces
 
-| Path | Purpose |
-|---|---|
+| Path                                   | Purpose                                                             |
+| -------------------------------------- | ------------------------------------------------------------------- |
 | `src/runtime/http/chat/completions.ts` | OpenAI-compatible `/v1/chat/completions`, streaming + non-streaming |
-| `src/runtime/signup/` | Signup + email verification + API key issuance |
-| `src/runtime/stripeWebhook/` | Stripe webhook handlers (top-up success, disputes) |
-| `src/runtime/admin/` | Ops endpoints (health, NodeBook status, customer lookup) |
+| `src/runtime/signup/`                  | Signup + email verification + API key issuance                      |
+| `src/runtime/stripeWebhook/`           | Stripe webhook handlers (top-up success, disputes)                  |
+| `src/runtime/admin/`                   | Ops endpoints (health, NodeBook status, customer lookup)            |
 
 ## Providers
 
-| Provider | Interface role | Default implementation |
-|---|---|---|
-| `PayerDaemonClient` | gRPC client to local Livepeer payment daemon | `@grpc/grpc-js` stub |
-| `StripeClient` | Top-ups, webhooks, disputes, refunds | `stripe` SDK |
-| `RedisClient` | Rate-limit state | `ioredis` |
-| `Database` | Postgres pool | `pg` |
-| `Tokenizer` | Model-aware token counting | `tiktoken` for OpenAI-compat; per-family plugins |
-| `ChainInfo` | Read-only Eth for admin views | `viem` |
-| `MetricsSink` | Counter / Gauge / Histogram | No-op default; Prometheus later |
-| `Logger` | Structured log | `pino` |
+| Provider            | Interface role                               | Default implementation                           |
+| ------------------- | -------------------------------------------- | ------------------------------------------------ |
+| `PayerDaemonClient` | gRPC client to local Livepeer payment daemon | `@grpc/grpc-js` stub                             |
+| `StripeClient`      | Top-ups, webhooks, disputes, refunds         | `stripe` SDK                                     |
+| `RedisClient`       | Rate-limit state                             | `ioredis`                                        |
+| `Database`          | Postgres pool                                | `pg`                                             |
+| `Tokenizer`         | Model-aware token counting                   | `tiktoken` for OpenAI-compat; per-family plugins |
+| `ChainInfo`         | Read-only Eth for admin views                | `viem`                                           |
+| `MetricsSink`       | Counter / Gauge / Histogram                  | No-op default; Prometheus later                  |
+| `Logger`            | Structured log                               | `pino`                                           |
 
 ## What this does NOT do
 

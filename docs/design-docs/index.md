@@ -6,12 +6,12 @@ A catalog of every design-doc in this repo, with verification status and core be
 
 Each doc carries a `status:` field in its frontmatter. Values:
 
-| Status | Meaning |
-|---|---|
-| `proposed` | Written, not yet reviewed or implemented |
-| `accepted` | Reviewed, intended direction, not yet fully implemented |
-| `verified` | Implemented and matches code; covered by tests |
-| `deprecated` | Superseded or abandoned; kept for history |
+| Status       | Meaning                                                 |
+| ------------ | ------------------------------------------------------- |
+| `proposed`   | Written, not yet reviewed or implemented                |
+| `accepted`   | Reviewed, intended direction, not yet fully implemented |
+| `verified`   | Implemented and matches code; covered by tests          |
+| `deprecated` | Superseded or abandoned; kept for history               |
 
 A doc-gardening lint in CI flags docs with stale status, broken cross-links, or no recent touch after linked code last changed.
 

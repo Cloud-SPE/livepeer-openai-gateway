@@ -16,6 +16,7 @@ A developer using the OpenAI SDK (Python, TypeScript, whatever). They care about
 - **Reasonable free tier.** Enough to test a real integration, not a toy demo.
 
 They do **not** care about:
+
 - Ethereum, tickets, escrow, wei, or any blockchain concept.
 - Which specific WorkerNode served their request.
 - How billing translates from USD to ETH.
@@ -40,9 +41,9 @@ Us. We run the bridge. We care about:
 
 ## Tiers (v1)
 
-| Tier | Who | Pricing | Limits |
-|---|---|---|---|
-| **Free** | Anyone with a verified email | $0 | 100K tokens/month, 1 model, 1024 max_tokens/request, 1 concurrent, 3 req/min |
+| Tier        | Who                                 | Pricing       | Limits                                                                            |
+| ----------- | ----------------------------------- | ------------- | --------------------------------------------------------------------------------- |
+| **Free**    | Anyone with a verified email        | $0            | 100K tokens/month, 1 model, 1024 max_tokens/request, 1 concurrent, 3 req/min      |
 | **Prepaid** | Customers who top up USD via Stripe | Per rate card | Full model access, per-model max_tokens, higher concurrency/rate, hard-stop at $0 |
 
 Enterprise / postpaid tier deferred to v2+.

@@ -1,10 +1,14 @@
 // ESLint 9 flat config.
-// Full rule set — including the custom layer-check plugin — is wired in exec-plan 0001-repo-scaffold.
+// Full custom rule set (layer-check, no-cross-cutting-import, zod-at-boundary,
+// no-secrets-in-logs, file-size) is tracked in docs/exec-plans/tech-debt-tracker.md.
 
-export default [
+import tseslint from 'typescript-eslint';
+
+export default tseslint.config(
   {
-    ignores: ['dist/**', 'node_modules/**', '**/*.d.ts'],
+    ignores: ['dist/**', 'node_modules/**', 'coverage/**', '**/*.d.ts'],
   },
+  ...tseslint.configs.recommended,
   {
     files: ['src/**/*.ts'],
     languageOptions: {
@@ -19,4 +23,4 @@ export default [
       // TODO: @livepeer-bridge/no-secrets-in-logs — rejects apiKey/privateKey/passphrase in log args.
     },
   },
-];
+);

@@ -2,9 +2,10 @@
 id: 0001
 slug: repo-scaffold
 title: Stand up initial repository scaffolding
-status: active
+status: completed
 owner: human
 opened: 2026-04-24
+closed: 2026-04-24
 ---
 
 ## Goal
@@ -32,21 +33,28 @@ Lay down the full scaffolding for `openai-livepeer-bridge` before any implementa
 - [x] `tsconfig.json` with strict mode
 - [x] `eslint.config.js` (flat config) with placeholder custom rules
 - [x] GitHub Actions workflows (lint, test, typecheck)
-- [ ] First commit: "Initial scaffolding"
-- [ ] Follow-up exec-plans opened as stubs: 0002 through 0012
-- [ ] Custom ESLint plugin for layer-check (stub in place; full impl in separate exec-plan)
-- [ ] Test runner wired (Vitest leaning; confirm in 0002)
+- [x] First commit: "Initial scaffolding"
+- [x] Follow-up exec-plans opened as stubs: 0002 through 0012
+- [x] Custom ESLint plugin for layer-check (stub in place; full impl tracked in tech-debt)
+- [x] Test runner wired (Vitest chosen in 0002; `npm test` runs with coverage gate ≥ 75%)
 
 ## Decisions log
 
 ### 2026-04-24 — TypeScript/Node over Go for the bridge
+
 Reason: OpenAI SDK is TS-first, Stripe SDK is first-class in TS, SSE proxying is idiomatic in Node, `tiktoken` has well-maintained JS bindings. Go would be defensible for consistency with the payment daemon; chose TS for ecosystem.
 
 ### 2026-04-24 — ESLint 9 flat config over legacy `.eslintrc`
+
 Reason: flat config is the current standard; the custom plugin we'll author is simpler to wire in.
 
 ### 2026-04-24 — `docs/references/` plural
+
 Already plural in this repo; harmonized the library repo to match.
+
+### 2026-04-24 — Test coverage floor at 75%, enforced by `npm test`
+
+Reason: Operator preference established at scaffold time. All four v8 metrics (lines/branches/functions/statements) must clear 75%. Threshold is a ratchet — raise only. Recorded as core belief #11 and AGENTS.md invariant #7.
 
 ## Open questions
 

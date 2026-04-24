@@ -32,33 +32,40 @@ IDs are monotonic, zero-padded to 4 digits.
 id: 0001
 slug: repo-scaffold
 title: Stand up repo scaffolding
-status: active          # active | blocked | completed | abandoned
+status: active # active | blocked | completed | abandoned
 owner: <agent-or-human>
 opened: YYYY-MM-DD
 ---
 
 ## Goal
+
 One paragraph. What are we trying to achieve and why.
 
 ## Non-goals
+
 What is explicitly NOT in this plan.
 
 ## Approach
+
 Bullet list of steps. Check off as completed.
 
 - [ ] Step 1
 - [ ] Step 2
 
 ## Decisions log
+
 Append-only. Each decision: date + one-paragraph rationale.
 
 ### YYYY-MM-DD — <short title>
+
 Reason: …
 
 ## Open questions
+
 Things we need to answer before or during implementation.
 
 ## Artifacts produced
+
 Links to PRs, generated docs, schemas created.
 ```
 

@@ -48,40 +48,40 @@ Enforced by `lint/layer-check` running as an npm script in CI (and via a custom 
 
 ## Domain inventory
 
-| Path | Purpose |
-|---|---|
-| `src/service/auth/` | API-key validation, customer record lookup, tier resolution |
-| `src/service/billing/` | CustomerLedger reads/writes, top-up orchestration, refund on failure |
-| `src/service/routing/` | Router: node selection, failover/retry, request dispatch |
-| `src/service/nodes/` | NodeBook loader (config + Postgres state), QuoteRefresher background loop, health checks |
-| `src/service/pricing/` | Rate card lookup, margin calculation, drift metrics |
-| `src/service/tokenAudit/` | LocalTokenizer coordination — v1 emits drift metrics only |
-| `src/service/rateLimit/` | Redis sliding window + concurrent-request semaphore |
-| `src/service/payments/` | Wraps PayerDaemon gRPC calls (StartSession, CreatePayment, CloseSession) |
+| Path                      | Purpose                                                                                  |
+| ------------------------- | ---------------------------------------------------------------------------------------- |
+| `src/service/auth/`       | API-key validation, customer record lookup, tier resolution                              |
+| `src/service/billing/`    | CustomerLedger reads/writes, top-up orchestration, refund on failure                     |
+| `src/service/routing/`    | Router: node selection, failover/retry, request dispatch                                 |
+| `src/service/nodes/`      | NodeBook loader (config + Postgres state), QuoteRefresher background loop, health checks |
+| `src/service/pricing/`    | Rate card lookup, margin calculation, drift metrics                                      |
+| `src/service/tokenAudit/` | LocalTokenizer coordination — v1 emits drift metrics only                                |
+| `src/service/rateLimit/`  | Redis sliding window + concurrent-request semaphore                                      |
+| `src/service/payments/`   | Wraps PayerDaemon gRPC calls (StartSession, CreatePayment, CloseSession)                 |
 
 ## Runtime surfaces
 
-| Path | Purpose |
-|---|---|
+| Path                                   | Purpose                                                             |
+| -------------------------------------- | ------------------------------------------------------------------- |
 | `src/runtime/http/chat/completions.ts` | OpenAI-compatible `/v1/chat/completions`, streaming + non-streaming |
-| `src/runtime/signup/` | Email-verified signup, API key issuance |
-| `src/runtime/stripeWebhook/` | Handle Stripe events (`payment_intent.succeeded`, disputes) |
-| `src/runtime/admin/` | Health, NodeBook inspection, customer ops (manual refund, etc.) |
+| `src/runtime/signup/`                  | Email-verified signup, API key issuance                             |
+| `src/runtime/stripeWebhook/`           | Handle Stripe events (`payment_intent.succeeded`, disputes)         |
+| `src/runtime/admin/`                   | Health, NodeBook inspection, customer ops (manual refund, etc.)     |
 
 ## Providers inventory
 
 All cross-cutting concerns enter through `src/providers/`. One interface per concern; one or more implementations.
 
-| Provider | Interface role | Default implementation |
-|---|---|---|
-| `PayerDaemonClient` | gRPC client to local payment daemon (`livepeer.payments.v1`) | `@grpc/grpc-js` with generated stubs |
-| `StripeClient` | Top-ups, webhooks, disputes | `stripe` SDK |
-| `RedisClient` | Rate-limit state, ephemeral counters | `ioredis` |
-| `Database` | Postgres connection pool | `pg` |
-| `Tokenizer` | Model-aware token counting (prompt + completion) | `tiktoken` default; per-model-family plugins |
-| `ChainInfo` | Read-only Eth for admin views (escrow status) | `viem` |
-| `MetricsSink` | Counter / Gauge / Histogram | No-op default; Prometheus later |
-| `Logger` | Structured log | `pino` |
+| Provider            | Interface role                                               | Default implementation                       |
+| ------------------- | ------------------------------------------------------------ | -------------------------------------------- |
+| `PayerDaemonClient` | gRPC client to local payment daemon (`livepeer.payments.v1`) | `@grpc/grpc-js` with generated stubs         |
+| `StripeClient`      | Top-ups, webhooks, disputes                                  | `stripe` SDK                                 |
+| `RedisClient`       | Rate-limit state, ephemeral counters                         | `ioredis`                                    |
+| `Database`          | Postgres connection pool                                     | `pg`                                         |
+| `Tokenizer`         | Model-aware token counting (prompt + completion)             | `tiktoken` default; per-model-family plugins |
+| `ChainInfo`         | Read-only Eth for admin views (escrow status)                | `viem`                                       |
+| `MetricsSink`       | Counter / Gauge / Histogram                                  | No-op default; Prometheus later              |
+| `Logger`            | Structured log                                               | `pino`                                       |
 
 Providers are wired in `src/runtime/` entry points and injected into `service/` and `repo/`.
 

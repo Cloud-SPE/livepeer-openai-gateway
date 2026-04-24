@@ -10,13 +10,23 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
-    "test": "echo 'test runner wired in exec-plan 0001' && exit 0",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "lint": "eslint . && node ./lint/layer-check/index.mjs",
     "fmt": "prettier --write .",
     "fmt:check": "prettier --check .",
     "doc-lint": "echo 'doc-gardener wired in exec-plan 0001' && exit 0"
   },
   "devDependencies": {
-    "typescript": "^5.4.0"
+    "@types/node": "^20.19.39",
+    "@vitest/coverage-v8": "^1.6.1",
+    "eslint": "^9.39.4",
+    "prettier": "^3.8.3",
+    "typescript": "^5.4.0",
+    "typescript-eslint": "^8.59.0",
+    "vitest": "^1.6.1"
+  },
+  "dependencies": {
+    "zod": "^3.25.76"
   }
 }

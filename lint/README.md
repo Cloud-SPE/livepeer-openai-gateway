@@ -19,6 +19,7 @@ types → config → repo → service → runtime → ui
 plus `providers/` accessible from all.
 
 Detects violations like:
+
 - `service/routing` importing `@grpc/grpc-js` directly (must go through `providers/payerDaemon`)
 - `service/billing` importing `service/routing` (no cross-domain imports inside service)
 - `repo/*` importing `service/*` (repo is below service)

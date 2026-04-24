@@ -60,13 +60,13 @@ Lints enforce this in CI. See [docs/design-docs/architecture.md](docs/design-doc
 
 ## Where to look for X
 
-| Question | Go to |
-|---|---|
-| What does the bridge do? | [DESIGN.md](DESIGN.md) |
-| Why is X done this way? | `docs/design-docs/` |
-| What's in flight? | `docs/exec-plans/active/` |
-| Customer tiers / pricing / quotas? | `docs/design-docs/tiers.md` (planned) |
-| How does streaming work? | `docs/design-docs/streaming-semantics.md` (planned) |
-| Retry policy? | `docs/design-docs/retry-policy.md` (planned) |
-| How do tokens get audited? | `docs/design-docs/token-audit.md` (planned) |
-| Known debt? | `docs/exec-plans/tech-debt-tracker.md` |
+| Question                           | Go to                                               |
+| ---------------------------------- | --------------------------------------------------- |
+| What does the bridge do?           | [DESIGN.md](DESIGN.md)                              |
+| Why is X done this way?            | `docs/design-docs/`                                 |
+| What's in flight?                  | `docs/exec-plans/active/`                           |
+| Customer tiers / pricing / quotas? | `docs/design-docs/tiers.md` (planned)               |
+| How does streaming work?           | `docs/design-docs/streaming-semantics.md` (planned) |
+| Retry policy?                      | `docs/design-docs/retry-policy.md` (planned)        |
+| How do tokens get audited?         | `docs/design-docs/token-audit.md` (planned)         |
+| Known debt?                        | `docs/exec-plans/tech-debt-tracker.md`              |

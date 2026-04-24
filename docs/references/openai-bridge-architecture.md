@@ -55,14 +55,14 @@ The customer never sees crypto. The operator bridges two economies: USD inbound 
 
 Three distinct actors. Internal component names below are meant to be used consistently in code and documentation.
 
-| Name | Role | In payment-daemon vocabulary |
-|---|---|---|
-| **Customer** | The developer making OpenAI SDK calls using an API key issued by APIService. Pays in USD. Never sees tickets, ETH, or nodes. | Not part of the payment-daemon protocol. |
-| **APIService** | The OpenAI-compatible HTTP service. Owns customer accounts, routes requests to nodes, bridges USD↔ETH. | Specialized **PayerApp**. |
-| **WorkerNode** | A remote node serving OpenAI-compatible endpoints for one or more models. Gets paid per token. | Specialized **PayeeApp**. |
-| **PayerDaemon** | Local payment daemon next to APIService. | (unchanged from abstraction doc) |
-| **PayeeDaemon** | Local payment daemon next to each WorkerNode. | (unchanged from abstraction doc) |
-| **TicketBroker** | Ethereum contract. | (unchanged) |
+| Name             | Role                                                                                                                         | In payment-daemon vocabulary             |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| **Customer**     | The developer making OpenAI SDK calls using an API key issued by APIService. Pays in USD. Never sees tickets, ETH, or nodes. | Not part of the payment-daemon protocol. |
+| **APIService**   | The OpenAI-compatible HTTP service. Owns customer accounts, routes requests to nodes, bridges USD↔ETH.                       | Specialized **PayerApp**.                |
+| **WorkerNode**   | A remote node serving OpenAI-compatible endpoints for one or more models. Gets paid per token.                               | Specialized **PayeeApp**.                |
+| **PayerDaemon**  | Local payment daemon next to APIService.                                                                                     | (unchanged from abstraction doc)         |
+| **PayeeDaemon**  | Local payment daemon next to each WorkerNode.                                                                                | (unchanged from abstraction doc)         |
+| **TicketBroker** | Ethereum contract.                                                                                                           | (unchanged)                              |
 
 **Key point**: `APIService` is not a new kind of component — it is a `PayerApp` with SaaS plumbing on top. Same for `WorkerNode` as a `PayeeApp`. The daemon architecture doesn't change.
 
@@ -74,18 +74,18 @@ The product name visible to customers is the operator's choice; "APIService" is 
 
 These are logical components. Whether they're one process, several microservices, or a monolith is an implementation choice.
 
-| Component | Responsibility |
-|---|---|
-| **AuthLayer** | Validates API keys, maps to customer account, applies tier-based rate limits, enforces quota (for free-tier customers). |
-| **CustomerLedger** | Authoritative source of customer balance (USD for prepaid) or quota state (tokens for free). Per-call debits are atomic. Refunds on failure. |
-| **NodeBook** | In-memory registry of known WorkerNodes: URL, ETH address, supported models, current quote (`TicketParams` + `PriceInfo`), health status, enabled flag. Config-driven in v1. |
-| **Router** | Per-request: picks a WorkerNode from NodeBook based on requested model, tier, node health, price, and capacity. Handles failover/retry on node errors. |
-| **PayerClient** | Thin local gRPC client stub that calls PayerDaemon. Lives inside APIService; not a separate process. |
-| **QuoteRefresher** | Background job polling each WorkerNode's `GetQuote` every N seconds. Caches results in NodeBook. |
-| **EscrowMonitor** | Reads APIService's deposit/reserve state on TicketBroker. Alerts when deposit runs low. Optionally triggers auto-top-up from fiat reserves in v1.5+. |
-| **LocalTokenizer** | (v1 in metric mode, v2 in enforcement mode.) Tokenizes requests and responses locally and cross-checks against WorkerNode's reported token counts. Emits drift metrics. |
-| **SignupService** | Creates new customer accounts. Email verification. API key issuance. Tier assignment. |
-| **BillingService** | Stripe integration for prepaid top-ups. Webhook handling. Ledger credits on successful payment. |
+| Component          | Responsibility                                                                                                                                                               |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **AuthLayer**      | Validates API keys, maps to customer account, applies tier-based rate limits, enforces quota (for free-tier customers).                                                      |
+| **CustomerLedger** | Authoritative source of customer balance (USD for prepaid) or quota state (tokens for free). Per-call debits are atomic. Refunds on failure.                                 |
+| **NodeBook**       | In-memory registry of known WorkerNodes: URL, ETH address, supported models, current quote (`TicketParams` + `PriceInfo`), health status, enabled flag. Config-driven in v1. |
+| **Router**         | Per-request: picks a WorkerNode from NodeBook based on requested model, tier, node health, price, and capacity. Handles failover/retry on node errors.                       |
+| **PayerClient**    | Thin local gRPC client stub that calls PayerDaemon. Lives inside APIService; not a separate process.                                                                         |
+| **QuoteRefresher** | Background job polling each WorkerNode's `GetQuote` every N seconds. Caches results in NodeBook.                                                                             |
+| **EscrowMonitor**  | Reads APIService's deposit/reserve state on TicketBroker. Alerts when deposit runs low. Optionally triggers auto-top-up from fiat reserves in v1.5+.                         |
+| **LocalTokenizer** | (v1 in metric mode, v2 in enforcement mode.) Tokenizes requests and responses locally and cross-checks against WorkerNode's reported token counts. Emits drift metrics.      |
+| **SignupService**  | Creates new customer accounts. Email verification. API key issuance. Tier assignment.                                                                                        |
+| **BillingService** | Stripe integration for prepaid top-ups. Webhook handling. Ledger credits on successful payment.                                                                              |
 
 ---
 
@@ -97,27 +97,30 @@ Two tiers at launch: **Free** and **Prepaid**. A future **Enterprise/Postpaid** 
 
 Purpose: let developers try the service without a credit card. Marketing + onboarding cost.
 
-| Limit | Default (configurable) |
-|---|---|
-| Token allowance | 100,000 tokens per calendar month |
-| Rate limit | 3 requests/minute, 200 requests/day |
-| Concurrent requests | 1 |
-| Available models | 1–2 cheapest models only (restricted via NodeBook) |
-| Max tokens per request | 1024 |
-| Streaming | Allowed |
-| Seamless upgrade | Adding USD flips account to prepaid tier mid-cycle; quota becomes irrelevant |
+| Limit                  | Default (configurable)                                                       |
+| ---------------------- | ---------------------------------------------------------------------------- |
+| Token allowance        | 100,000 tokens per calendar month                                            |
+| Rate limit             | 3 requests/minute, 200 requests/day                                          |
+| Concurrent requests    | 1                                                                            |
+| Available models       | 1–2 cheapest models only (restricted via NodeBook)                           |
+| Max tokens per request | 1024                                                                         |
+| Streaming              | Allowed                                                                      |
+| Seamless upgrade       | Adding USD flips account to prepaid tier mid-cycle; quota becomes irrelevant |
 
 Abuse prevention (v1):
+
 - Email verification required at signup.
 - IP-based rate limit on signup endpoint (prevent multi-accounting).
 - One free tier per email address.
 
 Abuse prevention (v1.5+):
+
 - Phone/SMS verification.
 - Device fingerprinting.
 - Behavioral heuristics (repeated zero-balance hits, suspicious prompt patterns).
 
 Economic framing for the operator:
+
 - Free tier is a direct cost. Budget = `expected_free_users × 100K_tokens × node_cost_per_token`.
 - Route free traffic to the cheapest WorkerNodes only.
 - Consider a "free tier reserved pool" — 1–2 nodes dedicated to free traffic so paid customers never contend with free load.
@@ -126,21 +129,22 @@ Economic framing for the operator:
 
 Purpose: the main revenue model. Customers buy USD credit; credit is consumed per call; hard-stop at zero.
 
-| Feature | Behavior |
-|---|---|
-| Top-up | Stripe (or similar) checkout → CustomerLedger credit. One-time only in v1; auto-reload in v1.5. |
-| Balance check | Request-path middleware. Rejects if `balance < estimatedMaxCost` before routing. |
-| Debit | Atomic, under row lock. Prevents concurrent-request double-spend. |
-| Rate limit | Higher than free tier; configurable per customer. |
-| Available models | Full rate card. |
-| Max tokens per request | Full (`max_tokens` capped only by model's context window). |
-| Low-balance notification | Email/webhook at ~20% remaining. |
-| Refund on failure | If node errors or stream aborts early, credit back unused portion. |
-| Account closure / refund | Manual ops process in v1. |
+| Feature                  | Behavior                                                                                        |
+| ------------------------ | ----------------------------------------------------------------------------------------------- |
+| Top-up                   | Stripe (or similar) checkout → CustomerLedger credit. One-time only in v1; auto-reload in v1.5. |
+| Balance check            | Request-path middleware. Rejects if `balance < estimatedMaxCost` before routing.                |
+| Debit                    | Atomic, under row lock. Prevents concurrent-request double-spend.                               |
+| Rate limit               | Higher than free tier; configurable per customer.                                               |
+| Available models         | Full rate card.                                                                                 |
+| Max tokens per request   | Full (`max_tokens` capped only by model's context window).                                      |
+| Low-balance notification | Email/webhook at ~20% remaining.                                                                |
+| Refund on failure        | If node errors or stream aborts early, credit back unused portion.                              |
+| Account closure / refund | Manual ops process in v1.                                                                       |
 
 ### 4.3 Enterprise / Postpaid (deferred, v2+)
 
 Not in v1. When added, will require:
+
 - Real credit policy and risk limits.
 - Invoice generation, dunning, collections.
 - SLA commitments.
@@ -271,12 +275,14 @@ Customer       APIService                                  WorkerNode
 ```
 
 **Streaming pre-payment policy (v1, locked):**
+
 - At request start, reserve `max_tokens × customer_rate` from CustomerLedger (atomic). Visible to customer as `balance − reserved`.
 - At stream end, debit `actual_tokens × customer_rate` and refund `reserved − actual` in the same transaction.
 - On failure: refund the full reservation and debit only tokens actually delivered.
 - Unused pre-payment on the PayeeDaemon side stays credited to the session and amortizes over future calls — not wasted.
 
 **Streaming gotchas** (must be tested explicitly):
+
 - `stream_options.include_usage` injection/stripping to avoid changing the customer's response shape.
 - Customer disconnect mid-stream → cancel upstream, debit only delivered tokens, refund rest.
 - Network failure APIService↔WorkerNode mid-stream → debit for tokens actually delivered to customer, surface partial-success error.
@@ -310,15 +316,15 @@ Applies to both non-streaming and streaming:
 
 ### 5.7 Retry policy (v1, locked)
 
-| Error class | Retry? | Max retries | Notes |
-|---|---|---|---|
-| Network error / timeout contacting node | Yes | 2 on different nodes | Short backoff (100ms, 500ms) |
-| 5xx from node (502/503/504) | Yes | 2 on different nodes | Same |
-| 5xx inference failure (OOM, model crash) | Yes | 1 on different node | |
-| 4xx from node (validation, auth) | No | — | Surface to customer as-is |
-| Payment insufficient (node rejects payment) | Yes | 1 | Force-refresh that node's quote, retry once |
-| **Streaming, after any token delivered** | **No** | — | Debit delivered tokens, surface partial-success error |
-| `ErrTicketParamsExpired` from PayeeDaemon | Yes | 1 | Force-refresh that node's quote, retry once |
+| Error class                                 | Retry? | Max retries          | Notes                                                 |
+| ------------------------------------------- | ------ | -------------------- | ----------------------------------------------------- |
+| Network error / timeout contacting node     | Yes    | 2 on different nodes | Short backoff (100ms, 500ms)                          |
+| 5xx from node (502/503/504)                 | Yes    | 2 on different nodes | Same                                                  |
+| 5xx inference failure (OOM, model crash)    | Yes    | 1 on different node  |                                                       |
+| 4xx from node (validation, auth)            | No     | —                    | Surface to customer as-is                             |
+| Payment insufficient (node rejects payment) | Yes    | 1                    | Force-refresh that node's quote, retry once           |
+| **Streaming, after any token delivered**    | **No** | —                    | Debit delivered tokens, surface partial-success error |
+| `ErrTicketParamsExpired` from PayeeDaemon   | Yes    | 1                    | Force-refresh that node's quote, retry once           |
 
 Retries hop to a **different** WorkerNode by default. Hammering the same node rarely helps and makes failure cascades worse.
 
@@ -347,15 +353,16 @@ The operator's margin is the delta between these, measured in USD-equivalent ter
 
 Models are grouped into **3 price tiers**, not priced per-model. Each model in NodeBook is mapped to one tier. Cleaner ops; rate card doesn't change when models are added.
 
-| Tier | Input $/1M | Output $/1M | Target model class | Competitive reference (late-2025/early-2026) |
-|---|---|---|---|---|
-| **Starter** | $0.20 | $0.60 | small (7B–13B class) | GPT-4o-mini: $0.15/$0.60; Groq Llama 70B: $0.59/$0.79 |
-| **Standard** | $1.00 | $3.00 | medium (~70B) | Claude Haiku: $0.80/$4.00 |
-| **Pro** | $3.00 | $10.00 | large (frontier) | Claude Sonnet: $3.00/$15.00; GPT-4o: $2.50/$10.00 |
+| Tier         | Input $/1M | Output $/1M | Target model class   | Competitive reference (late-2025/early-2026)          |
+| ------------ | ---------- | ----------- | -------------------- | ----------------------------------------------------- |
+| **Starter**  | $0.20      | $0.60       | small (7B–13B class) | GPT-4o-mini: $0.15/$0.60; Groq Llama 70B: $0.59/$0.79 |
+| **Standard** | $1.00      | $3.00       | medium (~70B)        | Claude Haiku: $0.80/$4.00                             |
+| **Pro**      | $3.00      | $10.00      | large (frontier)     | Claude Sonnet: $3.00/$15.00; GPT-4o: $2.50/$10.00     |
 
 Free tier consumes against the Starter tier's pricing (quota-capped).
 
 Customer-facing pricing must cover:
+
 - Worst-case node cost across all allowlisted nodes serving this tier.
 - ETH/USD volatility buffer (assume ETH can move 30–40% against you in a month).
 - Operator margin.
@@ -397,6 +404,7 @@ Three sets of books must approximately reconcile:
 3. **TicketBroker on-chain** — sum of ETH actually moved via redeemed winning tickets.
 
 Expected relationships:
+
 - `sum(CustomerLedger debits)` should equal `(sum(node payments in ETH) × ETH_USD_rate) × (1 + margin)`, within ETH price drift.
 - `sum(TicketBroker redemptions)` should approximately equal `sum(PayerDaemon EV committed)`, within the expected statistical variance of probabilistic payments.
 
@@ -423,10 +431,10 @@ Build a reconciliation dashboard showing all three. Investigate drift above conf
 
 ### 7.3 Progression
 
-| Phase | Action |
-|---|---|
-| **v1 (observe)** | Metrics only. Per-node drift dashboard. |
-| **v1.5 (audit)** | Alert operator on sustained drift > 5%. |
+| Phase            | Action                                                                                                            |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **v1 (observe)** | Metrics only. Per-node drift dashboard.                                                                           |
+| **v1.5 (audit)** | Alert operator on sustained drift > 5%.                                                                           |
 | **v2 (enforce)** | Reject node's count, use local count as source of truth for billing. Blacklist nodes with persistent large drift. |
 
 Enforcement in v2 requires choosing whether to debit the WorkerNode's `PayeeDaemon` based on local or reported count. If enforcement is strict, APIService can simply call `DebitBalance` with the local count (nodes see less revenue than they reported). This needs a renegotiation of trust with the node operators — get their buy-in before turning it on.
@@ -440,6 +448,7 @@ Enforcement in v2 requires choosing whether to debit the WorkerNode's `PayeeDaem
 APIService's TicketBroker deposit is shared across all WorkerNodes it pays. `pendingAmount` from each active session reduces effective float.
 
 Rule of thumb:
+
 ```
 min_deposit = sum_over_nodes (max_concurrent_tickets × faceValue) × safety_factor(2x)
 ```
@@ -459,16 +468,19 @@ Top-up trigger:                   Immediate — from fiat revenue when alert fir
 ```
 
 **Design rationale:**
+
 - 90% in TicketBroker keeps the math simple: one wallet to watch.
 - $100 hot wallet is enough to pay gas for occasional on-chain actions (deposit top-ups, unlocks, emergencies).
 - No cold-storage split at this tier — at $1K, splitting custody adds human-error risk for no meaningful security gain. Reconsider cold split when reserve passes ~$20K.
 
 **First 30 days — what to watch:**
+
 - `daily_wei_burn_actual` — if this exceeds ~$50/day, you're at 20-day runway; alarm.
 - `redemption_rate` = (winning tickets redeemed) / (winning tickets identified). Should be near 1.0; if not, on-chain issue.
 - `eth_price_drawdown_7d` — if ETH drops 15%+, effective USD-denominated reserve shrinks; reconsider customer pricing.
 
 **Scaling triggers:**
+
 - Burn exceeds 10% of reserve per week sustained → raise reserve to $10K.
 - Peak-hour concurrent requests cause `CreatePayment` rejections → raise deposit percentage.
 - General availability launch → minimum $10K reserve, reconsider cold/hot split.
@@ -489,18 +501,18 @@ Each WorkerNode's operator owns their own `PayeeDaemon` key. Not APIService's co
 
 ## 9. Risks and mitigations
 
-| Risk | Mitigation |
-|---|---|
-| **Node over-reports tokens** | LocalTokenizer metrics in v1; enforcement in v2. Per-node drift dashboard. Blacklist policy. |
-| **Node goes offline mid-request** | Router retry on different node. Customer sees partial-success if some tokens delivered. |
-| **All nodes for a model unavailable** | 503 to customer. No debit. Alert on pattern. |
-| **ETH/USD price crash** | Customer pricing has volatility buffer. Reprice customer rate card if sustained drop. |
-| **Escrow depletion** | EscrowMonitor alerts. Operator-funded top-up. v1.5 auto-top-up. |
-| **Free tier abuse (multi-accounting)** | Email verification in v1, phone in v1.5, rate limits on signup, behavioral heuristics in v2. |
-| **Prepaid customer balance exploit** (race condition) | Atomic debit with row lock. Reserve `est_max_cost` at request start, reconcile with `actual_cost` at end. |
-| **Regulatory / compliance** | Operator holds customer USD (money transmitter concerns in some jurisdictions) AND ETH (VASP concerns). Consult counsel before launch. |
-| **PayerDaemon unreachable (sidecar outage)** | Fail-closed: customer calls return 503. EscrowMonitor and PayerClient both health-check. |
-| **Customer sends `max_tokens=999999`** | Cap `max_tokens` per tier in AuthLayer before it reaches Router. Free tier: 1024. Prepaid: capped by model's context window. |
+| Risk                                                  | Mitigation                                                                                                                             |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **Node over-reports tokens**                          | LocalTokenizer metrics in v1; enforcement in v2. Per-node drift dashboard. Blacklist policy.                                           |
+| **Node goes offline mid-request**                     | Router retry on different node. Customer sees partial-success if some tokens delivered.                                                |
+| **All nodes for a model unavailable**                 | 503 to customer. No debit. Alert on pattern.                                                                                           |
+| **ETH/USD price crash**                               | Customer pricing has volatility buffer. Reprice customer rate card if sustained drop.                                                  |
+| **Escrow depletion**                                  | EscrowMonitor alerts. Operator-funded top-up. v1.5 auto-top-up.                                                                        |
+| **Free tier abuse (multi-accounting)**                | Email verification in v1, phone in v1.5, rate limits on signup, behavioral heuristics in v2.                                           |
+| **Prepaid customer balance exploit** (race condition) | Atomic debit with row lock. Reserve `est_max_cost` at request start, reconcile with `actual_cost` at end.                              |
+| **Regulatory / compliance**                           | Operator holds customer USD (money transmitter concerns in some jurisdictions) AND ETH (VASP concerns). Consult counsel before launch. |
+| **PayerDaemon unreachable (sidecar outage)**          | Fail-closed: customer calls return 503. EscrowMonitor and PayerClient both health-check.                                               |
+| **Customer sends `max_tokens=999999`**                | Cap `max_tokens` per tier in AuthLayer before it reaches Router. Free tier: 1024. Prepaid: capped by model's context window.           |
 
 ---
 
@@ -508,27 +520,27 @@ Each WorkerNode's operator owns their own `PayeeDaemon` key. Not APIService's co
 
 Locked decisions (this document + the abstraction doc):
 
-| Area | v1 choice |
-|---|---|
-| Endpoints | `/chat/completions` only (streaming + non-streaming) |
-| Customer tiers | Free + Prepaid |
-| Free-tier quota | 100,000 tokens/month (placeholder; monitor and adjust) |
-| Free-tier models | Exactly one model (cheapest in the Starter tier) |
-| Billing model | Prepaid USD balance via Stripe, quota-based free tier |
-| Stripe setup | USD only; no automated refunds (manual ops, 30-day window); Stripe Tax enabled; single "API Credits" product with custom amount (detailed config later) |
-| Signup | Email verification only |
-| Node discovery | Config-driven allowlist; manual onboarding via config file + SIGHUP reload; 3–5 nodes at launch (mix: 1–2 for free tier, 2–3 for prepaid) |
-| Models & pricing | 3 customer-facing tiers (Starter / Standard / Pro) — see §6.2. Monitor and adjust. |
-| Token audit | LocalTokenizer as metric-only (§7) |
-| Streaming pre-payment | Pre-charge `max_tokens` worst case, refund unused at stream end (§5.4) |
-| Retry policy | Up to 2 retries on different nodes for 5xx / network errors; no retry after any token delivered in a stream (§5.7) |
-| Rate limiting | Redis-backed sliding window, per-customer, fail-open on Redis outage (§5.8) |
-| Escrow management | $1K USD-equivalent ETH reserve, 90% in TicketBroker, 10% in operator hot wallet; manual top-up; EscrowMonitor alerts (§8.2) |
-| Failure policy | Fail-closed (daemon down or balance zero → 503) |
-| Persistence (PayerDaemon) | BoltDB/SQLite (per abstraction doc §13) |
-| Wire protocol | `livepeer.payments.v1` — wire-compatible with existing `net.Payment` |
-| Key custody | PayerDaemon holds ETH signing key (default custody model) |
-| App-side vocabulary | `APIService` (PayerApp specialization), `WorkerNode` (PayeeApp specialization) |
+| Area                      | v1 choice                                                                                                                                               |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Endpoints                 | `/chat/completions` only (streaming + non-streaming)                                                                                                    |
+| Customer tiers            | Free + Prepaid                                                                                                                                          |
+| Free-tier quota           | 100,000 tokens/month (placeholder; monitor and adjust)                                                                                                  |
+| Free-tier models          | Exactly one model (cheapest in the Starter tier)                                                                                                        |
+| Billing model             | Prepaid USD balance via Stripe, quota-based free tier                                                                                                   |
+| Stripe setup              | USD only; no automated refunds (manual ops, 30-day window); Stripe Tax enabled; single "API Credits" product with custom amount (detailed config later) |
+| Signup                    | Email verification only                                                                                                                                 |
+| Node discovery            | Config-driven allowlist; manual onboarding via config file + SIGHUP reload; 3–5 nodes at launch (mix: 1–2 for free tier, 2–3 for prepaid)               |
+| Models & pricing          | 3 customer-facing tiers (Starter / Standard / Pro) — see §6.2. Monitor and adjust.                                                                      |
+| Token audit               | LocalTokenizer as metric-only (§7)                                                                                                                      |
+| Streaming pre-payment     | Pre-charge `max_tokens` worst case, refund unused at stream end (§5.4)                                                                                  |
+| Retry policy              | Up to 2 retries on different nodes for 5xx / network errors; no retry after any token delivered in a stream (§5.7)                                      |
+| Rate limiting             | Redis-backed sliding window, per-customer, fail-open on Redis outage (§5.8)                                                                             |
+| Escrow management         | $1K USD-equivalent ETH reserve, 90% in TicketBroker, 10% in operator hot wallet; manual top-up; EscrowMonitor alerts (§8.2)                             |
+| Failure policy            | Fail-closed (daemon down or balance zero → 503)                                                                                                         |
+| Persistence (PayerDaemon) | BoltDB/SQLite (per abstraction doc §13)                                                                                                                 |
+| Wire protocol             | `livepeer.payments.v1` — wire-compatible with existing `net.Payment`                                                                                    |
+| Key custody               | PayerDaemon holds ETH signing key (default custody model)                                                                                               |
+| App-side vocabulary       | `APIService` (PayerApp specialization), `WorkerNode` (PayeeApp specialization)                                                                          |
 
 ---
 
@@ -639,23 +651,23 @@ Loaded from config file at startup; refreshed in memory by QuoteRefresher.
 ```yaml
 # nodes.yaml — config-driven in v1
 nodes:
-  - id: "node-a"
-    url: "https://node-a.example.com"
-    eth_address: "0x1234..."
+  - id: 'node-a'
+    url: 'https://node-a.example.com'
+    eth_address: '0x1234...'
     supported_models:
-      - "model-small"
-      - "model-medium"
+      - 'model-small'
+      - 'model-medium'
     enabled: true
-    tier_allowed: ["free", "prepaid"]  # free-tier allowed?
-    weight: 100                         # for weighted random routing
+    tier_allowed: ['free', 'prepaid'] # free-tier allowed?
+    weight: 100 # for weighted random routing
 
-  - id: "node-b"
-    url: "https://node-b.example.com"
-    eth_address: "0x5678..."
+  - id: 'node-b'
+    url: 'https://node-b.example.com'
+    eth_address: '0x5678...'
     supported_models:
-      - "model-medium"
+      - 'model-medium'
     enabled: true
-    tier_allowed: ["prepaid"]          # paid-only node
+    tier_allowed: ['prepaid'] # paid-only node
     weight: 100
 ```
 
