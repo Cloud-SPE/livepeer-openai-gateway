@@ -18,9 +18,11 @@
     "fmt:check": "prettier --check .",
     "doc-lint": "echo 'doc-gardener wired in exec-plan 0001' && exit 0",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "node --experimental-strip-types ./scripts/migrate.ts"
+    "db:migrate": "node --experimental-strip-types ./scripts/migrate.ts",
+    "proto:gen": "rm -rf src/providers/payerDaemon/gen && mkdir -p src/providers/payerDaemon/gen && buf generate"
   },
   "devDependencies": {
+    "@bufbuild/buf": "^1.68.4",
     "@testcontainers/postgresql": "^10.28.0",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.19.39",
@@ -30,12 +32,14 @@
     "eslint": "^9.39.4",
     "prettier": "^3.8.3",
     "testcontainers": "^10.28.0",
+    "ts-proto": "^2.11.6",
     "typescript": "^5.4.0",
     "typescript-eslint": "^8.59.0",
     "vitest": "^1.6.1"
   },
   "dependencies": {
     "@fastify/sensible": "^5.6.0",
+    "@grpc/grpc-js": "^1.14.3",
     "drizzle-orm": "^0.33.0",
     "fastify": "^4.29.1",
     "js-yaml": "^4.1.1",
