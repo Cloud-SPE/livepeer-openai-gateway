@@ -1,0 +1,131 @@
+import { randomUUID } from 'node:crypto';
+import type { RedisClient } from '../../providers/redis.js';
+import type { RateLimitConfig, RateLimitPolicy } from '../../config/rateLimit.js';
+import { resolvePolicy } from '../../config/rateLimit.js';
+import { RateLimitExceededError } from './errors.js';
+import { acquireSlot, releaseSlot } from './concurrency.js';
+import { checkWindow, type WindowResult } from './slidingWindow.js';
+
+export * from './errors.js';
+
+export interface RateLimitHeaders {
+  limitRequests: number;
+  remainingRequests: number;
+  resetSeconds: number;
+}
+
+export interface RateLimitCheckResult {
+  policy: RateLimitPolicy;
+  headers: RateLimitHeaders;
+  concurrencyKey: string;
+  failedOpen: boolean;
+}
+
+export interface RateLimiter {
+  check(customerId: string, policyName: string): Promise<RateLimitCheckResult>;
+  release(concurrencyKey: string, failedOpen: boolean): Promise<void>;
+}
+
+export interface RateLimiterDeps {
+  redis: RedisClient;
+  config: RateLimitConfig;
+  now?: () => number;
+}
+
+export function createRateLimiter(deps: RateLimiterDeps): RateLimiter {
+  const now = deps.now ?? (() => Date.now());
+
+  return {
+    async check(customerId, policyName) {
+      const policy = resolvePolicy(deps.config, policyName);
+      const concurrencyKey = `rl:${customerId}:concurrent`;
+      const minuteKey = `rl:${customerId}:min`;
+      const dayKey = `rl:${customerId}:day`;
+      const member = `${now()}:${randomUUID()}`;
+
+      let minute: WindowResult;
+      let day: WindowResult;
+      try {
+        [minute, day] = await Promise.all([
+          checkWindow(deps.redis, minuteKey, policy.perMinute, 60_000, now(), member),
+          checkWindow(deps.redis, dayKey, policy.perDay, 86_400_000, now(), member),
+        ]);
+      } catch {
+        return {
+          policy,
+          headers: {
+            limitRequests: policy.perMinute,
+            remainingRequests: policy.perMinute,
+            resetSeconds: 60,
+          },
+          concurrencyKey,
+          failedOpen: true,
+        };
+      }
+
+      if (!minute.allowed) {
+        throw new RateLimitExceededError(
+          customerId,
+          policy.name,
+          'per_minute',
+          policy.perMinute,
+          minute.resetSeconds,
+        );
+      }
+      if (!day.allowed) {
+        throw new RateLimitExceededError(
+          customerId,
+          policy.name,
+          'per_day',
+          policy.perDay,
+          day.resetSeconds,
+        );
+      }
+
+      try {
+        const slot = await acquireSlot(deps.redis, concurrencyKey, policy.concurrent);
+        if (!slot.acquired) {
+          throw new RateLimitExceededError(
+            customerId,
+            policy.name,
+            'concurrent',
+            policy.concurrent,
+            1,
+          );
+        }
+      } catch (err) {
+        if (err instanceof RateLimitExceededError) throw err;
+        return {
+          policy,
+          headers: {
+            limitRequests: policy.perMinute,
+            remainingRequests: Math.max(0, minute.limit - minute.count),
+            resetSeconds: minute.resetSeconds,
+          },
+          concurrencyKey,
+          failedOpen: true,
+        };
+      }
+
+      return {
+        policy,
+        headers: {
+          limitRequests: policy.perMinute,
+          remainingRequests: Math.max(0, minute.limit - minute.count),
+          resetSeconds: minute.resetSeconds,
+        },
+        concurrencyKey,
+        failedOpen: false,
+      };
+    },
+
+    async release(concurrencyKey, failedOpen) {
+      if (failedOpen) return;
+      try {
+        await releaseSlot(deps.redis, concurrencyKey);
+      } catch {
+        // Best-effort; TTL safety net catches orphaned slots.
+      }
+    },
+  };
+}

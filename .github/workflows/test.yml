@@ -21,12 +21,23 @@ jobs:
           --health-interval=5s
           --health-timeout=5s
           --health-retries=20
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
     env:
       TEST_PG_HOST: localhost
       TEST_PG_PORT: '5432'
       TEST_PG_USER: postgres
       TEST_PG_PASSWORD: postgres
       TEST_PG_DATABASE: postgres
+      TEST_REDIS_HOST: localhost
+      TEST_REDIS_PORT: '6379'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

@@ -16,6 +16,7 @@ import {
   QuoteExpiredError,
 } from '../../service/payments/errors.js';
 import { ModelNotFoundError, RoutingError } from '../../service/routing/errors.js';
+import { RateLimitExceededError } from '../../service/rateLimit/errors.js';
 import type { ErrorEnvelope } from '../../types/error.js';
 
 export interface HttpError {
@@ -77,6 +78,14 @@ export function toHttpError(err: unknown): HttpError {
       status: 503,
       envelope: {
         error: { code: 'service_unavailable', type: err.name, message: err.message },
+      },
+    };
+  }
+  if (err instanceof RateLimitExceededError) {
+    return {
+      status: 429,
+      envelope: {
+        error: { code: 'rate_limit_exceeded', type: err.name, message: err.message },
       },
     };
   }

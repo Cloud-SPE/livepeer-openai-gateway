@@ -17,7 +17,9 @@ import {
   type QuotaReserveResult,
 } from '../../../service/billing/reservations.js';
 import type { AuthService } from '../../../service/auth/authenticate.js';
+import type { RateLimiter } from '../../../service/rateLimit/index.js';
 import { authPreHandler } from '../middleware/auth.js';
+import { rateLimitPreHandler } from '../middleware/rateLimit.js';
 import { pickNode } from '../../../service/routing/router.js';
 import {
   computeActualCost,
@@ -34,6 +36,7 @@ export interface ChatCompletionsDeps {
   nodeClient: NodeClient;
   paymentsService: PaymentsService;
   authService: AuthService;
+  rateLimiter?: RateLimiter;
   pricing: PricingConfig;
   nodeCallTimeoutMs?: number;
   rng?: () => number;
@@ -43,7 +46,10 @@ export function registerChatCompletionsRoute(
   app: FastifyInstance,
   deps: ChatCompletionsDeps,
 ): void {
-  app.post('/v1/chat/completions', { preHandler: authPreHandler(deps.authService) }, (req, reply) =>
+  const preHandler = deps.rateLimiter
+    ? [authPreHandler(deps.authService), rateLimitPreHandler(deps.rateLimiter)]
+    : authPreHandler(deps.authService);
+  app.post('/v1/chat/completions', { preHandler }, (req, reply) =>
     handleChatCompletion(req, reply, deps),
   );
 }
