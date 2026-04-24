@@ -19,6 +19,10 @@ export function registerStripeWebhookRoute(app: FastifyInstance, deps: WebhookRo
   );
 }
 
+// Stripe webhook validation is not Zod — it's stripe.webhooks.constructEvent
+// verifying the signature against the raw body. Same invariant as Zod-at-
+// boundary (wire data parsed before use), different mechanism.
+// eslint-disable-next-line livepeer-bridge/zod-at-boundary
 async function handleWebhook(
   req: FastifyRequestWithRawBody,
   reply: FastifyReply,

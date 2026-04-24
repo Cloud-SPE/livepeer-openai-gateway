@@ -3,7 +3,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { Db } from '../../../repo/db.js';
 import * as usageRecordsRepo from '../../../repo/usageRecords.js';
 import type { PricingConfig } from '../../../config/pricing.js';
-import type { NodeClient, RawSseEvent } from '../../../providers/nodeClient.js';
+import type { NodeClient } from '../../../providers/nodeClient.js';
 import type { PaymentsService } from '../../../service/payments/createPayment.js';
 import type { NodeBook } from '../../../service/nodes/nodebook.js';
 import {
@@ -44,6 +44,9 @@ export interface StreamingDeps {
   rng?: () => number;
 }
 
+// `body` is already Zod-parsed by the caller (completions.ts's
+// ChatCompletionRequestSchema.safeParse). No parse needed here.
+// eslint-disable-next-line livepeer-bridge/zod-at-boundary
 export async function handleStreamingChatCompletion(
   req: FastifyRequest,
   reply: FastifyReply,

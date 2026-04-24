@@ -14,7 +14,7 @@
     "test": "vitest run --coverage",
     "test:watch": "vitest",
     "test:nocov": "vitest run",
-    "lint": "eslint . && node ./lint/layer-check/index.mjs",
+    "lint": "eslint .",
     "fmt": "prettier --write .",
     "fmt:check": "prettier --check .",
     "doc-lint": "echo 'doc-gardener wired in exec-plan 0001' && exit 0",

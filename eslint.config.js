@@ -1,26 +1,39 @@
 // ESLint 9 flat config.
-// Full custom rule set (layer-check, no-cross-cutting-import, zod-at-boundary,
-// no-secrets-in-logs, file-size) is tracked in docs/exec-plans/tech-debt-tracker.md.
 
 import tseslint from 'typescript-eslint';
+import livepeerBridge from './lint/eslint-plugin-livepeer-bridge/index.js';
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'node_modules/**', 'coverage/**', '**/*.d.ts'],
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      'coverage/**',
+      '**/*.d.ts',
+      'src/providers/payerDaemon/gen/**',
+    ],
   },
   ...tseslint.configs.recommended,
   {
     files: ['src/**/*.ts'],
+    plugins: {
+      'livepeer-bridge': livepeerBridge,
+    },
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',
+      parserOptions: {
+        projectService: false,
+      },
     },
     rules: {
       'no-console': ['error', { allow: ['warn', 'error'] }],
-      // TODO: @livepeer-bridge/layer-check — enforces the src/ dependency rule.
-      // TODO: @livepeer-bridge/no-cross-cutting-import — enforces providers boundary.
-      // TODO: @livepeer-bridge/zod-at-boundary — enforces Zod parse at HTTP/gRPC edges.
-      // TODO: @livepeer-bridge/no-secrets-in-logs — rejects apiKey/privateKey/passphrase in log args.
+      'livepeer-bridge/layer-check': 'error',
+      'livepeer-bridge/no-cross-cutting-import': 'error',
+      'livepeer-bridge/zod-at-boundary': 'error',
+      'livepeer-bridge/no-secrets-in-logs': 'error',
+      'livepeer-bridge/file-size': 'warn',
+      'livepeer-bridge/types-shape': 'error',
     },
   },
 );

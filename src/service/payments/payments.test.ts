@@ -27,8 +27,8 @@ function mkFakeDaemon(): PayerDaemonClient & {
   createdPayments: number;
   closed: string[];
 } {
-  let startedSessions = 0;
-  let createdPayments = 0;
+  const startedSessions = 0;
+  const createdPayments = 0;
   const closed: string[] = [];
   const daemon: PayerDaemonClient & {
     startedSessions: number;

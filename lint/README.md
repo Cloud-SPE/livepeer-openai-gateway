@@ -1,63 +1,55 @@
 # lint/
 
-Custom lints that enforce architectural invariants beyond what ESLint's built-in rules handle. Each lint:
+Custom lints that enforce architectural invariants beyond what ESLint's built-in rules handle. All six rules are implemented and wired into `npm run lint` via a local ESLint plugin — see `eslint-plugin-livepeer-bridge/`.
 
-- Lives in its own subdirectory.
-- Is a Node.js script invokable via `node ./lint/<name>/index.mjs` (or as an ESLint custom rule plugin).
-- Produces structured errors with **remediation instructions** embedded in the message.
+## Rules shipped (0014)
 
-## Planned lints
+| Rule                                      | Severity | Purpose                                                                                                                                                                                                              |
+| ----------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `livepeer-bridge/layer-check`             | error    | Enforce `types → config → repo → service → runtime → ui` + `providers/` reachable from all. Also rejects cross-domain imports inside `service/`.                                                                     |
+| `livepeer-bridge/no-cross-cutting-import` | error    | `stripe`, `ioredis`, `pg`, `@grpc/*`, `fastify`, `tiktoken`, `viem`, `pino` may only be value-imported under `src/providers/`. Type-only imports and test files are exempt.                                          |
+| `livepeer-bridge/zod-at-boundary`         | error    | `async function handle*` in `src/runtime/http/` must call `.parse()` or `.safeParse()` within the first 5 executable statements.                                                                                     |
+| `livepeer-bridge/no-secrets-in-logs`      | error    | Reject identifiers / object keys matching `apiKey`, `adminToken`, `stripeSecret`, `privateKey`, `passphrase`, `keystore`, `pepper`, `bearer`, etc. passed to `console.*` / `logger.*` / `req.log.*` / `reply.log.*`. |
+| `livepeer-bridge/file-size`               | warn     | Warn at 400 source lines, error at 600. Excludes `*.test.ts` and `gen/**`.                                                                                                                                           |
+| `livepeer-bridge/types-shape`             | error    | Every `src/types/*.ts` (excluding `index.ts` and tests) must export at least one `*Schema` value and at least one `z.infer<typeof X>` / `z.input/z.output<...>` type alias.                                          |
 
-### layer-check
+## Exemption patterns
 
-Enforces the dependency rule from `docs/design-docs/architecture.md`:
+Use `// eslint-disable-next-line livepeer-bridge/<rule>` with a one-line justification above the exempted statement. Current legitimate exemptions:
 
-```
-types → config → repo → service → runtime → ui
-```
+- `src/runtime/http/chat/streaming.ts:handleStreamingChatCompletion` — body already Zod-parsed by the non-streaming handler that branches into it.
+- `src/runtime/http/stripe/webhook.ts:handleWebhook` — validates via `stripe.webhooks.constructEvent` (signature check), which serves the same invariant.
 
-plus `providers/` accessible from all.
-
-Detects violations like:
-
-- `service/routing` importing `@grpc/grpc-js` directly (must go through `providers/payerDaemon`)
-- `service/billing` importing `service/routing` (no cross-domain imports inside service)
-- `repo/*` importing `service/*` (repo is below service)
-
-Status: **stub**. Full implementation as an ESLint plugin tracked separately.
-
-### no-cross-cutting-import
-
-Companion to `layer-check`: explicit allowlist of external packages that are forbidden outside `providers/` (`stripe`, `ioredis`, `pg`, `@grpc/*`, `tiktoken`, `viem`, `pino`).
-
-Status: **planned**.
-
-### zod-at-boundary
-
-Requires every HTTP handler and gRPC response handler to start with a Zod `.parse()` or `.safeParse()` before touching any other code. Structural check on the AST.
-
-Status: **planned**.
-
-### no-secrets-in-logs
-
-Scans log call arguments for variables or literals matching `apiKey`, `stripeSecret`, `passphrase`, `privateKey`, `keystore`, etc.
-
-Status: **planned**.
-
-### file-size
-
-Warns at 400 lines, errors at 600.
-
-Status: **planned**.
-
-## Format
-
-Lint errors must include:
+## Plugin skeleton
 
 ```
-<file>:<line>: <rule-id>: <one-line problem>
-  Remediation: <one-or-two sentence guidance>
-  See: docs/design-docs/<relevant-doc>.md
+lint/eslint-plugin-livepeer-bridge/
+├── index.js          # exports { rules: {...} }
+├── package.json      # private workspace package, name: eslint-plugin-livepeer-bridge
+└── rules/
+    ├── layer-check.js
+    ├── no-cross-cutting-import.js
+    ├── zod-at-boundary.js
+    ├── no-secrets-in-logs.js
+    ├── file-size.js
+    └── types-shape.js
 ```
 
-This lets agents fix violations autonomously from the error message.
+Wired into `eslint.config.js` as:
+
+```js
+import livepeerBridge from './lint/eslint-plugin-livepeer-bridge/index.js';
+// ...
+plugins: { 'livepeer-bridge': livepeerBridge },
+rules: { 'livepeer-bridge/layer-check': 'error', /* … */ },
+```
+
+## Error message format
+
+Each rule produces a one-line diagnostic with a concrete remediation hint. Agents fixing violations autonomously have enough signal in the message alone — they don't need to read the rule source.
+
+## Not shipped here (tracked in tech-debt)
+
+- **Doc-gardener** (design-doc frontmatter freshness, cross-link integrity) — separate tool; will live under `lint/` as its own subdir when scoped.
+- **Proto drift check** (regenerate `src/providers/payerDaemon/gen/` and assert clean diff) — CI job rather than a lint.
+- **Full-repo secret scan** (gitleaks-class) — separate tool.

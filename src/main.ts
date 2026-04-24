@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { z } from 'zod';
 import { loadAdminConfig } from './config/admin.js';
 import { loadAuthConfig } from './config/auth.js';
