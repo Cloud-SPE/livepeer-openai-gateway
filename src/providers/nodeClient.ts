@@ -57,10 +57,29 @@ export interface ChatCompletionCallResult {
   rawBody: string;
 }
 
+export interface StreamChatCompletionInput {
+  url: string;
+  body: ChatCompletionRequest;
+  paymentHeaderB64: string;
+  timeoutMs: number;
+  signal: AbortSignal;
+}
+
+export interface RawSseEvent {
+  data: string;
+}
+
+export interface StreamChatCompletionResult {
+  status: number;
+  events: AsyncIterable<RawSseEvent> | null;
+  rawErrorBody: string | null;
+}
+
 export { ChatCompletionRequestSchema, ChatCompletionResponseSchema };
 
 export interface NodeClient {
   getHealth(url: string, timeoutMs: number): Promise<NodeHealthResponse>;
   getQuote(url: string, timeoutMs: number): Promise<NodeQuoteResponse>;
   createChatCompletion(input: ChatCompletionCallInput): Promise<ChatCompletionCallResult>;
+  streamChatCompletion(input: StreamChatCompletionInput): Promise<StreamChatCompletionResult>;
 }

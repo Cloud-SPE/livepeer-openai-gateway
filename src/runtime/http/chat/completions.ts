@@ -26,6 +26,7 @@ import {
 } from '../../../service/pricing/index.js';
 import { MissingUsageError, toHttpError, UpstreamNodeError } from '../errors.js';
 import { ChatCompletionRequestSchema } from '../../../types/openai.js';
+import { handleStreamingChatCompletion } from './streaming.js';
 
 export interface ChatCompletionsDeps {
   db: Db;
@@ -66,6 +67,21 @@ async function handleChatCompletion(
     return;
   }
   const body = parsed.data;
+
+  if (body.stream === true) {
+    await handleStreamingChatCompletion(req, reply, body, {
+      db: deps.db,
+      nodeBook: deps.nodeBook,
+      nodeClient: deps.nodeClient,
+      paymentsService: deps.paymentsService,
+      pricing: deps.pricing,
+      ...(deps.nodeCallTimeoutMs !== undefined
+        ? { nodeCallTimeoutMs: deps.nodeCallTimeoutMs }
+        : {}),
+      ...(deps.rng !== undefined ? { rng: deps.rng } : {}),
+    });
+    return;
+  }
 
   try {
     resolveTierForModel(deps.pricing, body.model);

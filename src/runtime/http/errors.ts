@@ -80,6 +80,14 @@ export function toHttpError(err: unknown): HttpError {
       },
     };
   }
+  if (err instanceof UpstreamNodeError || err instanceof MissingUsageError) {
+    return {
+      status: 503,
+      envelope: {
+        error: { code: 'service_unavailable', type: err.name, message: err.message },
+      },
+    };
+  }
   if (err instanceof PaymentsError || err instanceof PayerDaemonError) {
     return {
       status: 500,

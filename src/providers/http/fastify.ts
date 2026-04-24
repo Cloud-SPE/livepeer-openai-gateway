@@ -7,6 +7,7 @@ export function createFastifyServer(config: HttpServerConfig = {}): HttpServer {
     logger: config.logger ?? false,
     bodyLimit: config.bodyLimit ?? 1_048_576,
     disableRequestLogging: true,
+    forceCloseConnections: true,
   });
   app.register(sensible);
 
