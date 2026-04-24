@@ -5,6 +5,7 @@ This repo's product is a customer-facing OpenAI-compatible API. Specs here descr
 ## Specs
 
 - [topup-prepaid.md](topup-prepaid.md) — `accepted` — Stripe checkout flow, balance credit, tier upgrade from free
+- [admin-endpoints.md](admin-endpoints.md) — `accepted` — ops surface: health, nodes, customers, refund, suspend, escrow
 
 _(planned)_
 

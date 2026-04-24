@@ -141,6 +141,22 @@ export const stripeWebhookEvents = pgTable('stripe_webhook_event', {
   payload: text('payload').notNull(),
 });
 
+export const adminAuditEvents = pgTable(
+  'admin_audit_event',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    actor: text('actor').notNull(),
+    action: text('action').notNull(),
+    targetId: text('target_id'),
+    payload: text('payload'),
+    statusCode: integer('status_code').notNull(),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byActorTime: index('admin_audit_event_actor_time_idx').on(t.actor, t.occurredAt),
+  }),
+);
+
 export const nodeHealth = pgTable('node_health', {
   nodeId: text('node_id').primaryKey(),
   status: nodeHealthStatus('status').notNull(),
@@ -172,6 +188,7 @@ export const schema = {
   usageRecords,
   topups,
   stripeWebhookEvents,
+  adminAuditEvents,
   nodeHealth,
   nodeHealthEvents,
   customerTier,

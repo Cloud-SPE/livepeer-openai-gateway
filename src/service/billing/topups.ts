@@ -76,3 +76,80 @@ export async function findTopupBySession(
     .limit(1);
   return rows[0] ?? null;
 }
+
+export interface ReverseTopupInput {
+  stripeSessionId: string;
+  reason: string;
+}
+
+export interface ReverseTopupResult {
+  stripeSessionId: string;
+  customerId: string;
+  amountReversedCents: string;
+  newBalanceUsdCents: string;
+  alreadyRefunded: boolean;
+}
+
+export async function reverseTopup(db: Db, input: ReverseTopupInput): Promise<ReverseTopupResult> {
+  if (input.reason.trim().length === 0) {
+    throw new Error('reverseTopup: reason must not be empty');
+  }
+  return db.transaction(async (tx) => {
+    const topup = await findTopupBySession(tx, input.stripeSessionId);
+    if (!topup) {
+      throw new Error(`reverseTopup: no topup for session ${input.stripeSessionId}`);
+    }
+    if (topup.refundedAt !== null) {
+      const customer = await customersRepo.findById(tx, topup.customerId);
+      return {
+        stripeSessionId: input.stripeSessionId,
+        customerId: topup.customerId,
+        amountReversedCents: '0',
+        newBalanceUsdCents: (customer?.balanceUsdCents ?? 0n).toString(),
+        alreadyRefunded: true,
+      };
+    }
+
+    const customer = await customersRepo.selectForUpdate(tx, topup.customerId);
+    if (!customer) throw new CustomerNotFoundError(topup.customerId);
+
+    const newBalance =
+      customer.balanceUsdCents > topup.amountUsdCents
+        ? customer.balanceUsdCents - topup.amountUsdCents
+        : 0n;
+    const actuallyReversed =
+      customer.balanceUsdCents > topup.amountUsdCents
+        ? topup.amountUsdCents
+        : customer.balanceUsdCents;
+
+    await tx
+      .update(customers)
+      .set({ balanceUsdCents: newBalance })
+      .where(eq(customers.id, topup.customerId));
+    await tx
+      .update(topups)
+      .set({ refundedAt: new Date(), status: 'refunded' })
+      .where(eq(topups.id, topup.id));
+
+    return {
+      stripeSessionId: input.stripeSessionId,
+      customerId: topup.customerId,
+      amountReversedCents: actuallyReversed.toString(),
+      newBalanceUsdCents: newBalance.toString(),
+      alreadyRefunded: false,
+    };
+  });
+}
+
+export async function setCustomerStatus(
+  db: Db,
+  customerId: string,
+  status: 'active' | 'suspended' | 'closed',
+): Promise<boolean> {
+  const result = await db
+    .update(customers)
+    .set({ status })
+    .where(eq(customers.id, customerId))
+    .returning({ id: customers.id });
+  return result.length > 0;
+}
