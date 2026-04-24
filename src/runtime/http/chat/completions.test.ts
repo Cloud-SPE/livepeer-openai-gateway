@@ -15,6 +15,11 @@ import { createQuoteRefresher } from '../../../service/nodes/quoteRefresher.js';
 import { NodeBook } from '../../../service/nodes/nodebook.js';
 import { ManualScheduler } from '../../../service/nodes/scheduler.js';
 import { createFetchNodeClient } from '../../../providers/nodeClient/fetch.js';
+import {
+  TEST_BRIDGE_ETH,
+  fakeHealthResponse,
+  fakeQuoteResponse,
+} from '../../../providers/nodeClient/testFakes.js';
 import { createFastifyServer } from '../../../providers/http/fastify.js';
 import { createGrpcPayerDaemonClient } from '../../../providers/payerDaemon/grpc.js';
 import { PayerDaemonService } from '../../../providers/payerDaemon/gen/livepeer/payments/v1/payer_daemon.js';
@@ -36,20 +41,10 @@ interface FakeWorkerNode {
 async function startFakeWorkerNode(): Promise<FakeWorkerNode> {
   let mode: 'ok' | 'fail-500' | 'no-usage' = 'ok';
   const app = Fastify({ logger: false, disableRequestLogging: true });
-  app.get('/health', async () => ({ status: 'ok', models: ['model-small'] }));
-  app.get('/quote', async () => ({
-    ticketParams: {
-      recipient: '0x' + 'aa'.repeat(20),
-      faceValueWei: '1000',
-      winProb: '100',
-      seed: 'deadbeef',
-      expirationBlock: '1000',
-      expirationParamsHash: 'hashhash',
-    },
-    priceInfo: { pricePerUnitWei: '1', pixelsPerUnit: '1' },
-    lastRefreshedAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 60_000).toISOString(),
-  }));
+  app.get('/health', async () => fakeHealthResponse());
+  app.get('/quote', async () =>
+    fakeQuoteResponse({ model: 'model-small', pricePerWorkUnitWei: '1' }),
+  );
   app.post('/v1/chat/completions', async (_req, reply) => {
     if (mode === 'fail-500') {
       return reply.code(500).send({ error: 'node down' });
@@ -207,7 +202,13 @@ nodes:
   const scheduler = new ManualScheduler();
   scheduler.setNow(new Date());
   const nodeClient = createFetchNodeClient();
-  const refresher = createQuoteRefresher({ db: pg.db, nodeBook, nodeClient, scheduler });
+  const refresher = createQuoteRefresher({
+    db: pg.db,
+    nodeBook,
+    nodeClient,
+    scheduler,
+    bridgeEthAddress: TEST_BRIDGE_ETH,
+  });
   await refresher.tickNode('node-e2e');
 
   const payerDaemon = createGrpcPayerDaemonClient({

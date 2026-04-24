@@ -7,6 +7,11 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import * as nodeHealthRepo from '../../repo/nodeHealth.js';
 import { startTestPg, type TestPg } from '../billing/testPg.js';
 import { createFetchNodeClient } from '../../providers/nodeClient/fetch.js';
+import {
+  TEST_BRIDGE_ETH,
+  fakeHealthResponse,
+  fakeQuoteResponse,
+} from '../../providers/nodeClient/testFakes.js';
 import { createNodesLoader } from './loader.js';
 import { createQuoteRefresher } from './quoteRefresher.js';
 import { NodeBook } from './nodebook.js';
@@ -34,26 +39,14 @@ async function startFakeNode(): Promise<FakeNode> {
       await reply.code(500).send({ error: 'down' });
       return;
     }
-    return { status: healthStatus, models: ['model-small'] };
+    return fakeHealthResponse({ status: healthStatus });
   });
   app.get('/quote', async (_req, reply) => {
     if (mode === 'quote-500') {
       await reply.code(500).send({ error: 'down' });
       return;
     }
-    return {
-      ticketParams: {
-        recipient: '0x' + 'aa'.repeat(20),
-        faceValueWei: '1000000000',
-        winProb: '100',
-        seed: 'deadbeef',
-        expirationBlock: '1000',
-        expirationParamsHash: 'hashhashhashhash',
-      },
-      priceInfo: { pricePerUnitWei: '1000', pixelsPerUnit: '1' },
-      lastRefreshedAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 60_000).toISOString(),
-    };
+    return fakeQuoteResponse();
   });
   const address = await app.listen({ host: '127.0.0.1', port: 0 });
   const port = Number(address.split(':').pop());
@@ -123,6 +116,7 @@ describe('nodes integration (Testcontainers + fake Fastify node)', () => {
       nodeBook,
       nodeClient: createFetchNodeClient(),
       scheduler,
+      bridgeEthAddress: TEST_BRIDGE_ETH,
     });
     try {
       await refresher.tickNode('node-a');
@@ -156,6 +150,7 @@ describe('nodes integration (Testcontainers + fake Fastify node)', () => {
       nodeBook,
       nodeClient: createFetchNodeClient(),
       scheduler,
+      bridgeEthAddress: TEST_BRIDGE_ETH,
     });
 
     try {
@@ -249,6 +244,7 @@ describe('nodes integration (Testcontainers + fake Fastify node)', () => {
       nodeBook,
       nodeClient: createFetchNodeClient(),
       scheduler,
+      bridgeEthAddress: TEST_BRIDGE_ETH,
     });
 
     refresher.start();

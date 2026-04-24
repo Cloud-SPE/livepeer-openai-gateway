@@ -1,17 +1,30 @@
 import { createParser, type EventSourceMessage } from 'eventsource-parser';
 import {
   ChatCompletionResponseSchema,
+  EmbeddingsResponseSchema,
+  ImagesResponseSchema,
+  NodeCapabilitiesResponseSchema,
   NodeHealthResponseSchema,
   NodeQuoteResponseSchema,
+  NodeQuotesResponseSchema,
   type ChatCompletionCallInput,
   type ChatCompletionCallResult,
+  type EmbeddingsCallInput,
+  type EmbeddingsCallResult,
+  type GetQuoteInput,
+  type GetQuotesInput,
+  type ImageGenerationCallInput,
+  type ImageGenerationCallResult,
+  type NodeCapabilitiesResponse,
   type NodeClient,
   type NodeHealthResponse,
   type NodeQuoteResponse,
+  type NodeQuotesResponse,
   type RawSseEvent,
   type StreamChatCompletionInput,
   type StreamChatCompletionResult,
 } from '../nodeClient.js';
+import { wireQuoteToDomain } from './wireQuote.js';
 
 export function createFetchNodeClient(): NodeClient {
   return {
@@ -24,14 +37,38 @@ export function createFetchNodeClient(): NodeClient {
       const body = await res.json();
       return NodeHealthResponseSchema.parse(body) satisfies NodeHealthResponse;
     },
-    async getQuote(url, timeoutMs) {
+    async getCapabilities(url, timeoutMs) {
       const signal = AbortSignal.timeout(timeoutMs);
-      const res = await fetch(trimSlash(url) + '/quote', { signal });
+      const res = await fetch(trimSlash(url) + '/capabilities', { signal });
+      if (!res.ok) {
+        throw new Error(`capabilities HTTP ${res.status}`);
+      }
+      const body = await res.json();
+      return NodeCapabilitiesResponseSchema.parse(body) satisfies NodeCapabilitiesResponse;
+    },
+    async getQuote(input: GetQuoteInput): Promise<NodeQuoteResponse> {
+      const signal = AbortSignal.timeout(input.timeoutMs);
+      const qs = new URLSearchParams({
+        sender: input.sender,
+        capability: input.capability,
+      });
+      const res = await fetch(trimSlash(input.url) + '/quote?' + qs.toString(), { signal });
       if (!res.ok) {
         throw new Error(`quote HTTP ${res.status}`);
       }
       const body = await res.json();
-      return NodeQuoteResponseSchema.parse(body) satisfies NodeQuoteResponse;
+      const wire = NodeQuoteResponseSchema.parse(body);
+      return wireQuoteToDomain(wire);
+    },
+    async getQuotes(input: GetQuotesInput): Promise<NodeQuotesResponse> {
+      const signal = AbortSignal.timeout(input.timeoutMs);
+      const qs = new URLSearchParams({ sender: input.sender });
+      const res = await fetch(trimSlash(input.url) + '/quotes?' + qs.toString(), { signal });
+      if (!res.ok) {
+        throw new Error(`quotes HTTP ${res.status}`);
+      }
+      const body = await res.json();
+      return NodeQuotesResponseSchema.parse(body) satisfies NodeQuotesResponse;
     },
 
     async createChatCompletion(input: ChatCompletionCallInput): Promise<ChatCompletionCallResult> {
@@ -51,6 +88,54 @@ export function createFetchNodeClient(): NodeClient {
         return { status: res.status, response: null, rawBody };
       }
       const parsed = ChatCompletionResponseSchema.safeParse(JSON.parse(rawBody));
+      return {
+        status: res.status,
+        response: parsed.success ? parsed.data : null,
+        rawBody,
+      };
+    },
+
+    async createEmbeddings(input: EmbeddingsCallInput): Promise<EmbeddingsCallResult> {
+      const timeoutSignal = AbortSignal.timeout(input.timeoutMs);
+      const signal = input.signal ? AbortSignal.any([input.signal, timeoutSignal]) : timeoutSignal;
+      const res = await fetch(trimSlash(input.url) + '/v1/embeddings', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'livepeer-payment': input.paymentHeaderB64,
+        },
+        body: JSON.stringify(input.body),
+        signal,
+      });
+      const rawBody = await res.text();
+      if (!res.ok) {
+        return { status: res.status, response: null, rawBody };
+      }
+      const parsed = EmbeddingsResponseSchema.safeParse(JSON.parse(rawBody));
+      return {
+        status: res.status,
+        response: parsed.success ? parsed.data : null,
+        rawBody,
+      };
+    },
+
+    async createImage(input: ImageGenerationCallInput): Promise<ImageGenerationCallResult> {
+      const timeoutSignal = AbortSignal.timeout(input.timeoutMs);
+      const signal = input.signal ? AbortSignal.any([input.signal, timeoutSignal]) : timeoutSignal;
+      const res = await fetch(trimSlash(input.url) + '/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'livepeer-payment': input.paymentHeaderB64,
+        },
+        body: JSON.stringify(input.body),
+        signal,
+      });
+      const rawBody = await res.text();
+      if (!res.ok) {
+        return { status: res.status, response: null, rawBody };
+      }
+      const parsed = ImagesResponseSchema.safeParse(JSON.parse(rawBody));
       return {
         status: res.status,
         response: parsed.success ? parsed.data : null,

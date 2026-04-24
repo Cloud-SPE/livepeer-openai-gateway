@@ -10,6 +10,10 @@ export interface QuoteRefresherDeps {
   nodeBook: NodeBook;
   nodeClient: NodeClient;
   scheduler: Scheduler;
+  // bridgeEthAddress (0x-prefixed 40-hex) is threaded through as the
+  // `?sender=` query param on /quote and /quotes against the worker.
+  // Introduced in 0018-worker-wire-format-alignment.
+  bridgeEthAddress: string;
 }
 
 export interface QuoteRefresher {
@@ -57,10 +61,17 @@ export function createQuoteRefresher(deps: QuoteRefresherDeps): QuoteRefresher {
       if (health.status !== 'ok' && health.status !== 'degraded') {
         throw new Error(`unexpected health status: ${String(health.status)}`);
       }
-      const quote = await deps.nodeClient.getQuote(
-        entry.config.url,
-        entry.config.refresh.quoteTimeoutMs,
-      );
+      // Phase 1 (0018): one quote per node, keyed on the single
+      // chat-completions capability. Phase 2 will probe /capabilities +
+      // /quotes to populate per-(capability, model) quotes on the
+      // NodeBook. Until then, every node is treated as a chat node for
+      // quote-refresh purposes.
+      const quote = await deps.nodeClient.getQuote({
+        url: entry.config.url,
+        sender: deps.bridgeEthAddress,
+        capability: 'openai:/v1/chat/completions',
+        timeoutMs: entry.config.refresh.quoteTimeoutMs,
+      });
       const result = onSuccess(
         deps.nodeBook.get(nodeId)?.circuit ?? probeDecision.result.state,
         entry.config.breaker,

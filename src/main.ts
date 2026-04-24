@@ -21,6 +21,8 @@ import { runMigrations } from './repo/migrate.js';
 import { registerAdminRoutes } from './runtime/http/admin/routes.js';
 import { registerTopupRoute } from './runtime/http/billing/topup.js';
 import { registerChatCompletionsRoute } from './runtime/http/chat/completions.js';
+import { registerEmbeddingsRoute } from './runtime/http/embeddings/index.js';
+import { registerImagesGenerationsRoute } from './runtime/http/images/generations.js';
 import { registerHealthzRoute } from './runtime/http/healthz.js';
 import { registerStripeWebhookRoute } from './runtime/http/stripe/webhook.js';
 import { createAdminService } from './service/admin/index.js';
@@ -82,7 +84,13 @@ async function main(): Promise<void> {
   // NodeBook + background refresh.
   const nodeBook = new NodeBook();
   createNodesLoader({ db, nodeBook, configPath: env.NODES_CONFIG_PATH }).load();
-  const refresher = createQuoteRefresher({ db, nodeBook, nodeClient, scheduler });
+  const refresher = createQuoteRefresher({
+    db,
+    nodeBook,
+    nodeClient,
+    scheduler,
+    bridgeEthAddress: payerDaemonConfig.bridgeEthAddress,
+  });
   refresher.start();
   payerDaemon.startHealthLoop();
 
@@ -105,6 +113,24 @@ async function main(): Promise<void> {
     authService,
     rateLimiter,
     tokenAudit,
+    pricing: pricingConfig,
+  });
+  registerEmbeddingsRoute(server.app, {
+    db,
+    nodeBook,
+    nodeClient,
+    paymentsService,
+    authService,
+    rateLimiter,
+    pricing: pricingConfig,
+  });
+  registerImagesGenerationsRoute(server.app, {
+    db,
+    nodeBook,
+    nodeClient,
+    paymentsService,
+    authService,
+    rateLimiter,
     pricing: pricingConfig,
   });
   registerTopupRoute(server.app, { authService, stripe, config: stripeConfig });
