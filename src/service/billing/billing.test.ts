@@ -26,13 +26,14 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  await pg.db.execute(sql`TRUNCATE TABLE reservation, usage_record, topup, customer CASCADE`);
+  await pg.db.execute(
+    sql`TRUNCATE TABLE api_key, reservation, usage_record, topup, customer CASCADE`,
+  );
 });
 
 async function seedPrepaidCustomer(balanceCents: bigint): Promise<string> {
   const row = await customersRepo.insertCustomer(pg.db, {
     email: `cust-${Math.random().toString(36).slice(2)}@example.com`,
-    apiKeyHash: `hash-${Math.random().toString(36).slice(2)}`,
     tier: 'prepaid',
     balanceUsdCents: balanceCents,
   });
@@ -42,7 +43,6 @@ async function seedPrepaidCustomer(balanceCents: bigint): Promise<string> {
 async function seedFreeCustomer(quotaTokens: bigint): Promise<string> {
   const row = await customersRepo.insertCustomer(pg.db, {
     email: `cust-${Math.random().toString(36).slice(2)}@example.com`,
-    apiKeyHash: `hash-${Math.random().toString(36).slice(2)}`,
     tier: 'free',
     quotaTokensRemaining: quotaTokens,
     quotaMonthlyAllowance: quotaTokens,

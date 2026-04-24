@@ -28,7 +28,9 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  await pg.db.execute(sql`TRUNCATE TABLE reservation, usage_record, topup, customer CASCADE`);
+  await pg.db.execute(
+    sql`TRUNCATE TABLE api_key, reservation, usage_record, topup, customer CASCADE`,
+  );
 });
 
 const ghostId = '00000000-0000-4000-8000-000000000000';
@@ -59,7 +61,6 @@ describe('billing error paths', () => {
   it('commit rejects a committed reservation as not-open', async () => {
     const customer = await customersRepo.insertCustomer(pg.db, {
       email: 'committed@x.io',
-      apiKeyHash: 'c',
       tier: 'prepaid',
       balanceUsdCents: 100n,
     });
@@ -77,7 +78,6 @@ describe('billing error paths', () => {
   it('commit of a prepaid reservation rejects when the reservation row is free-kind', async () => {
     const customer = await customersRepo.insertCustomer(pg.db, {
       email: 'mix@x.io',
-      apiKeyHash: 'm',
       tier: 'free',
       quotaTokensRemaining: 100n,
       quotaMonthlyAllowance: 100n,
@@ -96,7 +96,6 @@ describe('billing error paths', () => {
   it('commitQuota / refundQuota reject a prepaid reservation', async () => {
     const customer = await customersRepo.insertCustomer(pg.db, {
       email: 'mix2@x.io',
-      apiKeyHash: 'm2',
       tier: 'prepaid',
       balanceUsdCents: 100n,
     });
@@ -114,7 +113,6 @@ describe('billing error paths', () => {
   it('reserveQuota rejects a prepaid customer', async () => {
     const customer = await customersRepo.insertCustomer(pg.db, {
       email: 'pp@x.io',
-      apiKeyHash: 'pp',
       tier: 'prepaid',
       balanceUsdCents: 100n,
     });

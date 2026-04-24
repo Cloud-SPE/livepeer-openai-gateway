@@ -8,6 +8,13 @@
       "when": 1777037057499,
       "tag": "0000_dizzy_midnight",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777038535354,
+      "tag": "0001_melodic_boom_boom",
+      "breakpoints": true
     }
   ]
 }

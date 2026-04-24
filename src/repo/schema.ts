@@ -17,31 +17,43 @@ export const topupStatus = pgEnum('topup_status', ['pending', 'succeeded', 'fail
 export const reservationState = pgEnum('reservation_state', ['open', 'committed', 'refunded']);
 export const reservationKind = pgEnum('reservation_kind', ['prepaid', 'free']);
 
-export const customers = pgTable(
-  'customer',
+export const customers = pgTable('customer', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  email: text('email').notNull().unique(),
+  tier: customerTier('tier').notNull(),
+  status: customerStatus('status').notNull().default('active'),
+  rateLimitTier: text('rate_limit_tier').notNull().default('default'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  balanceUsdCents: bigint('balance_usd_cents', { mode: 'bigint' })
+    .notNull()
+    .default(sql`0`),
+  reservedUsdCents: bigint('reserved_usd_cents', { mode: 'bigint' })
+    .notNull()
+    .default(sql`0`),
+  quotaTokensRemaining: bigint('quota_tokens_remaining', { mode: 'bigint' }),
+  quotaMonthlyAllowance: bigint('quota_monthly_allowance', { mode: 'bigint' }),
+  quotaReservedTokens: bigint('quota_reserved_tokens', { mode: 'bigint' })
+    .notNull()
+    .default(sql`0`),
+  quotaResetAt: timestamp('quota_reset_at', { withTimezone: true }),
+});
+
+export const apiKeys = pgTable(
+  'api_key',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    email: text('email').notNull().unique(),
-    apiKeyHash: text('api_key_hash').notNull(),
-    tier: customerTier('tier').notNull(),
-    status: customerStatus('status').notNull().default('active'),
-    rateLimitTier: text('rate_limit_tier').notNull().default('default'),
+    customerId: uuid('customer_id')
+      .notNull()
+      .references(() => customers.id),
+    hash: text('hash').notNull(),
+    label: text('label'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    balanceUsdCents: bigint('balance_usd_cents', { mode: 'bigint' })
-      .notNull()
-      .default(sql`0`),
-    reservedUsdCents: bigint('reserved_usd_cents', { mode: 'bigint' })
-      .notNull()
-      .default(sql`0`),
-    quotaTokensRemaining: bigint('quota_tokens_remaining', { mode: 'bigint' }),
-    quotaMonthlyAllowance: bigint('quota_monthly_allowance', { mode: 'bigint' }),
-    quotaReservedTokens: bigint('quota_reserved_tokens', { mode: 'bigint' })
-      .notNull()
-      .default(sql`0`),
-    quotaResetAt: timestamp('quota_reset_at', { withTimezone: true }),
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
   },
   (t) => ({
-    byApiKeyHash: index('customer_api_key_hash_idx').on(t.apiKeyHash),
+    byHash: index('api_key_hash_idx').on(t.hash),
+    byCustomer: index('api_key_customer_idx').on(t.customerId),
   }),
 );
 
@@ -110,6 +122,7 @@ export const topups = pgTable(
 
 export const schema = {
   customers,
+  apiKeys,
   reservations,
   usageRecords,
   topups,

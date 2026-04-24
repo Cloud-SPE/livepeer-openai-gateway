@@ -16,11 +16,6 @@ export async function findById(db: Db, id: string): Promise<CustomerRow | null> 
   return rows[0] ?? null;
 }
 
-export async function findByApiKeyHash(db: Db, hash: string): Promise<CustomerRow | null> {
-  const rows = await db.select().from(customers).where(eq(customers.apiKeyHash, hash)).limit(1);
-  return rows[0] ?? null;
-}
-
 export async function selectForUpdate(db: Db, id: string): Promise<CustomerRow | null> {
   const rows = await db.select().from(customers).where(eq(customers.id, id)).for('update').limit(1);
   return rows[0] ?? null;
