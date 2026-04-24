@@ -226,7 +226,7 @@ nodes:
     db: pg.db,
     config: { pepper, envPrefix: 'test', cacheTtlMs: 60_000 },
   });
-  const server = createFastifyServer({ logger: false });
+  const server = await createFastifyServer({ logger: false });
   registerChatCompletionsRoute(server.app, {
     db: pg.db,
     nodeBook,

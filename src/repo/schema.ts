@@ -126,11 +126,20 @@ export const topups = pgTable(
     amountUsdCents: bigint('amount_usd_cents', { mode: 'bigint' }).notNull(),
     status: topupStatus('status').notNull().default('pending'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    disputedAt: timestamp('disputed_at', { withTimezone: true }),
+    refundedAt: timestamp('refunded_at', { withTimezone: true }),
   },
   (t) => ({
     byCustomer: index('topup_customer_idx').on(t.customerId),
   }),
 );
+
+export const stripeWebhookEvents = pgTable('stripe_webhook_event', {
+  eventId: text('event_id').primaryKey(),
+  type: text('type').notNull(),
+  receivedAt: timestamp('received_at', { withTimezone: true }).notNull().defaultNow(),
+  payload: text('payload').notNull(),
+});
 
 export const nodeHealth = pgTable('node_health', {
   nodeId: text('node_id').primaryKey(),
@@ -162,6 +171,7 @@ export const schema = {
   reservations,
   usageRecords,
   topups,
+  stripeWebhookEvents,
   nodeHealth,
   nodeHealthEvents,
   customerTier,

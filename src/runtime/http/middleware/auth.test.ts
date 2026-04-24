@@ -24,7 +24,7 @@ beforeEach(async () => {
 
 async function buildServer() {
   const auth = createAuthService({ db: pg.db, config });
-  const server = createFastifyServer({ logger: false });
+  const server = await createFastifyServer({ logger: false });
   server.app.get('/whoami', { preHandler: authPreHandler(auth) }, async (req) => {
     return { customerId: req.caller?.customer.id ?? null };
   });
