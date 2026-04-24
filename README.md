@@ -15,7 +15,7 @@ An OpenAI-compatible API service that fronts a pool of Livepeer WorkerNodes. Cus
 
 ## Status
 
-**v1 feature-complete.** All fifteen exec-plans (0001 – 0015) are in [`docs/exec-plans/completed/`](docs/exec-plans/completed/). Outstanding items are durable — each is an entry in [`docs/exec-plans/tech-debt-tracker.md`](docs/exec-plans/tech-debt-tracker.md).
+**v1 feature-complete.** All sixteen exec-plans (0001 – 0016) are in [`docs/exec-plans/completed/`](docs/exec-plans/completed/). Outstanding items are durable — each is an entry in [`docs/exec-plans/tech-debt-tracker.md`](docs/exec-plans/tech-debt-tracker.md).
 
 | Plan | What it ships                                                      |
 | ---: | ------------------------------------------------------------------ |
@@ -34,6 +34,7 @@ An OpenAI-compatible API service that fronts a pool of Livepeer WorkerNodes. Cus
 | 0013 | Process entrypoint, Dockerfile, docker-compose                     |
 | 0014 | Architectural ESLint plugin (layer-check et al.)                   |
 | 0015 | doc-gardener, proto-drift, secret-scan                             |
+| 0016 | Production docker stack (`tztcloud/payment-daemon:v0.8.10`)        |
 
 Test suite: **223 tests, 91 % statement / 80 % branch coverage** (the 75 % floor is mechanically enforced per [core belief #11](docs/design-docs/core-beliefs.md)).
 
@@ -68,6 +69,7 @@ docs/
 │                   artifacts — history is immutable.
 │   └── tech-debt-tracker.md  Append-only list of open items with remediation.
 ├── generated/      Auto-generated; do not hand-edit.
+├── operations/     Operator guides — deployment, runbooks.
 └── references/     External material — architecture reference, harness PDFs.
 
 migrations/         Drizzle-generated Postgres migrations.
@@ -75,7 +77,7 @@ lint/
 ├── eslint-plugin-livepeer-bridge/  Six custom ESLint rules (0014).
 └── doc-gardener/                    Docs-integrity lint (0015).
 
-Dockerfile, compose.yaml, .env.example, .gitleaks.toml  — deployment (0013, 0015).
+Dockerfile, compose.yaml, compose.prod.yaml, .env.example, .gitleaks.toml  — deployment (0013, 0015, 0016).
 ```
 
 ## Invariants (non-negotiable)
@@ -97,12 +99,15 @@ ESLint rules [`livepeer-bridge/layer-check`](lint/eslint-plugin-livepeer-bridge/
 
 ```sh
 cp .env.example .env
-# fill the REQUIRED values: API_KEY_PEPPER, STRIPE_*, ADMIN_TOKEN
+# fill the REQUIRED values: CHAIN_RPC, API_KEY_PEPPER, STRIPE_*, ADMIN_TOKEN
+# drop keystore.json + keystore-password alongside compose.yaml (see .env.example)
 # author your own nodes.yaml — see docs/design-docs/node-lifecycle.md
 docker compose up --build
 ```
 
-Stands up `postgres:16-alpine` + `redis:7-alpine` + the bridge (built from `Dockerfile`). The PayerDaemon is **not** included by default — it's a sidecar from [`livepeer-payment-library`](../livepeer-payment-library). Mount its unix socket into the shared `payer-socket` volume at `/run/payer-daemon/daemon.sock`. Commented service block in `compose.yaml` shows the wiring.
+Stands up `postgres:16-alpine` + `redis:7-alpine` + `tztcloud/payment-daemon:v0.8.10` (sender mode) + the bridge (built from `Dockerfile`). All four services share a `payment-socket` named volume at `/var/run/livepeer/` so the bridge can reach the daemon over its unix socket.
+
+See [`docs/operations/deployment.md`](docs/operations/deployment.md) for the full walkthrough including the production override (`compose.prod.yaml`) with pinned image, restart policies, log rotation, resource limits, read-only hardening, and the one-shot migration job.
 
 ### Without Docker
 

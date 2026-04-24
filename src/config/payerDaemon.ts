@@ -8,7 +8,7 @@ export interface PayerDaemonConfig {
 }
 
 const EnvSchema = z.object({
-  PAYER_DAEMON_SOCKET: z.string().min(1).default('/var/run/livepeer-payment-daemon.sock'),
+  PAYER_DAEMON_SOCKET: z.string().min(1).default('/var/run/livepeer/payment.sock'),
   PAYER_DAEMON_HEALTH_INTERVAL_MS: z.coerce.number().int().positive().default(10_000),
   PAYER_DAEMON_HEALTH_FAILURE_THRESHOLD: z.coerce.number().int().positive().default(2),
   PAYER_DAEMON_CALL_TIMEOUT_MS: z.coerce.number().int().positive().default(5_000),

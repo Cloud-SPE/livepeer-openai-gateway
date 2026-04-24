@@ -21,6 +21,7 @@ export default defineConfig({
         'src/**/testRedis.ts',
         'src/**/gen/**',
         'src/main.ts',
+        'src/scripts/**',
       ],
       thresholds: {
         lines: 75,

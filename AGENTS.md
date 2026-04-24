@@ -19,6 +19,7 @@ This is an OpenAI-compatible API service that accepts customer requests, routes 
 - `docs/exec-plans/tech-debt-tracker.md` — known debt, append-only
 - `docs/product-specs/` — customer-facing behaviors (signup, top-up, endpoints)
 - `docs/generated/` — auto-generated; never hand-edit
+- `docs/operations/` — operator guides (deployment, runbooks)
 - `docs/references/` — external material (abstraction doc, harness PDF, architecture doc)
 
 ## The layer rule (non-negotiable)
@@ -61,17 +62,18 @@ Lints enforce this in CI. See [docs/design-docs/architecture.md](docs/design-doc
 
 ## Where to look for X
 
-| Question                           | Go to                                            |
-| ---------------------------------- | ------------------------------------------------ |
-| What does the bridge do?           | [DESIGN.md](DESIGN.md)                           |
-| Why is X done this way?            | `docs/design-docs/`                              |
-| What's in flight?                  | `docs/exec-plans/active/`                        |
-| Customer tiers / pricing / quotas? | `docs/design-docs/tiers.md` + `pricing-model.md` |
-| How does streaming work?           | `docs/design-docs/streaming-semantics.md`        |
-| Retry policy?                      | `docs/design-docs/retry-policy.md`               |
-| How do tokens get audited?         | `docs/design-docs/token-audit.md`                |
-| PayerDaemon wire protocol?         | `docs/design-docs/payer-integration.md`          |
-| Node lifecycle / circuit breaker?  | `docs/design-docs/node-lifecycle.md`             |
-| Stripe top-up + dispute flow?      | `docs/design-docs/stripe-integration.md`         |
-| Admin / ops endpoints?             | `docs/product-specs/admin-endpoints.md`          |
-| Known debt?                        | `docs/exec-plans/tech-debt-tracker.md`           |
+| Question                            | Go to                                            |
+| ----------------------------------- | ------------------------------------------------ |
+| What does the bridge do?            | [DESIGN.md](DESIGN.md)                           |
+| Why is X done this way?             | `docs/design-docs/`                              |
+| What's in flight?                   | `docs/exec-plans/active/`                        |
+| Customer tiers / pricing / quotas?  | `docs/design-docs/tiers.md` + `pricing-model.md` |
+| How does streaming work?            | `docs/design-docs/streaming-semantics.md`        |
+| Retry policy?                       | `docs/design-docs/retry-policy.md`               |
+| How do tokens get audited?          | `docs/design-docs/token-audit.md`                |
+| PayerDaemon wire protocol?          | `docs/design-docs/payer-integration.md`          |
+| Node lifecycle / circuit breaker?   | `docs/design-docs/node-lifecycle.md`             |
+| Stripe top-up + dispute flow?       | `docs/design-docs/stripe-integration.md`         |
+| Admin / ops endpoints?              | `docs/product-specs/admin-endpoints.md`          |
+| How to deploy / run the full stack? | `docs/operations/deployment.md`                  |
+| Known debt?                         | `docs/exec-plans/tech-debt-tracker.md`           |

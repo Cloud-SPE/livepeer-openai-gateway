@@ -133,14 +133,14 @@ Append-only list of known debt. Strike through when resolved; include the PR or 
 - Remediation: cap vitest concurrency, or share a single container across files via globalSetup.
 - Resolved: _(open)_
 
-### Payer-daemon Docker image
+### ~~Payer-daemon Docker image~~
 
 - Opened: 2026-04-24
 - Severity: medium
 - Area: deployment
 - Description: The bridge's `compose.yaml` keeps the payer-daemon service block commented out because the library repo doesn't publish a container image yet. Local full-stack dev requires bringing your own daemon.
 - Remediation: publish a sender-mode image from `livepeer-payment-library` (its own ops plan), then uncomment the block in `compose.yaml`.
-- Resolved: _(open)_
+- Resolved: 2026-04-24 in exec-plan 0016. Library published `tztcloud/payment-daemon:v0.8.10`; `compose.yaml` wires it as the default `payment-daemon` service (sender mode), and `compose.prod.yaml` layers prod hardening. Socket path reconciled to the library's convention (`/var/run/livepeer/payment.sock`, `payment-socket` volume).
 
 ### CI workflow to build + push bridge image
 

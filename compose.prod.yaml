@@ -1,0 +1,103 @@
+# Production override for compose.yaml.
+#
+# Usage:
+#   docker compose -f compose.yaml -f compose.prod.yaml up -d
+#
+# Adds: restart policies, JSON log rotation, resource limits, read-only
+# hardening on the daemon, a one-shot bridge-migrate job, and a parameterised
+# BRIDGE_IMAGE (no inline build in prod).
+#
+# See docs/operations/deployment.md for the full walkthrough.
+
+services:
+  postgres:
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '5'
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2g
+
+  redis:
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '5'
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512m
+
+  payment-daemon:
+    restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '5'
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512m
+
+  # One-shot migration job. Runs `node dist/scripts/migrate.js` and exits.
+  # The bridge service gates on its successful completion, so this replaces
+  # BRIDGE_AUTO_MIGRATE=true (which races in multi-replica deploys).
+  bridge-migrate:
+    image: ${BRIDGE_IMAGE:?set BRIDGE_IMAGE (e.g. ghcr.io/your-org/openai-livepeer-bridge:v0.1.0)}
+    command: ['dist/scripts/migrate.js']
+    restart: 'no'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGPORT: '5432'
+      PGUSER: ${PGUSER:-bridge}
+      PGPASSWORD: ${PGPASSWORD:?set PGPASSWORD}
+      PGDATABASE: ${PGDATABASE:-bridge}
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '5'
+
+  bridge:
+    # Override dev's inline build with a pinned, pushed image.
+    build: !reset null
+    image: ${BRIDGE_IMAGE:?set BRIDGE_IMAGE (e.g. ghcr.io/your-org/openai-livepeer-bridge:v0.1.0)}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      payment-daemon:
+        condition: service_started
+      bridge-migrate:
+        condition: service_completed_successfully
+    environment:
+      # Migration runs as a job, not on boot.
+      BRIDGE_AUTO_MIGRATE: 'false'
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '5'
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1g

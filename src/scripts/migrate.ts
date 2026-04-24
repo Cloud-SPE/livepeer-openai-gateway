@@ -1,7 +1,7 @@
-import { loadDatabaseConfig } from '../src/config/database.ts';
-import { createPgDatabase } from '../src/providers/database/pg/index.ts';
-import { makeDb } from '../src/repo/db.ts';
-import { runMigrations } from '../src/repo/migrate.ts';
+import { loadDatabaseConfig } from '../config/database.js';
+import { createPgDatabase } from '../providers/database/pg/index.js';
+import { makeDb } from '../repo/db.js';
+import { runMigrations } from '../repo/migrate.js';
 
 async function main(): Promise<void> {
   const config = loadDatabaseConfig();

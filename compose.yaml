@@ -1,14 +1,15 @@
-# Local-dev docker-compose for the bridge.
+# Local-dev docker-compose for the bridge + payment daemon stack.
 #
 # Usage:
-#   cp .env.example .env               # edit the secrets marked REQUIRED
+#   cp .env.example .env            # fill in the REQUIRED values (CHAIN_RPC, Stripe, admin, pepper)
+#   cp /path/to/keystore.json ./keystore.json
+#   printf '%s' 'your-password' > ./keystore-password && chmod 600 ./keystore-password
 #   docker compose up --build
 #
-# The PayerDaemon is deliberately NOT built or pulled here — it lives in a
-# sibling repo (`livepeer-payment-library`) and is language-agnostic. Bring
-# your own daemon sidecar and have it write its unix socket into the shared
-# `payer-socket` volume at /run/payer-daemon/daemon.sock. See the commented
-# `payer-daemon` service below for the expected wiring.
+# Prod deployments layer compose.prod.yaml on top:
+#   docker compose -f compose.yaml -f compose.prod.yaml up -d
+#
+# See docs/operations/deployment.md for the full walkthrough.
 
 services:
   postgres:
@@ -33,6 +34,27 @@ services:
       timeout: 5s
       retries: 20
 
+  payment-daemon:
+    image: tztcloud/payment-daemon:v0.8.10
+    command:
+      - --mode=sender
+      - --socket=/var/run/livepeer/payment.sock
+      - --chain-rpc=${CHAIN_RPC:?set CHAIN_RPC (Arbitrum One RPC endpoint)}
+      - --keystore-path=/etc/livepeer/keystore.json
+      - --keystore-password-file=/etc/livepeer/keystore-password
+      # Hot/cold split — uncomment to sign with the mounted keystore while
+      # embedding a different orchestrator identity in every ticket.
+      # - --orch-address=${PAYER_ORCH_ADDRESS}
+      # Non-Arbitrum chains — set all four together.
+      # - --expected-chain-id=${EXPECTED_CHAIN_ID}
+      # - --ticketbroker-address=${TICKETBROKER_ADDRESS}
+      # - --rounds-manager-address=${ROUNDS_MANAGER_ADDRESS}
+      # - --bonding-manager-address=${BONDING_MANAGER_ADDRESS}
+    volumes:
+      - ${PAYER_KEYSTORE_PATH:-./keystore.json}:/etc/livepeer/keystore.json:ro
+      - ${PAYER_KEYSTORE_PASSWORD_PATH:-./keystore-password}:/etc/livepeer/keystore-password:ro
+      - payment-socket:/var/run/livepeer
+
   bridge:
     build:
       context: .
@@ -41,6 +63,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      payment-daemon:
+        condition: service_started
     environment:
       HOST: '0.0.0.0'
       PORT: '8080'
@@ -60,8 +84,8 @@ services:
       API_KEY_PEPPER: ${API_KEY_PEPPER:?set API_KEY_PEPPER (>= 16 chars)}
       API_KEY_ENV_PREFIX: ${API_KEY_ENV_PREFIX:-test}
 
-      # PayerDaemon (external sidecar; socket shared via named volume)
-      PAYER_DAEMON_SOCKET: /run/payer-daemon/daemon.sock
+      # PayerDaemon — socket lives on the shared payment-socket volume
+      PAYER_DAEMON_SOCKET: /var/run/livepeer/payment.sock
 
       # Stripe (use test-mode keys for local dev)
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:?set STRIPE_SECRET_KEY}
@@ -77,7 +101,7 @@ services:
       BRIDGE_AUTO_MIGRATE: 'true'
     volumes:
       - ./nodes.yaml:/app/nodes.yaml:ro
-      - payer-socket:/run/payer-daemon
+      - payment-socket:/var/run/livepeer
     ports:
       - '8080:8080'
     healthcheck:
@@ -90,27 +114,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # -----------------------------------------------------------------------------
-  # PayerDaemon sidecar. Not wired by default because the image doesn't exist
-  # yet. When `livepeer-payment-library` publishes a sender-mode image, flip
-  # this block on and point `image:` at it. The socket lives on a shared
-  # named volume so the bridge can reach it at /run/payer-daemon/daemon.sock.
-  # -----------------------------------------------------------------------------
-  # payer-daemon:
-  #   image: livepeer-payment-daemon:latest
-  #   command:
-  #     - '--mode=sender'
-  #     - '--socket=/run/payer-daemon/daemon.sock'
-  #     - '--keystore=/etc/livepeer/keystore'
-  #     - '--data=/var/lib/payer-daemon'
-  #   environment:
-  #     PAYER_KEYSTORE_PASSPHRASE: ${PAYER_KEYSTORE_PASSPHRASE:?set PAYER_KEYSTORE_PASSPHRASE}
-  #   volumes:
-  #     - payer-socket:/run/payer-daemon
-  #     - ./payer-keystore:/etc/livepeer/keystore:ro
-  #     - payer-data:/var/lib/payer-daemon
-
 volumes:
   pgdata:
-  payer-socket:
-  # payer-data:  # uncomment alongside payer-daemon service
+  payment-socket:

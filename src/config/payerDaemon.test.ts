@@ -4,7 +4,7 @@ import { loadPayerDaemonConfig } from './payerDaemon.js';
 describe('loadPayerDaemonConfig', () => {
   it('applies defaults when env is empty', () => {
     const cfg = loadPayerDaemonConfig({} as NodeJS.ProcessEnv);
-    expect(cfg.socketPath).toBe('/var/run/livepeer-payment-daemon.sock');
+    expect(cfg.socketPath).toBe('/var/run/livepeer/payment.sock');
     expect(cfg.healthIntervalMs).toBe(10_000);
     expect(cfg.healthFailureThreshold).toBe(2);
     expect(cfg.callTimeoutMs).toBe(5_000);
