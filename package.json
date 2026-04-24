@@ -1,0 +1,22 @@
+{
+  "name": "openai-livepeer-bridge",
+  "version": "0.0.0",
+  "private": true,
+  "description": "OpenAI-compatible API service fronting Livepeer WorkerNodes",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "echo 'test runner wired in exec-plan 0001' && exit 0",
+    "lint": "eslint . && node ./lint/layer-check/index.mjs",
+    "fmt": "prettier --write .",
+    "fmt:check": "prettier --check .",
+    "doc-lint": "echo 'doc-gardener wired in exec-plan 0001' && exit 0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

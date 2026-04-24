@@ -1,0 +1,39 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+
+# Local config / secrets
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+
+# Data / local state
+data/
+*.db
+*.sqlite
+
+# Logs
+*.log
+logs/
