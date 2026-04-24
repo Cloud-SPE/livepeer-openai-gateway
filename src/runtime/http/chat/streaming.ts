@@ -29,6 +29,7 @@ import {
 } from '../../../service/pricing/index.js';
 import { toHttpError, UpstreamNodeError } from '../errors.js';
 import { rateForTier } from '../../../config/pricing.js';
+import type { TokenAuditService } from '../../../service/tokenAudit/index.js';
 
 const MAX_RETRY_ATTEMPTS = 3;
 
@@ -38,6 +39,7 @@ export interface StreamingDeps {
   nodeClient: NodeClient;
   paymentsService: PaymentsService;
   pricing: PricingConfig;
+  tokenAudit?: TokenAuditService;
   nodeCallTimeoutMs?: number;
   rng?: () => number;
 }
@@ -60,7 +62,7 @@ export async function handleStreamingChatCompletion(
   }
 
   const workId = `${caller.customer.id}:${randomUUID()}`;
-  const estimate = estimateReservation(body, customerTier, deps.pricing);
+  const estimate = estimateReservation(body, customerTier, deps.pricing, deps.tokenAudit);
 
   let reservation: PrepaidReserveResult | QuotaReserveResult;
   try {
@@ -175,7 +177,7 @@ export async function handleStreamingChatCompletion(
   raw.flushHeaders();
 
   let firstTokenDelivered = false;
-  let tokensDeliveredApprox = 0;
+  let accumulatedContent = '';
   let capturedUsage: Usage | null = null;
   let streamNormallyEnded = false;
 
@@ -205,12 +207,15 @@ export async function handleStreamingChatCompletion(
 
       const delta = chunk.data.choices[0]?.delta.content ?? '';
       if (delta.length > 0 && !firstTokenDelivered) firstTokenDelivered = true;
-      tokensDeliveredApprox += Math.max(1, Math.ceil(delta.length / 3));
+      accumulatedContent += delta;
       raw.write(`data: ${ev.data}\n\n`);
     }
   } catch (err) {
     void err;
   }
+
+  const localCompletionTokens =
+    deps.tokenAudit?.countCompletionText(body.model, accumulatedContent) ?? null;
 
   const settlement = await settleReservation({
     db: deps.db,
@@ -225,8 +230,11 @@ export async function handleStreamingChatCompletion(
     capturedUsage,
     firstTokenDelivered,
     streamNormallyEnded,
-    tokensDeliveredApprox,
+    localCompletionTokens,
     paymentWei,
+    ...(deps.tokenAudit !== undefined ? { tokenAudit: deps.tokenAudit } : {}),
+    messages: body.messages,
+    nodeId: node.config.id,
   });
 
   if (settlement.emittedError) {
@@ -243,14 +251,17 @@ interface SettleInput {
   customerId: string;
   workId: string;
   nodeUrl: string;
+  nodeId: string;
   model: string;
   pricing: PricingConfig;
   estimate: ReturnType<typeof estimateReservation>;
   capturedUsage: Usage | null;
   firstTokenDelivered: boolean;
   streamNormallyEnded: boolean;
-  tokensDeliveredApprox: number;
+  localCompletionTokens: number | null;
   paymentWei: bigint;
+  tokenAudit?: TokenAuditService;
+  messages: readonly Parameters<NonNullable<TokenAuditService['countPromptTokens']>>[1][number][];
 }
 
 async function settleReservation(input: SettleInput): Promise<{
@@ -277,6 +288,7 @@ async function settleReservation(input: SettleInput): Promise<{
           actualTokens: BigInt(input.capturedUsage.total_tokens),
         });
       }
+      const localPrompt = input.tokenAudit?.countPromptTokens(input.model, input.messages) ?? null;
       await usageRecordsRepo.insertUsageRecord(input.db, {
         customerId: input.customerId,
         workId: input.workId,
@@ -284,10 +296,24 @@ async function settleReservation(input: SettleInput): Promise<{
         nodeUrl: input.nodeUrl,
         promptTokensReported: input.capturedUsage.prompt_tokens,
         completionTokensReported: input.capturedUsage.completion_tokens,
+        ...(localPrompt !== null ? { promptTokensLocal: localPrompt } : {}),
+        ...(input.localCompletionTokens !== null
+          ? { completionTokensLocal: input.localCompletionTokens }
+          : {}),
         costUsdCents: cost.actualCents,
         nodeCostWei: input.paymentWei.toString(),
         status: 'success',
       });
+      if (input.tokenAudit && localPrompt !== null && input.localCompletionTokens !== null) {
+        input.tokenAudit.emitDrift({
+          model: input.model,
+          nodeId: input.nodeId,
+          localPromptTokens: localPrompt,
+          reportedPromptTokens: input.capturedUsage.prompt_tokens,
+          localCompletionTokens: input.localCompletionTokens,
+          reportedCompletionTokens: input.capturedUsage.completion_tokens,
+        });
+      }
     } catch {
       // Settlement failed — best effort. Caller has no way to remediate here.
     }
@@ -308,14 +334,21 @@ async function settleReservation(input: SettleInput): Promise<{
     };
   }
 
-  // Tokens delivered but no usage chunk — bill the prompt-estimate portion only,
-  // refund the (max_tokens × output-rate) completion portion.
+  // Tokens delivered but no usage chunk. With LocalTokenizer (0011) we can
+  // commit the real completion count we accumulated during forwarding. If no
+  // tokenAudit is wired, fall back to the prompt-estimate-only bill that
+  // 0008 shipped as a stopgap.
   const pricingTier = input.estimate.pricingTier;
   const rate = rateForTier(input.pricing.rateCard, pricingTier);
+  const localPrompt = input.tokenAudit?.countPromptTokens(input.model, input.messages) ?? null;
+  const completionTokens = input.localCompletionTokens ?? 0;
+  const promptTokens = localPrompt ?? input.estimate.promptEstimateTokens;
+
   const partialCents = ceilMicroCentsToCents(
-    (BigInt(input.estimate.promptEstimateTokens) *
-      BigInt(Math.round(rate.inputUsdPerMillion * 100 * 10_000))) /
-      1_000_000n,
+    (BigInt(promptTokens) * BigInt(Math.round(rate.inputUsdPerMillion * 100 * 10_000))) /
+      1_000_000n +
+      (BigInt(completionTokens) * BigInt(Math.round(rate.outputUsdPerMillion * 100 * 10_000))) /
+        1_000_000n,
   );
 
   try {
@@ -327,7 +360,7 @@ async function settleReservation(input: SettleInput): Promise<{
     } else {
       await commitQuota(input.db, {
         reservationId: input.reservationId,
-        actualTokens: BigInt(input.estimate.promptEstimateTokens),
+        actualTokens: BigInt(promptTokens + completionTokens),
       });
     }
     await usageRecordsRepo.insertUsageRecord(input.db, {
@@ -335,8 +368,12 @@ async function settleReservation(input: SettleInput): Promise<{
       workId: input.workId,
       model: input.model,
       nodeUrl: input.nodeUrl,
-      promptTokensReported: input.estimate.promptEstimateTokens,
-      completionTokensReported: Math.max(1, input.tokensDeliveredApprox),
+      promptTokensReported: promptTokens,
+      completionTokensReported: Math.max(1, completionTokens),
+      ...(localPrompt !== null ? { promptTokensLocal: localPrompt } : {}),
+      ...(input.localCompletionTokens !== null
+        ? { completionTokensLocal: input.localCompletionTokens }
+        : {}),
       costUsdCents: partialCents,
       nodeCostWei: input.paymentWei.toString(),
       status: 'partial',
@@ -352,7 +389,7 @@ async function settleReservation(input: SettleInput): Promise<{
         code: 'service_unavailable',
         type: 'StreamTerminatedEarly',
         message: 'upstream stream ended without usage chunk; billed prompt portion only',
-        tokens_delivered: input.tokensDeliveredApprox,
+        tokens_delivered: completionTokens,
       },
     },
   };

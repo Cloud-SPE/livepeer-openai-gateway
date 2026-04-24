@@ -4,6 +4,7 @@ import type { ChatCompletionRequest, Usage } from '../../types/openai.js';
 import type { PricingTier } from '../../types/pricing.js';
 import { rateForTier } from '../../config/pricing.js';
 import { ModelNotFoundError } from '../routing/errors.js';
+import type { TokenAuditService } from '../tokenAudit/index.js';
 
 const MILLION = 1_000_000n;
 
@@ -24,12 +25,16 @@ export function estimateReservation(
   req: ChatCompletionRequest,
   customerTier: CustomerTier,
   config: PricingConfig,
+  tokenAudit?: TokenAuditService,
 ): ReservationEstimate {
   const pricingTier = resolveTierForModel(config, req.model);
   const rate = rateForTier(config.rateCard, pricingTier);
 
-  const charCount = req.messages.reduce((sum, m) => sum + m.content.length, 0);
-  const promptEstimateTokens = Math.max(1, Math.ceil(charCount / 3));
+  const auditedPrompt = tokenAudit?.countPromptTokens(req.model, req.messages) ?? null;
+  const promptEstimateTokens =
+    auditedPrompt !== null
+      ? Math.max(1, auditedPrompt)
+      : Math.max(1, Math.ceil(req.messages.reduce((sum, m) => sum + m.content.length, 0) / 3));
 
   const defaultMax =
     customerTier === 'free' ? config.defaultMaxTokensFree : config.defaultMaxTokensPrepaid;

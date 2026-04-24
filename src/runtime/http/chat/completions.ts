@@ -29,6 +29,7 @@ import {
 import { MissingUsageError, toHttpError, UpstreamNodeError } from '../errors.js';
 import { ChatCompletionRequestSchema } from '../../../types/openai.js';
 import { handleStreamingChatCompletion } from './streaming.js';
+import type { TokenAuditService } from '../../../service/tokenAudit/index.js';
 
 export interface ChatCompletionsDeps {
   db: Db;
@@ -37,6 +38,7 @@ export interface ChatCompletionsDeps {
   paymentsService: PaymentsService;
   authService: AuthService;
   rateLimiter?: RateLimiter;
+  tokenAudit?: TokenAuditService;
   pricing: PricingConfig;
   nodeCallTimeoutMs?: number;
   rng?: () => number;
@@ -81,6 +83,7 @@ async function handleChatCompletion(
       nodeClient: deps.nodeClient,
       paymentsService: deps.paymentsService,
       pricing: deps.pricing,
+      ...(deps.tokenAudit !== undefined ? { tokenAudit: deps.tokenAudit } : {}),
       ...(deps.nodeCallTimeoutMs !== undefined
         ? { nodeCallTimeoutMs: deps.nodeCallTimeoutMs }
         : {}),
@@ -99,7 +102,7 @@ async function handleChatCompletion(
 
   const workId = `${caller.customer.id}:${randomUUID()}`;
   const customerTier = caller.customer.tier;
-  const estimate = estimateReservation(body, customerTier, deps.pricing);
+  const estimate = estimateReservation(body, customerTier, deps.pricing, deps.tokenAudit);
 
   let reservation: PrepaidReserveResult | QuotaReserveResult | null = null;
   let committed = false;
@@ -165,6 +168,11 @@ async function handleChatCompletion(
     }
     committed = true;
 
+    const completionText = response.choices.map((c) => c.message.content).join('') ?? '';
+    const localPrompt = deps.tokenAudit?.countPromptTokens(body.model, body.messages) ?? null;
+    const localCompletion =
+      deps.tokenAudit?.countCompletionText(body.model, completionText) ?? null;
+
     await usageRecordsRepo.insertUsageRecord(deps.db, {
       customerId: caller.customer.id,
       workId,
@@ -172,10 +180,23 @@ async function handleChatCompletion(
       nodeUrl: node.config.url,
       promptTokensReported: response.usage.prompt_tokens,
       completionTokensReported: response.usage.completion_tokens,
+      ...(localPrompt !== null ? { promptTokensLocal: localPrompt } : {}),
+      ...(localCompletion !== null ? { completionTokensLocal: localCompletion } : {}),
       costUsdCents: cost.actualCents,
       nodeCostWei: payment.expectedValueWei.toString(),
       status: 'success',
     });
+
+    if (deps.tokenAudit && localPrompt !== null && localCompletion !== null) {
+      deps.tokenAudit.emitDrift({
+        model: body.model,
+        nodeId: node.config.id,
+        localPromptTokens: localPrompt,
+        reportedPromptTokens: response.usage.prompt_tokens,
+        localCompletionTokens: localCompletion,
+        reportedCompletionTokens: response.usage.completion_tokens,
+      });
+    }
 
     await reply.code(200).send(response);
   } catch (err) {
