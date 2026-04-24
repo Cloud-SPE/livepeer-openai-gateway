@@ -25,3 +25,12 @@ Append-only list of known debt. Strike through when resolved; include the PR or 
 - Remediation: dedicated exec-plan to author an AST-based layer-check (and the companion `no-cross-cutting-import`, `zod-at-boundary`, `no-secrets-in-logs`, `file-size` rules described in `lint/README.md`).
 - Resolved: _(open)_
 
+### `src/types/` shape lint not enforced
+
+- Opened: 2026-04-24
+- Severity: low
+- Area: lint / types
+- Description: 0002-types-and-zod calls for a lint that asserts every file in `src/types/` exports both a Zod schema and the inferred `z.infer` type. Currently relying on code review. Convention is respected by every file authored in 0002.
+- Remediation: add as a rule in the ESLint plugin work (see above).
+- Resolved: _(open)_
+

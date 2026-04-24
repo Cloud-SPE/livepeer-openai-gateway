@@ -10,8 +10,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --coverage",
     "test:watch": "vitest",
+    "test:nocov": "vitest run",
     "lint": "eslint . && node ./lint/layer-check/index.mjs",
     "fmt": "prettier --write .",
     "fmt:check": "prettier --check .",

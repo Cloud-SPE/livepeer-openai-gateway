@@ -1,0 +1,71 @@
+import { z } from 'zod';
+import { CustomerTierSchema } from './customer.js';
+import { ModelIdSchema } from './pricing.js';
+
+export const NodeIdSchema = z.string().min(1).max(64);
+export type NodeId = z.infer<typeof NodeIdSchema>;
+
+export const EthAddressSchema = z
+  .string()
+  .regex(/^0x[0-9a-fA-F]{40}$/, 'must be a 0x-prefixed 40-char hex string');
+export type EthAddress = z.infer<typeof EthAddressSchema>;
+
+export const NodeConfigSchema = z.object({
+  id: NodeIdSchema,
+  url: z.string().url(),
+  ethAddress: EthAddressSchema,
+  supportedModels: z.array(ModelIdSchema).min(1),
+  enabled: z.boolean(),
+  tierAllowed: z.array(CustomerTierSchema).min(1),
+  weight: z.number().int().positive(),
+});
+export type NodeConfig = z.infer<typeof NodeConfigSchema>;
+
+export const TicketParamsSchema = z.object({
+  recipient: EthAddressSchema,
+  faceValueWei: z.bigint().nonnegative(),
+  winProb: z.string().min(1),
+  seed: z.string().min(1),
+  expirationBlock: z.bigint().nonnegative(),
+  expirationParamsHash: z.string().min(1),
+});
+export type TicketParams = z.infer<typeof TicketParamsSchema>;
+
+export const PriceInfoSchema = z.object({
+  pricePerUnitWei: z.bigint().nonnegative(),
+  pixelsPerUnit: z.bigint().positive(),
+});
+export type PriceInfo = z.infer<typeof PriceInfoSchema>;
+
+export const QuoteSchema = z.object({
+  ticketParams: TicketParamsSchema,
+  priceInfo: PriceInfoSchema,
+  lastRefreshedAt: z.coerce.date(),
+  expiresAt: z.coerce.date(),
+});
+export type Quote = z.infer<typeof QuoteSchema>;
+
+export const HealthStatusCodeSchema = z.enum(['healthy', 'degraded', 'circuit_broken']);
+export type HealthStatusCode = z.infer<typeof HealthStatusCodeSchema>;
+
+export const HealthStatusSchema = z.object({
+  code: HealthStatusCodeSchema,
+  consecutiveFailures: z.number().int().nonnegative(),
+  lastSuccessAt: z.coerce.date().nullable(),
+  lastFailureAt: z.coerce.date().nullable(),
+});
+export type HealthStatus = z.infer<typeof HealthStatusSchema>;
+
+export const NodeCapacitySchema = z.object({
+  inFlightRequests: z.number().int().nonnegative(),
+  maxConcurrent: z.number().int().positive(),
+});
+export type NodeCapacity = z.infer<typeof NodeCapacitySchema>;
+
+export const NodeStateSchema = z.object({
+  config: NodeConfigSchema,
+  quote: QuoteSchema.nullable(),
+  health: HealthStatusSchema,
+  capacity: NodeCapacitySchema,
+});
+export type NodeState = z.infer<typeof NodeStateSchema>;

@@ -57,6 +57,7 @@ Lints enforce this in CI. See [docs/design-docs/architecture.md](docs/design-doc
 4. **No code without a plan.** Non-trivial work starts with an entry in `docs/exec-plans/active/`.
 5. **Atomic ledger debits.** Every customer debit is under a DB-level lock. No exceptions.
 6. **Fail-closed on payment daemon outage.** If PayerDaemon is unreachable, requests return 503. Never proceed without payment.
+7. **Test coverage ≥ 75%.** All four v8 metrics (lines, branches, functions, statements) enforced by `npm test`. Do not lower the floor; raise it when possible.
 
 ## Where to look for X
 

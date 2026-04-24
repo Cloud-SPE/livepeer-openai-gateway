@@ -48,6 +48,10 @@ Humans author design-docs, open exec-plans, and review outcomes. Agents do the i
 
 Non-trivial changes start with an entry in `docs/exec-plans/active/`. See `PLANS.md`.
 
+## 11. Tests and coverage are non-negotiable
+
+Every production module in `src/` ships with tests. Overall test coverage (lines, branches, functions, statements) is enforced at **≥ 75%** by `vitest`; `npm test` fails below that floor. The threshold ratchets up, never down — if a change lowers the coverage gate, it also needs a design-doc justifying the regression.
+
 ## Project-specific invariants
 
 - **Free tier subsidy is capped.** Free tier uses only nodes marked `tier_allowed: [free, prepaid]`. No way for a free-tier request to land on a premium node.
