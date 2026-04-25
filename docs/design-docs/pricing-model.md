@@ -21,11 +21,17 @@ The four `v2` chat tiers + the four model-keyed cards (embeddings, images, speec
 - **Commodity tiers** (`starter`, `standard`, `pro`) strictly undercut every benchmarked commercial competitor as of the rebalance (`2c40cbb`, 2026-04-25): OpenAI, Anthropic (Claude), Together, Replicate, Groq, Deepgram, AssemblyAI, ElevenLabs. They assume the worker is heavily-batched commodity hardware (vLLM with high concurrency on a hyperscaler-class GPU, or a prosumer GPU with `--max-num-seqs ≥ 8`).
 - **Premium tier** is positioned BELOW the most expensive commercial frontier offerings (OpenAI gpt-4o, Anthropic Claude Sonnet) but well above commodity. It exists because a single retail GPU running a single model without aggressive batching cannot break even at commodity rates — see "Worker operator economics" below for the math. Premium workers compete on what hyperscalers cannot offer: uncensored fine-tunes, privacy guarantees, specific languages or domains, custom adapters, low-noise serving.
 
-Margin comes from the worker side: `worker.yaml` `price_per_work_unit_wei` values are sized at roughly **70-80% of the bridge customer rate**, leaving the bridge a healthy spread for infra, redemption gas, and operations while still beating every commercial endpoint a customer could route to instead. The competitive references that drive each tier's number live in the `pricing.ts` comment block (`src/config/pricing.ts`) and are mirrored below for each rate card. When competitor prices change, the playbook is to re-check those benchmarks and bump our rates only enough to preserve the "strictly cheaper at commodity, BELOW frontier at premium" property.
+**Cheapness is the brand promise.** The customer-facing rate cards are non-negotiable: every commodity tier strictly undercuts the cheapest commercial competitor. We do NOT raise customer rates to cover worker hardware costs — that defeats the entire positioning. Instead, the worker-side `price_per_work_unit_wei` is set at a deliberately low fraction of the customer rate during the growth phase, and the bridge keeps most of the spread to fund customer acquisition + infra. As the bridge grows demand and worker utilization climbs, operators measure their actual economics and can negotiate rates upward.
+
+The competitive references that drive each tier's number live in the `pricing.ts` comment block (`src/config/pricing.ts`) and are mirrored below for each rate card. When competitor prices change, the playbook is to re-check those benchmarks and bump our rates only enough to preserve the "strictly cheaper at commodity, BELOW frontier at premium" property.
 
 ## Worker operator economics
 
-**Bridge operator's job: keep worker GPUs humming with concurrent load.** The whole pricing structure assumes high utilization (>50%, ideally >80%) — at low utilization no rate card makes a worker profitable on commodity GPUs. The bridge takes the load-balancing + customer-acquisition burden so workers can saturate.
+The pricing model has three independent dials. Operators (worker AND bridge) need data to know which one to adjust over time:
+
+1. **Customer rate card** — non-negotiable in growth phase; cheaper-than-OpenAI is the brand. Adjustments are reactive (when a competitor changes price, we re-check we're still strictly cheaper).
+2. **Worker `price_per_work_unit_wei`** — fully tunable per-worker per-model. Default values in `worker.example.yaml` are LOW (5–10 % of customer rate) so the bridge keeps the bulk of revenue during the growth phase. Workers participate at a loss expecting volume to grow.
+3. **Worker hardware utilization** — outside the bridge's direct control. Bridge does best-effort load balancing + customer acquisition; worker brings the GPU.
 
 ### Throughput shapes the achievable price
 
@@ -39,9 +45,9 @@ Same GPU, very different cost-per-token depending on batching:
 
 (Numbers approximate; exact depends on prompt length, model size, quantization, and the inference engine.)
 
-### Break-even math (RTX 5090 at $12/day cost)
+### Worker hardware break-even (reference math, RTX 5090 at $12/day cost)
 
-Worker break-even price/M tokens = `daily_cost / daily_tokens`:
+Break-even price/M tokens for the worker = `daily_cost / daily_tokens`:
 
 | Mode | Break-even ($12/day) | $5/day profit ($17/day rev) |
 | --- | --- | --- |
@@ -49,31 +55,22 @@ Worker break-even price/M tokens = `daily_cost / daily_tokens`:
 | 4× batched | $0.55 | $0.79 |
 | 16× batched | $0.28 | $0.39 |
 
-### Tier-to-throughput mapping
+### Default (growth-phase) tier mapping
 
-The four chat tiers correspond to the batching the worker can achieve:
-
-| Tier | Bridge customer (avg) | Worker take (~80%) | Required throughput on a 5090 to break even on $12/day | Suggested `worker.yaml` `price_per_work_unit_wei` (at $4k/ETH) |
+| Tier | Bridge customer (avg) | Default `worker.yaml` `price_per_work_unit_wei` (at $4k/ETH) | Worker take | Bridge keeps |
 | --- | --- | --- | --- | --- |
-| **starter** ($0.05/$0.10) | ~$0.075/M | ~$0.06/M | **~32× concurrent** — heavy server-grade vLLM, multiple models, or hyperscaler hardware | `1_250_000` |
-| **standard** ($0.15/$0.40) | ~$0.25/M | ~$0.20/M | **~10× concurrent** — vLLM with healthy traffic | `5_000_000` |
-| **pro** ($0.40/$1.20) | ~$0.80/M | ~$0.64/M | **~3-4× concurrent** — comfortable for any vLLM deploy | `15_000_000` |
-| **premium** ($2.50/$6.00) | ~$3.75/M | ~$3.00/M | **single-user serving** — Ollama-class without batching | `75_000_000` |
+| **starter** ($0.05/$0.10) | ~$0.075/M | `1_250_000` (≈ $0.005/M) | ~7 % | ~93 % |
+| **standard** ($0.15/$0.40) | ~$0.25/M | `5_000_000` (≈ $0.02/M) | ~8 % | ~92 % |
+| **pro** ($0.40/$1.20) | ~$0.80/M | `15_000_000` (≈ $0.06/M) | ~7 % | ~93 % |
+| **premium** ($2.50/$6.00) | ~$3.75/M | `75_000_000` (≈ $0.30/M) | ~8 % | ~92 % |
 
-(`price_per_work_unit_wei` math: target USD/M tokens × 80% worker share, divided by ETH/USD, divided by 10⁶ tokens, expressed in wei. These are *recommended starting points*; operators tune up/down against their actual hardware costs and ETH price.)
+These defaults are **deliberately worker-unfavorable in the short term**. A consumer GPU running at any of these prices loses money against its hardware cost. Workers participate because:
 
-### Two strategies for a worker operator
+- The bridge is doing customer acquisition + handling Stripe + handling crypto + holding the on-chain deposit + running redemption gas
+- Rates can be renegotiated upward once the bridge has demand
+- Specialty / niche workers can override `price_per_work_unit_wei` per-model on their own worker.yaml — there's no central control
 
-**Strategy A — Compete on price (commodity).** Run vLLM, TGI, or a similar batched inference engine. Push concurrency to 8-16+. Pick `starter`/`standard`/`pro` tier matching your sustained throughput. Customer acquisition is easier (you're cheaper than OpenAI) but margin per token is thin.
-
-**Strategy B — Compete on value (premium).** Single-user-friendly serving (Ollama is fine). Differentiate on what hyperscalers can't or won't ship:
-- Uncensored / abliterated models
-- Custom fine-tunes
-- Privacy / no-log guarantees
-- Specific languages or domain expertise
-- Lower latency (geographic proximity, no batching wait)
-
-Customer demand is smaller but per-customer revenue is much higher. Premium tier at $2.50/$6 per 1M tokens leaves the worker ~$3/M after the bridge's cut — a single 5090 at modest utilization (~6M tokens/day, single-user-serving) earns ~$18/day, comfortably above the $12/day GPU cost.
+Workers chasing economic break-even on a single 5090 (no batching) need ~$2/M tokens, i.e. `price_per_work_unit_wei: "500000000"` (≈ 80 % of the premium customer rate, leaving ~20 % bridge margin). They should set that on their own deployment when their measured economics warrant it — see "Measurement and adjustment" below.
 
 ### What the bridge operator does
 
@@ -82,9 +79,42 @@ The bridge's role is to make sure workers have **demand**, not capacity. Every w
 1. **Route requests to the right tier**, so a customer asking for `gemma4:26b` lands on a worker who can profitably serve it at the matching tier.
 2. **Aggregate demand** across many small customers so each worker sees consistent load.
 3. **Smooth the bursty-traffic problem** with rate-limiting (Redis-backed) and concurrency caps (per-customer, per-worker).
-4. **Keep the worker billed honestly** — workers are paid in ticket EV; the bridge never sees the worker's GPU cost, but the rate-card design assumes the bridge isn't undercutting the worker into unprofitability.
+4. **Surface real economics to both sides** — worker operators can see what they earned, bridge operator can see margin per request, both can decide when/how to adjust.
 
-A bridge that cannot keep its worker fleet at >50% utilization is signaling that pricing is too high (lose customers to competitors) or marketing is too thin (no customers know about you). Either way, the worker pulls out and capacity disappears. The pricing here only works if the load shows up.
+If workers can't see the data, they have no basis to negotiate or to leave. If the bridge can't see the data, it has no basis to set rates intelligently or to know when its growth phase is over. **Measurement is the load-bearing missing piece** — see below.
+
+## Measurement and adjustment
+
+The bridge already records the raw inputs (`usage_record` table, daemon BoltDB, Stripe topup events, on-chain redemptions). What's missing is **operator-facing rollups + projections** that turn those raw rows into a price-tuning decision.
+
+### What's recorded today
+
+| Source | Data | Location |
+| --- | --- | --- |
+| `usage_record` (postgres) | per-request: customer_id, model, kind, prompt/completion tokens, cost_usd_cents, node_cost_wei, status, timestamp | bridge db |
+| `topup` (postgres) | Stripe Checkout settlements per customer | bridge db |
+| `node_health_event` (postgres) | circuit-state transitions per worker | bridge db |
+| daemon BoltDB | pending winning tickets, redeemed tx hashes, sender nonces | worker daemon `/var/lib/livepeer/payment-daemon.db` |
+| Arbitrum One | actual ETH/LPT received from `redeemWinningTicket` events on the recipient address | on-chain |
+| Bridge logs | per-request `session started`, `ticket batch created`, `commit reservation` lines | container stdout |
+
+### What's missing (tracked as tech debt)
+
+- **Bridge admin metrics endpoints.** `GET /admin/metrics/daily`, `/admin/metrics/per-worker`, `/admin/metrics/per-tier` — rolled-up views of customer revenue, worker EV paid out, gross margin, per-tier utilization. Today operators have to write SQL by hand against `usage_record`.
+- **Worker daemon `/metrics` endpoint.** Prometheus-style counters: `tickets_accepted_total`, `tickets_won_total`, `redemptions_succeeded_total`, `redemptions_failed_total`, `ev_earned_wei_total`, per-sender labels. Today operators tail container logs.
+- **Operator-facing economics CLI.** `livepeer-payment-stats --since=7d` reading the daemon BoltDB + on-chain redemptions, producing a markdown report with realized $/M tokens, break-even projection, suggested `price_per_work_unit_wei` adjustment if data warrants. Today the operator does this math in a spreadsheet.
+- **Cost-attribution per request.** Single SQL view (or admin endpoint) that joins a chat request to: customer USD billed, ticket EV sent, worker recipient address, redemption tx hash if any. Audit trail for "where did this $0.004 go?" investigations. Today the operator manually correlates timestamps across sources.
+- **Bridge-operator economics dashboard.** Even a static HTML page (auto-regenerated nightly) showing daily customer revenue vs daily worker EV vs (operator-input) infra cost vs net margin per tier. Today the operator has nothing.
+
+The lack of these tools is not blocking the deploy — workers can still earn, customers can still pay, the protocol works. But it actively prevents anyone from making an informed pricing decision, which is exactly the loop the user (operator) needs to close to know when growth-phase rates can be moved.
+
+### Adjustment loop (the intent once tooling lands)
+
+1. Bridge operator periodically (weekly) checks `/admin/metrics/per-worker`: tokens served, EV paid, margin per tier.
+2. Worker operator periodically checks their own `/metrics` + on-chain redemption events: realized $/M tokens.
+3. If a worker's realized-$/M is below their hardware cost AND utilization is high, they raise `price_per_work_unit_wei`. The bridge sees the new quote and either continues routing (its margin shrinks but it's still profitable) or stops routing to that worker (the worker is now overpriced for the tier).
+4. If utilization is low across the fleet, the bridge operator drops customer rates further OR invests in customer acquisition.
+5. The bridge operator never auto-adjusts — every change is observable and intentional.
 
 ## Chat rate card (v2, effective 2026-04-25)
 

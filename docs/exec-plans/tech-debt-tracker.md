@@ -205,6 +205,22 @@ Append-only list of known debt. Strike through when resolved; include the PR or 
 - Remediation: add `POST /admin/customers/:id/issue-key` (and optionally `POST /admin/customers/issue-key` that creates the customer + key in one call for the bootstrap flow) under the existing `adminAuthPreHandler`. Body: `{ envPrefix: 'test' | 'live' }`. Response: `{ apiKeyId, plaintext, prefix, last4 }` with the plaintext returned exactly once. Wire to `issueKey(db, ...)`. Test: TestPg + admin token round-trip + rejected without admin token. Update `docs/operations/deployment.md` to replace the SQL recipe with a `curl` recipe once landed.
 - Resolved: _(open)_
 
+### operator-economics-metrics-tooling
+
+- Opened: 2026-04-25
+- Severity: HIGH (load-bearing for the growth-phase pricing strategy)
+- Area: src/runtime/http/admin, observability, tooling
+- Description: The pricing strategy (cheap customer rates, low worker pay during growth phase, adjust upward as data warrants) DEPENDS on operators being able to see their actual economics. The bridge already records all the raw inputs (`usage_record`, `topup`, `node_health_event` tables; daemon BoltDB; on-chain redemption events) but does not surface them as operator-facing rollups. Today operators have to write SQL by hand or tail container logs to figure out: what's our customer revenue today, what EV did we ship to which workers, what's our gross margin per tier, are we actually keeping a worker fleet busy. Without this loop, no operator (worker or bridge) can decide when growth-phase rates can be moved — the whole adjustment process documented in `pricing-model.md` "Measurement and adjustment" is theoretical.
+- Remediation: ship in roughly this order of value:
+  1. `GET /admin/metrics/daily` — last-N-days rollup: customer revenue (USD cents), worker EV paid (wei + USD est at current ETH price), per-tier request count, per-tier net margin. JSON shape mirrors the existing admin endpoints.
+  2. `GET /admin/metrics/per-worker` — per-`node_id` breakdown: tokens served, EV paid, % utilization (requests / max_concurrent_requests * 100), circuit state.
+  3. `GET /admin/metrics/per-tier` — per-tier rollup including realized $/M tokens (from `usage_record.cost_usd_cents` aggregated).
+  4. Worker daemon `/metrics` Prometheus endpoint: counters for `tickets_accepted_total`, `tickets_won_total`, `redemptions_succeeded_total`, `redemptions_failed_total`, `ev_earned_wei_total`, with `sender` label.
+  5. CLI tool `livepeer-payment-stats --since=7d` that reads the daemon BoltDB + on-chain redemption events and prints a markdown report (realized $/M tokens, break-even projection, suggested `price_per_work_unit_wei` adjustment).
+  6. Cost-attribution view: per-request join across `usage_record` + ticket batch ID + on-chain redemption tx hash, accessible as `GET /admin/metrics/request/:work_id`.
+  7. Static HTML dashboard (auto-regenerated nightly): customer revenue vs worker EV vs (operator-input) infra cost over time, per tier.
+- Resolved: _(open)_
+
 ### pricing-rebalance-pricing-model-doc-v1-tables
 
 - Opened: 2026-04-25
