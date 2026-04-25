@@ -14,6 +14,9 @@ export const CAPABILITY_STRINGS: Record<NodeCapability, string> = {
   chat: 'openai:/v1/chat/completions',
   embeddings: 'openai:/v1/embeddings',
   images: 'openai:/v1/images/generations',
+  imagesEdits: 'openai:/v1/images/edits',
+  speech: 'openai:/v1/audio/speech',
+  transcriptions: 'openai:/v1/audio/transcriptions',
 };
 
 /**

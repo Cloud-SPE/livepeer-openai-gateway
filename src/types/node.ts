@@ -10,7 +10,14 @@ export const EthAddressSchema = z
   .regex(/^0x[0-9a-fA-F]{40}$/, 'must be a 0x-prefixed 40-char hex string');
 export type EthAddress = z.infer<typeof EthAddressSchema>;
 
-export const NodeCapabilitySchema = z.enum(['chat', 'embeddings', 'images']);
+export const NodeCapabilitySchema = z.enum([
+  'chat',
+  'embeddings',
+  'images',
+  'imagesEdits',
+  'speech',
+  'transcriptions',
+]);
 export type NodeCapability = z.infer<typeof NodeCapabilitySchema>;
 
 export const NodeConfigSchema = z.object({

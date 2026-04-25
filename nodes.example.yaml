@@ -36,15 +36,22 @@ nodes:
     # nodes is irrelevant; only relative weights matter.
     weight: 100
 
-  # ─── Multi-capability worker (chat + embeddings + images) ────────────
+  # ─── Multi-capability worker (every advertised capability) ──────────
   - id: worker-multi-1
     url: https://worker2.example.com
     ethAddress: "0x2222222222222222222222222222222222222222"
-    capabilities: [chat, embeddings, images]
+    # Six v1 capabilities. `imagesEdits` is /v1/images/edits (multipart);
+    # `speech` is /v1/audio/speech (TTS); `transcriptions` is
+    # /v1/audio/transcriptions (multipart STT). Workers may advertise
+    # any subset.
+    capabilities: [chat, embeddings, images, imagesEdits, speech, transcriptions]
     supportedModels:
       - llama-3.3-70b
       - text-embedding-3-small
       - sdxl-turbo
+      - sdxl-edit
+      - tts-1
+      - whisper-large-v3
     enabled: true
     tierAllowed: [prepaid]
     weight: 50

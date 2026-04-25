@@ -73,7 +73,7 @@ nodes:
     url: https://node.example.com
     ethAddress: "${addressA}"
     supportedModels: ["m"]
-    capabilities: ["chat", "speech"]
+    capabilities: ["chat", "telekinesis"]
     enabled: true
     tierAllowed: ["prepaid"]
     weight: 1
