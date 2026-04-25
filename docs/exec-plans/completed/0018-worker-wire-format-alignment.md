@@ -2,9 +2,10 @@
 id: 0018
 slug: worker-wire-format-alignment
 title: Align bridge wire schemas with the openai-worker-node HTTP contract
-status: active
+status: completed
 owner: agent
 opened: 2026-04-24
+completed: 2026-04-25
 ---
 
 ## Goal
@@ -28,18 +29,18 @@ This is phase 1 of the multi-capability bridge rework. It gets the bridge **talk
 
 ## Approach
 
-- [ ] Update `NodeHealthResponseSchema` in `src/providers/nodeClient.ts` to match the worker's `/health` output: `{ status: 'ok' | 'degraded', protocol_version: number, max_concurrent: number, inflight: number }`. Drop the pre-0018 `models: string[]` field — it never landed in production and the new probe pipeline doesn't need it.
-- [ ] Add `NodeCapabilitiesResponseSchema` — matches `/capabilities`: `{ protocol_version, capabilities: [{ capability: string, work_unit: string, models: [{ model, price_per_work_unit_wei }] }] }`.
-- [ ] Update `NodeQuoteResponseSchema` to match `/quote`: snake_case field names (`ticket_params`, `face_value_wei`, etc.) and `0x`-prefixed hex byte fields (bridge's `BigIntStringSchema` converts hex via `BigInt('0x…')`). Nested `expiration_params: { creation_round, creation_round_block_hash }` replaces the pre-0018 `expirationParamsHash`. `model_prices: [{ model, price_per_work_unit_wei }]` replaces the single `priceInfo`.
-- [ ] Add `getCapabilities(url, timeoutMs)` + `getQuotes(url, sender, timeoutMs)` to the `NodeClient` interface and fetch impl. Update `getQuote` signature to take `(url, sender, capability, timeoutMs)` — the worker rejects the old no-query-params form with `400 invalid_request`.
-- [ ] New config field `bridgeEthAddress` (eth address format, validated by Zod) so the refresher can supply `?sender=`. Kept in the existing `src/config/` layer alongside other bridge-wide config.
-- [ ] Update `src/service/nodes/quoteRefresher.ts` to pass the new signature: it already fetches a single quote; wire through `bridgeEthAddress` + the capability string `openai:/v1/chat/completions` (the only routed capability today). When storing the result on `NodeEntry.quote`, pick the first `model_prices[]` entry's price as `priceInfo.pricePerUnitWei`. Multi-capability quote storage lands in phase 2.
-- [ ] Vitest tests for:
+- [x] Update `NodeHealthResponseSchema` in `src/providers/nodeClient.ts` to match the worker's `/health` output: `{ status: 'ok' | 'degraded', protocol_version: number, max_concurrent: number, inflight: number }`. Drop the pre-0018 `models: string[]` field — it never landed in production and the new probe pipeline doesn't need it.
+- [x] Add `NodeCapabilitiesResponseSchema` — matches `/capabilities`: `{ protocol_version, capabilities: [{ capability: string, work_unit: string, models: [{ model, price_per_work_unit_wei }] }] }`.
+- [x] Update `NodeQuoteResponseSchema` to match `/quote`: snake_case field names (`ticket_params`, `face_value_wei`, etc.) and `0x`-prefixed hex byte fields (bridge's `BigIntStringSchema` converts hex via `BigInt('0x…')`). Nested `expiration_params: { creation_round, creation_round_block_hash }` replaces the pre-0018 `expirationParamsHash`. `model_prices: [{ model, price_per_work_unit_wei }]` replaces the single `priceInfo`.
+- [x] Add `getCapabilities(url, timeoutMs)` + `getQuotes(url, sender, timeoutMs)` to the `NodeClient` interface and fetch impl. Update `getQuote` signature to take `(url, sender, capability, timeoutMs)` — the worker rejects the old no-query-params form with `400 invalid_request`.
+- [x] New config field `bridgeEthAddress` (eth address format, validated by Zod) so the refresher can supply `?sender=`. Kept in the existing `src/config/` layer alongside other bridge-wide config.
+- [x] Update `src/service/nodes/quoteRefresher.ts` to pass the new signature: it already fetches a single quote; wire through `bridgeEthAddress` + the capability string `openai:/v1/chat/completions` (the only routed capability today). When storing the result on `NodeEntry.quote`, pick the first `model_prices[]` entry's price as `priceInfo.pricePerUnitWei`. (Phase-2 per-capability storage delivered in 0020.)
+- [x] Vitest tests for:
   - New schema parse paths (valid + invalid for each schema).
   - `getCapabilities` happy path + non-2xx.
   - `getQuotes` happy path.
   - `getQuote` with the new signature.
-- [ ] Update `worker.example.yaml` / equivalent operator docs to note the `bridgeEthAddress` config key.
+- [x] Update `worker.example.yaml` / equivalent operator docs to note the `bridgeEthAddress` config key.
 
 ## Decisions log
 
@@ -61,4 +62,11 @@ The payer daemon knows the bridge's sender ETH address via its keystore. Fetchin
 
 ## Artifacts produced
 
-_In progress._
+- `src/providers/nodeClient.ts` — `NodeHealthResponseSchema`, `NodeQuoteResponseSchema` (snake_case + 0x-hex), `NodeCapabilitiesResponseSchema`, `NodeQuotesResponseSchema`. New `GetQuoteInput` + `GetQuotesInput` shapes; `NodeClient` interface gains `getCapabilities` / `getQuotes`; `getQuote` takes `(url, sender, capability, timeoutMs)`.
+- `src/providers/nodeClient/fetch.ts` — fetch implementations for `getCapabilities` / `getQuotes` / new `getQuote` signature, with shared timeout + non-2xx handling.
+- `src/config/payerDaemon.ts` — `bridgeEthAddress` config field (validated as 0x-prefixed 40-hex via Zod) plumbed from `BRIDGE_ETH_ADDRESS` env.
+- `src/service/nodes/quoteRefresher.ts` — switched to batched `getQuotes({ url, sender: bridgeEthAddress })`; phase-1 path picked first `model_prices[]` entry. (Per-capability fan-out followed in 0020.)
+- `src/main.ts` — wires `bridgeEthAddress` into the refresher constructor.
+- Test updates: `nodebook.test.ts`, `nodes.test.ts`, `quoteRefresher.test.ts`, `nodeClient.test.ts`, `chat/completions.test.ts`, `chat/streaming.test.ts`, `embeddings/embeddings.test.ts`, `images/images.test.ts`, `payerDaemon.test.ts`.
+
+Followed by `0020-per-capability-nodebook` which reshaped `NodeEntry.quote` → `NodeEntry.quotes: Map<string, Quote>` and migrated all routing handlers.
