@@ -17,7 +17,7 @@ How to run the bridge + payment daemon + postgres + redis stack end-to-end, for 
 
 ## Layout
 
-- `compose.yaml` — dev stack: bridge (inline build), postgres, redis, `tztcloud/payment-daemon:v0.8.10`.
+- `compose.yaml` — dev stack: bridge (inline build), postgres, redis, `tztcloud/livepeer-payment-daemon:v0.8.10`.
 - `compose.prod.yaml` — prod override: pinned bridge image, restart policies, log rotation, resource limits, read-only hardening on the daemon, one-shot migration job.
 
 Dev invokes one file; prod layers both:
@@ -37,13 +37,18 @@ docker compose -f compose.yaml -f compose.prod.yaml up -d
 cp .env.example .env
 $EDITOR .env   # fill every REQUIRED-* placeholder + CHAIN_RPC
 
+# Note: BRIDGE_ETH_ADDRESS must match the address derived from the
+# keystore you mount in step 2. The bridge sends it as ?sender= when
+# probing worker /quote + /quotes.
+
 # 2. Keystore (signer) + password
 cp /path/to/your-v3-keystore.json ./keystore.json
 printf '%s' 'your-keystore-password' > ./keystore-password
 chmod 600 ./keystore-password
 
-# 3. Nodes allowlist
-$EDITOR nodes.yaml   # pin at least one WorkerNode entry
+# 3. Nodes allowlist (start from the annotated example)
+cp nodes.example.yaml nodes.yaml
+$EDITOR nodes.yaml   # edit URLs, ETH addresses, supportedModels, capabilities
 
 # 4. Boot
 docker compose up --build
@@ -120,7 +125,7 @@ docker compose exec payment-daemon ls -la /var/run/livepeer/
 # same file, from the daemon's side
 ```
 
-If the socket is absent, the daemon crashed on boot — check its logs. If it's present but the bridge gets `EACCES`, the two containers disagree on uid. Both `tztcloud/payment-daemon` and distroless-nodejs20 default to uid `65532`; don't override `user:` unless you've aligned both.
+If the socket is absent, the daemon crashed on boot — check its logs. If it's present but the bridge gets `EACCES`, the two containers disagree on uid. Both `tztcloud/livepeer-payment-daemon` and distroless-nodejs20 default to uid `65532`; don't override `user:` unless you've aligned both.
 
 ### Bridge can't connect to postgres
 

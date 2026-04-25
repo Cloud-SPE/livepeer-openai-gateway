@@ -1,0 +1,63 @@
+# Annotated example for nodes.yaml (the bridge's WorkerNode pool).
+#
+# Copy to nodes.yaml at the repo root (gitignored) and edit. The bridge
+# reads this file at startup; changes require a process restart
+# (auto-reload is tracked as tech-debt).
+#
+# Schema: src/types/node.ts NodeConfigSchema. Validated by Zod at load
+# time; a malformed file fails the bridge's startup, not silently.
+
+nodes:
+  # ─── Single-capability chat-only worker ───────────────────────────────
+  - id: worker-chat-1
+    # HTTPS URL the bridge POSTs paid requests to. Must be reachable
+    # from the bridge container.
+    url: https://worker1.example.com
+    # ETH address the worker advertises as the ticket recipient. Must
+    # match the recipient_eth_address in the worker's worker.yaml +
+    # the address derived from the worker's payment-daemon keystore.
+    # Mismatch is detected at config-reload time and is a startup error.
+    ethAddress: "0x1111111111111111111111111111111111111111"
+    # Capabilities the bridge will route to this node. The bridge does
+    # NOT verify these against /capabilities yet — phase 2 of 0018
+    # (plan 0020-per-capability-nodebook) adds the runtime cross-check.
+    # Until then, this list is the operator's allowlist.
+    capabilities: [chat]
+    supportedModels:
+      - llama-3.3-70b
+      - mistral-7b-instruct
+    enabled: true
+    # Customer tiers eligible to route here. 'free' is the default
+    # quota tier; 'prepaid' customers pay per-token from a topped-up
+    # balance.
+    tierAllowed: [free, prepaid]
+    # Higher weight = more requests routed here under the weighted-
+    # random pickNode (see src/service/routing/router.ts). Sum across
+    # nodes is irrelevant; only relative weights matter.
+    weight: 100
+
+  # ─── Multi-capability worker (chat + embeddings + images) ────────────
+  - id: worker-multi-1
+    url: https://worker2.example.com
+    ethAddress: "0x2222222222222222222222222222222222222222"
+    capabilities: [chat, embeddings, images]
+    supportedModels:
+      - llama-3.3-70b
+      - text-embedding-3-small
+      - sdxl-turbo
+    enabled: true
+    tierAllowed: [prepaid]
+    weight: 50
+
+  # ─── Disabled worker (kept in config but skipped by router) ──────────
+  - id: worker-staging
+    url: https://staging.example.com
+    ethAddress: "0x3333333333333333333333333333333333333333"
+    capabilities: [chat]
+    supportedModels: [llama-3.3-70b]
+    # `enabled: false` keeps the entry in the config (for ETH-address
+    # auditing across reloads) but excludes it from routing. Useful
+    # for staging nodes you don't want serving live traffic.
+    enabled: false
+    tierAllowed: [prepaid]
+    weight: 1
