@@ -152,15 +152,18 @@ Three-way reconciliation on the same hop is the whole point of building all thre
 
 ## Wiring
 
-Same package split as service-registry, adapted for TypeScript: `src/providers/metrics/` (Recorder + impls) + `src/runtime/metrics/` (HTTP listener). Per-provider decorators live next to the provider they wrap. Per the conventions doc, **no service or repo package may import `prom-client` directly** — all emissions go through the Recorder/Sink interface.
+Same package split as service-registry, adapted for TypeScript: `src/providers/metrics/` (Recorder + impls) + `src/runtime/metrics/` (HTTP listener). Per-provider decorators live next to the provider they wrap. Per the conventions doc, **no service or repo package may import `prom-client` directly** — all emissions go through the `Recorder` interface.
 
 ### Package layout
 
-- `src/providers/metrics/recorder.ts` — `Recorder` interface (extends the existing `MetricsSink` from [`0011`](../exec-plans/completed/0011-local-tokenizer-metric.md)); cardinality-cap wrapper; bucket presets (`DEFAULT_BUCKETS`, `FAST_BUCKETS`); dual-histogram registration helper.
-- `src/providers/metrics/noop.ts` — default for tests + endpoint-off mode.
-- `src/providers/metrics/prometheus.ts` — `prom-client` impl with custom `Registry` + `collectDefaultMetrics({ register })` for the built-in `process_*` / `nodejs_*` collectors.
-- `src/providers/metrics/names.ts` — exported metric-name constants.
-- `src/runtime/metrics/server.ts` — separate Fastify instance listening on `METRICS_LISTEN`. Single `GET /metrics` route. Graceful shutdown via the existing lifecycle hook.
+- `src/providers/metrics/recorder.ts` — `Recorder` interface: a fat **domain-specific** surface (e.g. `incRequest(capability, model, tier, outcome)`, `addNodeCostWei(capability, model, nodeId, weiString)`, `observePayerDaemonCall(method, durationSec)`), NOT a generic `counter/gauge/histogram` factory. Adding a metric means adding a method here and implementing it in every Recorder. Also exports label-value constants. Coexists with the existing `MetricsSink` interface from [`0011`](../exec-plans/completed/0011-local-tokenizer-metric.md) — the new Recorder does NOT extend it; instead, both `PrometheusRecorder` and `NoopRecorder` implement BOTH interfaces so legacy `tokenAudit` emits keep working unchanged. Phase 2 unifies them.
+- `src/providers/metrics/noop.ts` — `NoopRecorder` class implementing both `Recorder` and `MetricsSink`. Re-exports the legacy `createNoopMetricsSink` factory for back-compat with `main.ts` and `tokenAudit.test.ts`.
+- `src/providers/metrics/prometheus.ts` — `prom-client` impl. Owns a custom `Registry` (not the default global) + `collectDefaultMetrics({ register })` for built-in `process_*` / `nodejs_*` collectors. Bucket presets defined inline (`DEFAULT_BUCKETS`, `FAST_BUCKETS`). Dual-histogram for the unix-socket gRPC histogram is two distinct `Histogram` fields written from one `observePayerDaemonCall` call.
+- `src/providers/metrics/capVec.ts` — cardinality-cap wrapper around `prom-client`'s `Counter`/`Gauge`/`Histogram` vecs. Drops new label tuples beyond `maxSeriesPerMetric`, fires `onCapExceeded` exactly once per metric. Split out of `prometheus.ts` to stay under the existing 400-line ESLint warn threshold.
+- `src/providers/metrics/legacySink.ts` — implements just the legacy `MetricsSink` half of the dual interface. Hard-allowlists only the three legacy `tokens_*` names; anything else is silently dropped. Phase 2 deletes this file.
+- `src/providers/metrics/fastify.ts` — small factory for the metrics-listener Fastify instance. Lives under `providers/metrics/` because the bridge's `no-cross-cutting-import` ESLint rule forbids importing `fastify` outside `src/providers/`.
+- `src/providers/metrics/testhelpers.ts` — `Counter` test helper class implementing both interfaces.
+- `src/runtime/metrics/server.ts` — `createMetricsServer({ listen, recorder, logger })` — wires the Fastify instance from `providers/metrics/fastify.ts` to a `GET /metrics` + `GET /healthz` route, with graceful shutdown via Fastify's `close()`. Returns a no-op when `listen` is empty.
 
 ### Decorators (per-provider, NOT centralized)
 
@@ -199,4 +202,4 @@ For outcome-by-branch counters and ledger emits where the wrapper can't see cont
 
 The composition root (`src/runtime/server.ts` or wherever production wiring lives) is the only place that constructs the prom impl. When `METRICS_LISTEN` is set: build the Recorder, start the metrics Fastify instance, wrap each provider with its `metered.ts`. Otherwise pass the noop Recorder (default) and skip the metrics server. Tests keep the noop unchanged.
 
-The existing `MetricsSink` interface from [`0011-local-tokenizer-metric.md`](../exec-plans/completed/0011-local-tokenizer-metric.md) is preserved; the new `Recorder` extends it. No service code that already takes a `MetricsSink` needs to change.
+The existing `MetricsSink` interface from [`0011-local-tokenizer-metric.md`](../exec-plans/completed/0011-local-tokenizer-metric.md) is preserved as a separate, narrower surface — the new `Recorder` does NOT extend it; both impls satisfy both interfaces side-by-side. No service code that already takes a `MetricsSink` needs to change. Phase 2 migrates `tokenAudit` onto the prefixed names emitted via the Recorder and deletes `legacySink.ts`.
