@@ -32,7 +32,11 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD', 'pg_isready', '-U', '${PGUSER:-bridge}']
+      # `pg_isready -U <name>` defaults the database to the same name as
+      # the user; if PGUSER and PGDATABASE diverge (e.g. user is named
+      # `openai-bridge-user` but the DB is `bridge`) the probe FATALs
+      # with "database does not exist". Pass -d explicitly.
+      test: ['CMD', 'pg_isready', '-U', '${PGUSER:-bridge}', '-d', '${PGDATABASE:-bridge}']
       interval: 5s
       timeout: 5s
       retries: 20
