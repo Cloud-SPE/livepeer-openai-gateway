@@ -32,11 +32,14 @@ Non-negotiables that shape every decision in this repo.
 - [retry-policy.md](retry-policy.md) — `accepted` — retry table for node dispatch (pre-first-token only)
 - [stripe-integration.md](stripe-integration.md) — `accepted` — Checkout top-ups, webhook flow, idempotency, tier upgrade
 - [token-audit.md](token-audit.md) — `accepted` — LocalTokenizer phases (observe → audit → enforce), drift metric, integration points
+- [metrics.md](metrics.md) — `accepted` — Prometheus metrics catalog (Phase 1 wires `prom-client` Recorder + `/metrics` endpoint; mirrors service-registry's verified pattern; cross-repo reconciliation panels enabled by consistent labels; advances `operator-economics-metrics-tooling`)
 - `escrow-operations.md` — _planned_ — reserve sizing, top-up, alerts
 - `reconciliation.md` — _planned_ — three-ledger relationship (customer USD, daemon EV, on-chain)
 
 Cross-repo:
 
+- [`../../../livepeer-modules-conventions/metrics-conventions.md`](../../../livepeer-modules-conventions/metrics-conventions.md) — authoritative naming, label, bucket, cardinality, and provider-boundary rules shared across all repos in the fleet
+- [`../../../livepeer-service-registry/docs/design-docs/observability.md`](../../../livepeer-service-registry/docs/design-docs/observability.md) — reference implementation of the Recorder pattern this repo's metrics.md mirrors
 - [`../../../livepeer-payment-library/docs/design-docs/shared-yaml.md`](../../../livepeer-payment-library/docs/design-docs/shared-yaml.md) — the `worker.yaml` cross-repo contract the bridge consumes via `nodes.yaml` per-node references and via the worker's `/capabilities` advertisement.
 
 ## Conventions
