@@ -16,14 +16,14 @@ Append-only list of known debt. Strike through when resolved; include the PR or 
 
 ## Items
 
-### layer-check ESLint plugin — stub only
+### ~~layer-check ESLint plugin — stub only~~
 
 - Opened: 2026-04-24
 - Severity: medium
 - Area: lint
 - Description: `lint/layer-check/index.mjs` is currently a warn-and-exit-0 stub. The dependency rule from `docs/design-docs/architecture.md` (types → config → repo → service → runtime → ui + providers) is not yet enforced mechanically — CI will pass on violations.
 - Remediation: dedicated exec-plan to author an AST-based layer-check (and the companion `no-cross-cutting-import`, `zod-at-boundary`, `no-secrets-in-logs`, `file-size` rules described in `lint/README.md`).
-- Resolved: _(open)_
+- Resolved: 2026-04-25 — debt entry was stale; the AST-based plugin shipped with exec-plan 0014 (`lint/eslint-plugin-livepeer-bridge/`, six rules at ~495 LOC, wired into `eslint.config.js` and `npm run lint`). Verified by re-running `npx eslint .` clean. One drive-by fix during verification: `src/types/capability.ts` gained the missing `CapabilityStringSchema` + `CapabilityString` type alias to satisfy the existing `livepeer-bridge/types-shape` rule (closed-set Zod enum of canonical capability strings, used at the worker-facing boundary).
 
 ### Server-side gRPC interceptor for auth — deferred
 
@@ -158,4 +158,4 @@ Append-only list of known debt. Strike through when resolved; include the PR or 
 - Area: lint / types
 - Description: 0002-types-and-zod calls for a lint that asserts every file in `src/types/` exports both a Zod schema and the inferred `z.infer` type. Currently relying on code review. Convention is respected by every file authored in 0002.
 - Remediation: add as a rule in the ESLint plugin work (see above).
-- Resolved: _(open)_
+- Resolved: 2026-04-25 — entry was stale; rule is implemented as `livepeer-bridge/types-shape` (lint/eslint-plugin-livepeer-bridge/rules/types-shape.js, 82 LOC) and is wired into `eslint.config.js`. Verified by `npx eslint .` running clean against `src/types/`.

@@ -74,7 +74,7 @@ export function createQuoteRefresher(deps: QuoteRefresherDeps): QuoteRefresher {
         sender: deps.bridgeEthAddress,
         timeoutMs: entry.config.refresh.quoteTimeoutMs,
       });
-      const advertisedCanonical = new Set(
+      const advertisedCanonical = new Set<string>(
         entry.config.capabilities.map((c) => CAPABILITY_TO_CANONICAL[c]),
       );
       const newQuotes = new Map<string, Quote>();
