@@ -1,7 +1,18 @@
 import type { TicketParams } from '../types/node.js';
 
+export interface PriceInfo {
+  // Wei per `pixelsPerUnit` units of work. Matches the proto wire field.
+  pricePerUnit: bigint;
+  pixelsPerUnit: bigint;
+}
+
 export interface StartSessionInput {
   ticketParams: TicketParams;
+  // Required since payment-daemon v0.8.10 (StartSessionRequest.price_info).
+  // Must match the price the worker used at quote time
+  // (cap.maxPrice / model_prices[i].price_per_work_unit_wei) — otherwise
+  // ProcessPayment 402s with `invalid recipientRand for recipientRandHash`.
+  priceInfo: PriceInfo;
   label?: string;
 }
 

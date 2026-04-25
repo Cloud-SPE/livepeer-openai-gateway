@@ -18,7 +18,7 @@ import {
   type ServiceError,
   type UntypedServiceImplementation,
 } from "@grpc/grpc-js";
-import { TicketParams } from "./types.js";
+import { PriceInfo, TicketParams } from "./types.js";
 
 export const protobufPackage = "livepeer.payments.v1";
 
@@ -29,6 +29,20 @@ export interface StartSessionRequest {
     | undefined;
   /** Optional caller-chosen label used only in the daemon's audit log. */
   label: string;
+  /**
+   * Price the payee committed to when issuing `ticket_params`. The daemon
+   * stores this price on the session and:
+   *   1. Embeds it in every Payment as `expected_price` so the payee's
+   *      `recipientRand` HMAC inputs match what they used at quote time.
+   *      Without it, the payee re-derives `recipientRand` against price=0
+   *      and the recipient_rand_hash check fails — see receiver.go's
+   *      `computeRecipientRand`.
+   *   2. Sizes ticket batches against `work_units × price`.
+   *
+   * REQUIRED for any session that will produce non-free tickets. Free /
+   * bootstrap sessions may pass `{ price_per_unit_wei: "0", pixels_per_unit: "1" }`.
+   */
+  priceInfo?: PriceInfo | undefined;
 }
 
 export interface StartSessionResponse {
@@ -88,7 +102,7 @@ export interface GetDepositInfoResponse {
 }
 
 function createBaseStartSessionRequest(): StartSessionRequest {
-  return { ticketParams: undefined, label: "" };
+  return { ticketParams: undefined, label: "", priceInfo: undefined };
 }
 
 export const StartSessionRequest: MessageFns<StartSessionRequest> = {
@@ -98,6 +112,9 @@ export const StartSessionRequest: MessageFns<StartSessionRequest> = {
     }
     if (message.label !== "") {
       writer.uint32(18).string(message.label);
+    }
+    if (message.priceInfo !== undefined) {
+      PriceInfo.encode(message.priceInfo, writer.uint32(26).fork()).join();
     }
     return writer;
   },
@@ -125,6 +142,14 @@ export const StartSessionRequest: MessageFns<StartSessionRequest> = {
           message.label = reader.string();
           continue;
         }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.priceInfo = PriceInfo.decode(reader, reader.uint32());
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -142,6 +167,11 @@ export const StartSessionRequest: MessageFns<StartSessionRequest> = {
         ? TicketParams.fromJSON(object.ticket_params)
         : undefined,
       label: isSet(object.label) ? globalThis.String(object.label) : "",
+      priceInfo: isSet(object.priceInfo)
+        ? PriceInfo.fromJSON(object.priceInfo)
+        : isSet(object.price_info)
+        ? PriceInfo.fromJSON(object.price_info)
+        : undefined,
     };
   },
 
@@ -152,6 +182,9 @@ export const StartSessionRequest: MessageFns<StartSessionRequest> = {
     }
     if (message.label !== "") {
       obj.label = message.label;
+    }
+    if (message.priceInfo !== undefined) {
+      obj.priceInfo = PriceInfo.toJSON(message.priceInfo);
     }
     return obj;
   },
@@ -165,6 +198,9 @@ export const StartSessionRequest: MessageFns<StartSessionRequest> = {
       ? TicketParams.fromPartial(object.ticketParams)
       : undefined;
     message.label = object.label ?? "";
+    message.priceInfo = (object.priceInfo !== undefined && object.priceInfo !== null)
+      ? PriceInfo.fromPartial(object.priceInfo)
+      : undefined;
     return message;
   },
 };

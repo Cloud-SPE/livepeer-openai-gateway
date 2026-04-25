@@ -27,14 +27,80 @@ export interface GetQuoteRequest {
   sender: Buffer;
   /**
    * Capability the sender intends to purchase. The daemon maps this to the
-   * `PriceInfo.capability` uint32 at the wire boundary.
+   * `PriceInfo.capability` uint32 at the wire boundary. One capability may
+   * host many models; the response lists them all.
    */
   capability: string;
 }
 
 export interface GetQuoteResponse {
-  ticketParams?: TicketParams | undefined;
+  /**
+   * Single TicketParams for this (sender, capability). Face value is sized
+   * to cover the most expensive model on this capability so one session
+   * covers the whole model set without re-keying RecipientRandHash per
+   * model.
+   */
+  ticketParams?:
+    | TicketParams
+    | undefined;
+  /**
+   * Per-model pricing. Ordered by model name for deterministic comparison
+   * on the bridge's quote-refresh cycle. Empty iff the daemon has no
+   * models configured for this capability (caller should treat as NotFound).
+   */
+  modelPrices: ModelPrice[];
+}
+
+/**
+ * ModelPrice pairs a model identifier with its wei-per-work-unit price.
+ * Shared between GetQuoteResponse and ListCapabilitiesResponse so the two
+ * surfaces cannot drift.
+ */
+export interface ModelPrice {
+  /**
+   * Model identifier, e.g. "llama-3.3-70b". Must match the model string the
+   * bridge uses when resolving a request to a node.
+   */
+  model: string;
+  /**
+   * Price for one work unit (see CapabilityEntry.work_unit for the meaning
+   * of "unit" on this capability).
+   */
   priceInfo?: PriceInfo | undefined;
+}
+
+export interface ListCapabilitiesRequest {
+}
+
+export interface ListCapabilitiesResponse {
+  /**
+   * Matches `protocol_version` in the shared worker.yaml. Worker-node uses
+   * this to detect daemon/worker version skew before comparing payload.
+   */
+  protocolVersion: number;
+  /**
+   * Full capability catalog as parsed by the daemon at startup. Ordered
+   * by capability string, then model name, for deterministic comparison.
+   */
+  capabilities: CapabilityEntry[];
+}
+
+export interface CapabilityEntry {
+  /**
+   * Capability string in the canonical form `openai:<uri-path>` for the
+   * OpenAI module family; other modules use their own domain prefix
+   * (e.g. `transcoding:...`). Opaque to the daemon.
+   */
+  capability: string;
+  /**
+   * Work-unit identifier for observability ("token", "audio_second",
+   * "image_step_megapixel", "character", ...). The daemon treats work
+   * units as opaque int64 — this field is metadata for the worker /
+   * bridge.
+   */
+  workUnit: string;
+  /** Models served on this capability, with their configured prices. */
+  models: ModelPrice[];
 }
 
 export interface ProcessPaymentRequest {
@@ -274,7 +340,7 @@ export const GetQuoteRequest: MessageFns<GetQuoteRequest> = {
 };
 
 function createBaseGetQuoteResponse(): GetQuoteResponse {
-  return { ticketParams: undefined, priceInfo: undefined };
+  return { ticketParams: undefined, modelPrices: [] };
 }
 
 export const GetQuoteResponse: MessageFns<GetQuoteResponse> = {
@@ -282,8 +348,8 @@ export const GetQuoteResponse: MessageFns<GetQuoteResponse> = {
     if (message.ticketParams !== undefined) {
       TicketParams.encode(message.ticketParams, writer.uint32(10).fork()).join();
     }
-    if (message.priceInfo !== undefined) {
-      PriceInfo.encode(message.priceInfo, writer.uint32(18).fork()).join();
+    for (const v of message.modelPrices) {
+      ModelPrice.encode(v!, writer.uint32(18).fork()).join();
     }
     return writer;
   },
@@ -308,7 +374,7 @@ export const GetQuoteResponse: MessageFns<GetQuoteResponse> = {
             break;
           }
 
-          message.priceInfo = PriceInfo.decode(reader, reader.uint32());
+          message.modelPrices.push(ModelPrice.decode(reader, reader.uint32()));
           continue;
         }
       }
@@ -327,11 +393,11 @@ export const GetQuoteResponse: MessageFns<GetQuoteResponse> = {
         : isSet(object.ticket_params)
         ? TicketParams.fromJSON(object.ticket_params)
         : undefined,
-      priceInfo: isSet(object.priceInfo)
-        ? PriceInfo.fromJSON(object.priceInfo)
-        : isSet(object.price_info)
-        ? PriceInfo.fromJSON(object.price_info)
-        : undefined,
+      modelPrices: globalThis.Array.isArray(object?.modelPrices)
+        ? object.modelPrices.map((e: any) => ModelPrice.fromJSON(e))
+        : globalThis.Array.isArray(object?.model_prices)
+        ? object.model_prices.map((e: any) => ModelPrice.fromJSON(e))
+        : [],
     };
   },
 
@@ -340,8 +406,8 @@ export const GetQuoteResponse: MessageFns<GetQuoteResponse> = {
     if (message.ticketParams !== undefined) {
       obj.ticketParams = TicketParams.toJSON(message.ticketParams);
     }
-    if (message.priceInfo !== undefined) {
-      obj.priceInfo = PriceInfo.toJSON(message.priceInfo);
+    if (message.modelPrices?.length) {
+      obj.modelPrices = message.modelPrices.map((e) => ModelPrice.toJSON(e));
     }
     return obj;
   },
@@ -354,9 +420,310 @@ export const GetQuoteResponse: MessageFns<GetQuoteResponse> = {
     message.ticketParams = (object.ticketParams !== undefined && object.ticketParams !== null)
       ? TicketParams.fromPartial(object.ticketParams)
       : undefined;
+    message.modelPrices = object.modelPrices?.map((e) => ModelPrice.fromPartial(e)) || [];
+    return message;
+  },
+};
+
+function createBaseModelPrice(): ModelPrice {
+  return { model: "", priceInfo: undefined };
+}
+
+export const ModelPrice: MessageFns<ModelPrice> = {
+  encode(message: ModelPrice, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.model !== "") {
+      writer.uint32(10).string(message.model);
+    }
+    if (message.priceInfo !== undefined) {
+      PriceInfo.encode(message.priceInfo, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ModelPrice {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseModelPrice();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.model = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.priceInfo = PriceInfo.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ModelPrice {
+    return {
+      model: isSet(object.model) ? globalThis.String(object.model) : "",
+      priceInfo: isSet(object.priceInfo)
+        ? PriceInfo.fromJSON(object.priceInfo)
+        : isSet(object.price_info)
+        ? PriceInfo.fromJSON(object.price_info)
+        : undefined,
+    };
+  },
+
+  toJSON(message: ModelPrice): unknown {
+    const obj: any = {};
+    if (message.model !== "") {
+      obj.model = message.model;
+    }
+    if (message.priceInfo !== undefined) {
+      obj.priceInfo = PriceInfo.toJSON(message.priceInfo);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ModelPrice>, I>>(base?: I): ModelPrice {
+    return ModelPrice.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ModelPrice>, I>>(object: I): ModelPrice {
+    const message = createBaseModelPrice();
+    message.model = object.model ?? "";
     message.priceInfo = (object.priceInfo !== undefined && object.priceInfo !== null)
       ? PriceInfo.fromPartial(object.priceInfo)
       : undefined;
+    return message;
+  },
+};
+
+function createBaseListCapabilitiesRequest(): ListCapabilitiesRequest {
+  return {};
+}
+
+export const ListCapabilitiesRequest: MessageFns<ListCapabilitiesRequest> = {
+  encode(_: ListCapabilitiesRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListCapabilitiesRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseListCapabilitiesRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(_: any): ListCapabilitiesRequest {
+    return {};
+  },
+
+  toJSON(_: ListCapabilitiesRequest): unknown {
+    const obj: any = {};
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ListCapabilitiesRequest>, I>>(base?: I): ListCapabilitiesRequest {
+    return ListCapabilitiesRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ListCapabilitiesRequest>, I>>(_: I): ListCapabilitiesRequest {
+    const message = createBaseListCapabilitiesRequest();
+    return message;
+  },
+};
+
+function createBaseListCapabilitiesResponse(): ListCapabilitiesResponse {
+  return { protocolVersion: 0, capabilities: [] };
+}
+
+export const ListCapabilitiesResponse: MessageFns<ListCapabilitiesResponse> = {
+  encode(message: ListCapabilitiesResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.protocolVersion !== 0) {
+      writer.uint32(8).int32(message.protocolVersion);
+    }
+    for (const v of message.capabilities) {
+      CapabilityEntry.encode(v!, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListCapabilitiesResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseListCapabilitiesResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.protocolVersion = reader.int32();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.capabilities.push(CapabilityEntry.decode(reader, reader.uint32()));
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ListCapabilitiesResponse {
+    return {
+      protocolVersion: isSet(object.protocolVersion)
+        ? globalThis.Number(object.protocolVersion)
+        : isSet(object.protocol_version)
+        ? globalThis.Number(object.protocol_version)
+        : 0,
+      capabilities: globalThis.Array.isArray(object?.capabilities)
+        ? object.capabilities.map((e: any) => CapabilityEntry.fromJSON(e))
+        : [],
+    };
+  },
+
+  toJSON(message: ListCapabilitiesResponse): unknown {
+    const obj: any = {};
+    if (message.protocolVersion !== 0) {
+      obj.protocolVersion = Math.round(message.protocolVersion);
+    }
+    if (message.capabilities?.length) {
+      obj.capabilities = message.capabilities.map((e) => CapabilityEntry.toJSON(e));
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ListCapabilitiesResponse>, I>>(base?: I): ListCapabilitiesResponse {
+    return ListCapabilitiesResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ListCapabilitiesResponse>, I>>(object: I): ListCapabilitiesResponse {
+    const message = createBaseListCapabilitiesResponse();
+    message.protocolVersion = object.protocolVersion ?? 0;
+    message.capabilities = object.capabilities?.map((e) => CapabilityEntry.fromPartial(e)) || [];
+    return message;
+  },
+};
+
+function createBaseCapabilityEntry(): CapabilityEntry {
+  return { capability: "", workUnit: "", models: [] };
+}
+
+export const CapabilityEntry: MessageFns<CapabilityEntry> = {
+  encode(message: CapabilityEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.capability !== "") {
+      writer.uint32(10).string(message.capability);
+    }
+    if (message.workUnit !== "") {
+      writer.uint32(18).string(message.workUnit);
+    }
+    for (const v of message.models) {
+      ModelPrice.encode(v!, writer.uint32(26).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): CapabilityEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCapabilityEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.capability = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.workUnit = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.models.push(ModelPrice.decode(reader, reader.uint32()));
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): CapabilityEntry {
+    return {
+      capability: isSet(object.capability) ? globalThis.String(object.capability) : "",
+      workUnit: isSet(object.workUnit)
+        ? globalThis.String(object.workUnit)
+        : isSet(object.work_unit)
+        ? globalThis.String(object.work_unit)
+        : "",
+      models: globalThis.Array.isArray(object?.models) ? object.models.map((e: any) => ModelPrice.fromJSON(e)) : [],
+    };
+  },
+
+  toJSON(message: CapabilityEntry): unknown {
+    const obj: any = {};
+    if (message.capability !== "") {
+      obj.capability = message.capability;
+    }
+    if (message.workUnit !== "") {
+      obj.workUnit = message.workUnit;
+    }
+    if (message.models?.length) {
+      obj.models = message.models.map((e) => ModelPrice.toJSON(e));
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<CapabilityEntry>, I>>(base?: I): CapabilityEntry {
+    return CapabilityEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<CapabilityEntry>, I>>(object: I): CapabilityEntry {
+    const message = createBaseCapabilityEntry();
+    message.capability = object.capability ?? "";
+    message.workUnit = object.workUnit ?? "";
+    message.models = object.models?.map((e) => ModelPrice.fromPartial(e)) || [];
     return message;
   },
 };
@@ -1599,9 +1966,11 @@ export const GetRedemptionStatusResponse: MessageFns<GetRedemptionStatusResponse
 export type PayeeDaemonService = typeof PayeeDaemonService;
 export const PayeeDaemonService = {
   /**
-   * Return the current TicketParams + PriceInfo for a (sender, capability)
+   * Return the TicketParams and per-model pricing for a (sender, capability)
    * pair. The payer app queries this via its PayeeApp peer and hands the
-   * result to its own PayerDaemon when starting a session.
+   * result to its own PayerDaemon when starting a session. One TicketParams
+   * covers every model on the capability; per-model prices are carried in
+   * `model_prices` and are what the payer checks against when billing.
    */
   getQuote: {
     path: "/livepeer.payments.v1.PayeeDaemon/GetQuote" as const,
@@ -1611,6 +1980,23 @@ export const PayeeDaemonService = {
     requestDeserialize: (value: Buffer): GetQuoteRequest => GetQuoteRequest.decode(value),
     responseSerialize: (value: GetQuoteResponse): Buffer => Buffer.from(GetQuoteResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): GetQuoteResponse => GetQuoteResponse.decode(value),
+  },
+  /**
+   * Return the daemon's full configured capability catalog. The worker-node
+   * calls this at startup to cross-check its own shared-YAML parse against
+   * the daemon's — mismatch is a fail-closed condition. Also drives the
+   * worker's /capabilities HTTP response.
+   */
+  listCapabilities: {
+    path: "/livepeer.payments.v1.PayeeDaemon/ListCapabilities" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: ListCapabilitiesRequest): Buffer =>
+      Buffer.from(ListCapabilitiesRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): ListCapabilitiesRequest => ListCapabilitiesRequest.decode(value),
+    responseSerialize: (value: ListCapabilitiesResponse): Buffer =>
+      Buffer.from(ListCapabilitiesResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ListCapabilitiesResponse => ListCapabilitiesResponse.decode(value),
   },
   /**
    * Validate an incoming payment blob, credit the sender's balance by the
@@ -1717,11 +2103,20 @@ export const PayeeDaemonService = {
 
 export interface PayeeDaemonServer extends UntypedServiceImplementation {
   /**
-   * Return the current TicketParams + PriceInfo for a (sender, capability)
+   * Return the TicketParams and per-model pricing for a (sender, capability)
    * pair. The payer app queries this via its PayeeApp peer and hands the
-   * result to its own PayerDaemon when starting a session.
+   * result to its own PayerDaemon when starting a session. One TicketParams
+   * covers every model on the capability; per-model prices are carried in
+   * `model_prices` and are what the payer checks against when billing.
    */
   getQuote: handleUnaryCall<GetQuoteRequest, GetQuoteResponse>;
+  /**
+   * Return the daemon's full configured capability catalog. The worker-node
+   * calls this at startup to cross-check its own shared-YAML parse against
+   * the daemon's — mismatch is a fail-closed condition. Also drives the
+   * worker's /capabilities HTTP response.
+   */
+  listCapabilities: handleUnaryCall<ListCapabilitiesRequest, ListCapabilitiesResponse>;
   /**
    * Validate an incoming payment blob, credit the sender's balance by the
    * payment's expected value, and queue any winning tickets for redemption.
@@ -1758,9 +2153,11 @@ export interface PayeeDaemonServer extends UntypedServiceImplementation {
 
 export interface PayeeDaemonClient extends Client {
   /**
-   * Return the current TicketParams + PriceInfo for a (sender, capability)
+   * Return the TicketParams and per-model pricing for a (sender, capability)
    * pair. The payer app queries this via its PayeeApp peer and hands the
-   * result to its own PayerDaemon when starting a session.
+   * result to its own PayerDaemon when starting a session. One TicketParams
+   * covers every model on the capability; per-model prices are carried in
+   * `model_prices` and are what the payer checks against when billing.
    */
   getQuote(
     request: GetQuoteRequest,
@@ -1776,6 +2173,27 @@ export interface PayeeDaemonClient extends Client {
     metadata: Metadata,
     options: Partial<CallOptions>,
     callback: (error: ServiceError | null, response: GetQuoteResponse) => void,
+  ): ClientUnaryCall;
+  /**
+   * Return the daemon's full configured capability catalog. The worker-node
+   * calls this at startup to cross-check its own shared-YAML parse against
+   * the daemon's — mismatch is a fail-closed condition. Also drives the
+   * worker's /capabilities HTTP response.
+   */
+  listCapabilities(
+    request: ListCapabilitiesRequest,
+    callback: (error: ServiceError | null, response: ListCapabilitiesResponse) => void,
+  ): ClientUnaryCall;
+  listCapabilities(
+    request: ListCapabilitiesRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: ListCapabilitiesResponse) => void,
+  ): ClientUnaryCall;
+  listCapabilities(
+    request: ListCapabilitiesRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: ListCapabilitiesResponse) => void,
   ): ClientUnaryCall;
   /**
    * Validate an incoming payment blob, credit the sender's balance by the

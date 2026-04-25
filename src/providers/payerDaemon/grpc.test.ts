@@ -136,7 +136,10 @@ describe('grpc payer daemon client (fake server over unix socket)', () => {
   it('startSession → createPayment → closeSession round-trip', async () => {
     const { client } = mkClient(running!.socketPath);
     try {
-      const { workId } = await client.startSession({ ticketParams });
+      const { workId } = await client.startSession({
+        ticketParams,
+        priceInfo: { pricePerUnit: 1n, pixelsPerUnit: 1n },
+      });
       expect(workId).toBe('wrk-1');
 
       const payment = await client.createPayment({ workId, workUnits: 10n });
@@ -166,7 +169,10 @@ describe('grpc payer daemon client (fake server over unix socket)', () => {
     const { client } = mkClient(running!.socketPath);
     try {
       running!.state.forceCreatePaymentError = true;
-      const { workId } = await client.startSession({ ticketParams });
+      const { workId } = await client.startSession({
+        ticketParams,
+        priceInfo: { pricePerUnit: 1n, pixelsPerUnit: 1n },
+      });
       await expect(client.createPayment({ workId, workUnits: 10n })).rejects.toMatchObject({
         name: 'PayerDaemonProtocolError',
       });

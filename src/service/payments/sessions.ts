@@ -49,7 +49,20 @@ export function createSessionCache(deps: SessionCacheDeps): SessionCache {
       if (existing) entries.delete(id);
 
       const { workId } = await deps.payerDaemon.startSession(
-        { ticketParams: quote.ticketParams, label: nodeId },
+        {
+          ticketParams: quote.ticketParams,
+          label: nodeId,
+          // REQUIRED since payment-daemon v0.8.10. Must match the price
+          // the worker used when issuing ticket_params (cap.maxPrice in
+          // payee.go GetQuote, surfaced as the max in /quote.model_prices
+          // and projected to Quote.priceInfo by wireQuoteToDomain).
+          // Without this, ProcessPayment 402s with `invalid recipientRand
+          // for recipientRandHash`.
+          priceInfo: {
+            pricePerUnit: quote.priceInfo.pricePerUnitWei,
+            pixelsPerUnit: quote.priceInfo.pixelsPerUnit,
+          },
+        },
         signal,
       );
       entries.set(id, {

@@ -89,6 +89,15 @@ export function createGrpcPayerDaemonClient(deps: GrpcPayerDaemonDeps): PayerDae
           {
             ticketParams: domainTicketParamsToWire(input.ticketParams),
             label: input.label ?? '',
+            priceInfo: {
+              pricePerUnit: input.priceInfo.pricePerUnit,
+              pixelsPerUnit: input.priceInfo.pixelsPerUnit,
+              // capability + constraint are uint32/string identifiers used by
+              // multi-capability daemons; for the bridge's single-capability
+              // session model they're left at their zero values.
+              capability: 0,
+              constraint: '',
+            },
           },
           meta,
           { deadline },
