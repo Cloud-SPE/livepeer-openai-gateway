@@ -127,6 +127,8 @@ async function handleImagesGenerations(
       nodeId: node.config.id,
       quote,
       workUnits: BigInt(n),
+      capability: capabilityString('images'),
+      model: body.model,
     });
 
     const paymentHeaderB64 = Buffer.from(payment.paymentBytes).toString('base64');

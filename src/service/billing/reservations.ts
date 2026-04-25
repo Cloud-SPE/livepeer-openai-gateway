@@ -1,6 +1,7 @@
 import type { Db } from '../../repo/db.js';
 import * as customersRepo from '../../repo/customers.js';
 import * as reservationsRepo from '../../repo/reservations.js';
+import type { Recorder } from '../../providers/metrics/recorder.js';
 import {
   BalanceInsufficientError,
   CustomerNotFoundError,
@@ -59,6 +60,11 @@ export async function reserve(db: Db, input: PrepaidReserveInput): Promise<Prepa
 export interface PrepaidCommitInput {
   reservationId: string;
   actualCostCents: bigint;
+  // capability/model/tier are optional metric labels for the revenue counter.
+  // When omitted (e.g. legacy callers), the recorder falls back to LABEL_UNSET.
+  capability?: string;
+  model?: string;
+  tier?: string;
 }
 
 export interface PrepaidCommitResult {
@@ -70,8 +76,12 @@ export interface PrepaidCommitResult {
   committedAt: Date;
 }
 
-export async function commit(db: Db, input: PrepaidCommitInput): Promise<PrepaidCommitResult> {
-  return db.transaction(async (tx) => {
+export async function commit(
+  db: Db,
+  input: PrepaidCommitInput,
+  recorder?: Recorder,
+): Promise<PrepaidCommitResult> {
+  const result = await db.transaction(async (tx) => {
     const reservation = await reservationsRepo.findById(tx, input.reservationId);
     if (!reservation || reservation.state !== 'open') {
       throw new ReservationNotOpenError(input.reservationId);
@@ -103,6 +113,18 @@ export async function commit(db: Db, input: PrepaidCommitInput): Promise<Prepaid
       committedAt,
     };
   });
+  // Emit revenue post-commit so a rolled-back transaction never bumps the
+  // counter. The cents value can exceed Number.MAX_SAFE_INTEGER only at
+  // absurd scale (~$90 trillion); a single commit fits comfortably.
+  if (recorder) {
+    recorder.addRevenueUsdCents(
+      input.capability ?? '',
+      input.model ?? '',
+      input.tier ?? 'prepaid',
+      Number(result.actualUsdCents),
+    );
+  }
+  return result;
 }
 
 export interface PrepaidRefundResult {

@@ -24,9 +24,14 @@ export interface NodeEntry {
 
 export class NodeBook {
   private readonly entries = new Map<string, NodeEntry>();
+  // Reverse index for url → id, rebuilt every replaceAll. Used by the
+  // `nodeClient` metrics decorator to label outbound requests by node_id
+  // (the underlying client only knows the URL).
+  private readonly urlToId = new Map<string, string>();
 
   replaceAll(config: NodesConfig, previous?: Map<string, NodeEntry>): void {
     this.entries.clear();
+    this.urlToId.clear();
     for (const node of config.nodes) {
       const prev = previous?.get(node.id);
       this.entries.set(node.id, {
@@ -34,7 +39,17 @@ export class NodeBook {
         circuit: prev?.circuit ?? initialCircuitState(),
         quotes: prev?.quotes ?? new Map(),
       });
+      this.urlToId.set(node.url, node.id);
     }
+  }
+
+  /**
+   * Reverse lookup from worker base URL to node id. Returns undefined when
+   * the URL is not advertised in the current nodes.yaml. Match is exact —
+   * the caller passes whatever URL the NodeClient knows about.
+   */
+  findIdByUrl(url: string): string | undefined {
+    return this.urlToId.get(url);
   }
 
   snapshot(): Map<string, NodeEntry> {

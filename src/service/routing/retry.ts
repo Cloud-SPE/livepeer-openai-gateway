@@ -1,8 +1,39 @@
 import type { NodeBook, NodeEntry } from '../nodes/nodebook.js';
 import type { CustomerTier } from '../../types/customer.js';
+import {
+  RETRY_5XX,
+  RETRY_CIRCUIT_OPEN,
+  RETRY_QUOTE_EXPIRED,
+  RETRY_TIMEOUT,
+  type Recorder,
+  type RetryAttempt,
+  type RetryReason,
+} from '../../providers/metrics/recorder.js';
 import { pickNode } from './router.js';
 
 export type RetryDisposition = 'retry_next_node' | 'retry_same_node' | 'no_retry';
+
+/** Map a numeric attempt count (1..3) onto the bounded RetryAttempt label. */
+function attemptLabel(n: number): RetryAttempt {
+  if (n <= 1) return '1';
+  if (n === 2) return '2';
+  return '3';
+}
+
+/** Best-effort retry-reason classifier. Inspects the error or HTTP status. */
+export function classifyRetryReason(
+  error: unknown,
+  status: number | null,
+): RetryReason {
+  if (status !== null && status >= 500 && status < 600) return RETRY_5XX;
+  const msg = error instanceof Error ? error.message : String(error ?? '');
+  const lower = msg.toLowerCase();
+  if (lower.includes('quote') && (lower.includes('expir') || lower.includes('refresh'))) {
+    return RETRY_QUOTE_EXPIRED;
+  }
+  if (lower.includes('circuit')) return RETRY_CIRCUIT_OPEN;
+  return RETRY_TIMEOUT;
+}
 
 export interface AttemptOutcome<T> {
   ok: true;
@@ -24,6 +55,8 @@ export interface RunWithRetryDeps {
   tier: CustomerTier;
   maxAttempts: number;
   rng?: () => number;
+  /** Optional recorder. Each retry attempt past the first emits incNodeRetry. */
+  recorder?: Recorder;
 }
 
 export interface AttemptContext {
@@ -53,6 +86,13 @@ export async function runWithRetry<T>(
     if (attempt === deps.maxAttempts) return result;
     if (result.disposition === 'retry_next_node') {
       previousNodeIds.push(node.config.id);
+    }
+    // We are about to retry. Emit the metric labeled by the attempt-just-
+    // failed (1..maxAttempts-1). The reason is best-effort classified from
+    // the surfaced error.
+    if (deps.recorder) {
+      const reason = classifyRetryReason(result.error, null);
+      deps.recorder.incNodeRetry(reason, attemptLabel(attempt));
     }
   }
 

@@ -4,9 +4,34 @@ import type { NodeClient } from '../../providers/nodeClient.js';
 import { wireQuoteToDomain } from '../../providers/nodeClient/wireQuote.js';
 import { CAPABILITY_STRINGS as CAPABILITY_TO_CANONICAL } from '../../types/capability.js';
 import type { Quote } from '../../types/node.js';
-import { onFailure, onSuccess, shouldProbe, type CircuitResult } from './circuitBreaker.js';
+import {
+  NODE_STATE_CIRCUIT_BROKEN,
+  NODE_STATE_DEGRADED,
+  NODE_STATE_HEALTHY,
+  type NodeState,
+  type Recorder,
+} from '../../providers/metrics/recorder.js';
+import {
+  onFailure,
+  onSuccess,
+  shouldProbe,
+  type CircuitResult,
+  type CircuitStatus,
+} from './circuitBreaker.js';
 import type { NodeBook } from './nodebook.js';
 import type { Scheduler, ScheduledTask } from './scheduler.js';
+
+/** Map circuit-breaker status onto the metric label state. */
+function statusToMetricState(status: CircuitStatus): NodeState {
+  switch (status) {
+    case 'healthy':
+      return NODE_STATE_HEALTHY;
+    case 'degraded':
+      return NODE_STATE_DEGRADED;
+    case 'circuit_broken':
+      return NODE_STATE_CIRCUIT_BROKEN;
+  }
+}
 
 export interface QuoteRefresherDeps {
   db: Db;
@@ -17,6 +42,13 @@ export interface QuoteRefresherDeps {
   // `?sender=` query param on /quote and /quotes against the worker.
   // Introduced in 0018-worker-wire-format-alignment.
   bridgeEthAddress: string;
+  /**
+   * Optional recorder. The refresher emits two metric kinds:
+   *   - incNodeCircuitTransition on every non-`none` circuit transition
+   *   - setNodeQuoteAgeSeconds(0) on each successful /quotes poll, per
+   *     advertised capability (the quote was *just* fetched, so age = 0).
+   */
+  recorder?: Recorder;
 }
 
 export interface QuoteRefresher {
@@ -54,6 +86,13 @@ export function createQuoteRefresher(deps: QuoteRefresherDeps): QuoteRefresher {
     if (probeDecision.result.transition.kind === 'circuit_half_opened') {
       deps.nodeBook.setCircuit(nodeId, probeDecision.result.state);
       await persist(deps.db, nodeId, probeDecision.result);
+      // The half-open transition is itself a circuit state change worth
+      // counting — emit before the probe runs so transient outages are
+      // visible even if the probe immediately fails.
+      deps.recorder?.incNodeCircuitTransition(
+        nodeId,
+        statusToMetricState(probeDecision.result.state.status),
+      );
     }
 
     try {
@@ -90,6 +129,18 @@ export function createQuoteRefresher(deps: QuoteRefresherDeps): QuoteRefresher {
       deps.nodeBook.setCircuit(nodeId, result.state);
       deps.nodeBook.setAllQuotes(nodeId, newQuotes);
       await persist(deps.db, nodeId, result);
+      if (deps.recorder) {
+        if (result.transition.kind !== 'none') {
+          deps.recorder.incNodeCircuitTransition(
+            nodeId,
+            statusToMetricState(result.state.status),
+          );
+        }
+        // Quotes were just fetched → age zero per advertised capability.
+        for (const cap of newQuotes.keys()) {
+          deps.recorder.setNodeQuoteAgeSeconds(nodeId, cap, 0);
+        }
+      }
     } catch (err) {
       const result = onFailure(
         deps.nodeBook.get(nodeId)?.circuit ?? probeDecision.result.state,
@@ -98,6 +149,12 @@ export function createQuoteRefresher(deps: QuoteRefresherDeps): QuoteRefresher {
       );
       deps.nodeBook.setCircuit(nodeId, result.state);
       await persist(deps.db, nodeId, result, err instanceof Error ? err.message : String(err));
+      if (deps.recorder && result.transition.kind !== 'none') {
+        deps.recorder.incNodeCircuitTransition(
+          nodeId,
+          statusToMetricState(result.state.status),
+        );
+      }
     }
   }
 

@@ -7,6 +7,11 @@ export interface CreatePaymentForRequestInput {
   nodeId: string;
   quote: Quote;
   workUnits: bigint;
+  // capability + model are passed through to the PayerDaemon decorator so
+  // the per-payment node-cost counter can be labeled correctly. They do not
+  // affect the underlying gRPC payload (workId + workUnits only).
+  capability: string;
+  model: string;
   signal?: AbortSignal;
 }
 
@@ -43,6 +48,9 @@ export function createPaymentsService(deps: PaymentsServiceDeps): PaymentsServic
       const out: CreatePaymentOutput = await deps.payerDaemon.createPayment({
         workId,
         workUnits: input.workUnits,
+        capability: input.capability,
+        model: input.model,
+        nodeId: input.nodeId,
         ...(input.signal !== undefined ? { signal: input.signal } : {}),
       });
       return {

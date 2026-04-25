@@ -115,6 +115,8 @@ async function handleSpeech(
       nodeId: node.config.id,
       quote,
       workUnits: BigInt(charCount),
+      capability: capabilityString('speech'),
+      model: body.model,
     });
     const paymentHeaderB64 = Buffer.from(payment.paymentBytes).toString('base64');
 

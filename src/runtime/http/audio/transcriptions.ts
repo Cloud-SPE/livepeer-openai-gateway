@@ -222,6 +222,8 @@ async function handleTranscription(
       nodeId: node.config.id,
       quote,
       workUnits: BigInt(estimate.estimatedSeconds),
+      capability: capabilityString('transcriptions'),
+      model: fields.data.model,
     });
     const paymentHeaderB64 = Buffer.from(payment.paymentBytes).toString('base64');
 

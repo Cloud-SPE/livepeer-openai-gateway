@@ -84,10 +84,33 @@ describe('payerDaemon withMetrics', () => {
     const client = withMetrics(makeFake({ failCreatePayment: true }), rec);
 
     await expect(
-      client.createPayment({ workId: 'wrk-1', workUnits: 10n }),
+      client.createPayment({
+        workId: 'wrk-1',
+        workUnits: 10n,
+        capability: 'openai:/v1/chat/completions',
+        model: 'm',
+        nodeId: 'n1',
+      }),
     ).rejects.toThrow('boom');
     expect(rec.payerDaemonCalls).toBe(1);
     expect(rec.payerDaemonCallObservations).toBe(1);
+    // Error path: addNodeCostWei must NOT have been called.
+    expect(rec.nodeCostAdds).toBe(0);
+  });
+
+  it('emits addNodeCostWei against expectedValueWei on successful createPayment', async () => {
+    const rec = new CounterRecorder();
+    const client = withMetrics(makeFake(), rec);
+
+    const out = await client.createPayment({
+      workId: 'wrk-1',
+      workUnits: 10n,
+      capability: 'openai:/v1/chat/completions',
+      model: 'gpt-test',
+      nodeId: 'node-a',
+    });
+    expect(out.expectedValueWei).toBe(42n);
+    expect(rec.nodeCostAdds).toBe(1);
   });
 
   it('drives deposit + reserve gauges from successful getDepositInfo', async () => {

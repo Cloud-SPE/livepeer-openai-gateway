@@ -23,6 +23,7 @@ import {
   type Usage,
 } from '../../../types/openai.js';
 import { runWithRetry, classifyNodeError } from '../../../service/routing/retry.js';
+import type { Recorder } from '../../../providers/metrics/recorder.js';
 import {
   computeActualCost,
   estimateReservation,
@@ -41,6 +42,7 @@ export interface StreamingDeps {
   paymentsService: PaymentsService;
   pricing: PricingConfig;
   tokenAudit?: TokenAuditService;
+  recorder?: Recorder;
   nodeCallTimeoutMs?: number;
   rng?: () => number;
 }
@@ -111,6 +113,7 @@ export async function handleStreamingChatCompletion(
       tier: customerTier,
       maxAttempts: MAX_RETRY_ATTEMPTS,
       ...(deps.rng ? { rng: deps.rng } : {}),
+      ...(deps.recorder ? { recorder: deps.recorder } : {}),
     },
     async (ctx) => {
       const node = ctx.node;
@@ -128,6 +131,8 @@ export async function handleStreamingChatCompletion(
           nodeId: node.config.id,
           quote,
           workUnits: BigInt(estimate.maxCompletionTokens),
+          capability: capabilityString('chat'),
+          model: body.model,
         });
         const paymentHeaderB64 = Buffer.from(payment.paymentBytes).toString('base64');
         const stream = await deps.nodeClient.streamChatCompletion({

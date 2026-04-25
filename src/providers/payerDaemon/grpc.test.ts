@@ -142,7 +142,13 @@ describe('grpc payer daemon client (fake server over unix socket)', () => {
       });
       expect(workId).toBe('wrk-1');
 
-      const payment = await client.createPayment({ workId, workUnits: 10n });
+      const payment = await client.createPayment({
+        workId,
+        workUnits: 10n,
+        capability: 'openai:/v1/chat/completions',
+        model: 'm',
+        nodeId: 'n',
+      });
       expect(payment.ticketsCreated).toBe(2);
       expect(payment.expectedValueWei).toBe(42n);
       expect(Buffer.from(payment.paymentBytes).toString('hex')).toBe('dead');
@@ -173,7 +179,15 @@ describe('grpc payer daemon client (fake server over unix socket)', () => {
         ticketParams,
         priceInfo: { pricePerUnit: 1n, pixelsPerUnit: 1n },
       });
-      await expect(client.createPayment({ workId, workUnits: 10n })).rejects.toMatchObject({
+      await expect(
+        client.createPayment({
+          workId,
+          workUnits: 10n,
+          capability: 'openai:/v1/chat/completions',
+          model: 'm',
+          nodeId: 'n',
+        }),
+      ).rejects.toMatchObject({
         name: 'PayerDaemonProtocolError',
       });
     } finally {

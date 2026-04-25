@@ -118,6 +118,8 @@ async function handleEmbeddings(
       nodeId: node.config.id,
       quote,
       workUnits: BigInt(estimate.promptEstimateTokens),
+      capability: capabilityString('embeddings'),
+      model: body.model,
     });
 
     const paymentHeaderB64 = Buffer.from(payment.paymentBytes).toString('base64');

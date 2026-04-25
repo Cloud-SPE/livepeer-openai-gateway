@@ -215,7 +215,7 @@ Append-only list of known debt. Strike through when resolved; include the PR or 
   1. `GET /admin/metrics/daily` — last-N-days rollup: customer revenue (USD cents), worker EV paid (wei + USD est at current ETH price), per-tier request count, per-tier net margin. JSON shape mirrors the existing admin endpoints.
   2. `GET /admin/metrics/per-worker` — per-`node_id` breakdown: tokens served, EV paid, % utilization (requests / max_concurrent_requests * 100), circuit state.
   3. `GET /admin/metrics/per-tier` — per-tier rollup including realized $/M tokens (from `usage_record.cost_usd_cents` aggregated).
-  4. Worker daemon `/metrics` Prometheus endpoint: counters for `tickets_accepted_total`, `tickets_won_total`, `redemptions_succeeded_total`, `redemptions_failed_total`, `ev_earned_wei_total`, with `sender` label.
+  4. ~~Worker daemon `/metrics` Prometheus endpoint: counters for `tickets_accepted_total`, `tickets_won_total`, `redemptions_succeeded_total`, `redemptions_failed_total`, `ev_earned_wei_total`, with `sender` label.~~ Closed 2026-04-25 by Pass-B metrics activation: the bridge itself now exposes a Prometheus `/metrics` endpoint via `METRICS_LISTEN` (recorder defined in `src/providers/metrics/recorder.ts`, exposition wiring in `src/runtime/metrics/server.ts`, sampler in `src/service/metrics/sampler.ts`). The bridge surfaces equivalent shape under the `livepeer_bridge_*` namespace (`requests_total`, `node_requests_total`, `node_cost_wei_total`, `payer_daemon_calls_total`, `payer_daemon_deposit_wei`, etc.). The original "worker daemon" framing is now subsumed: operators read the bridge's view rather than instrumenting the daemon a second time. Items 1–3 + 5–7 below remain open as Phase 3.
   5. CLI tool `livepeer-payment-stats --since=7d` that reads the daemon BoltDB + on-chain redemption events and prints a markdown report (realized $/M tokens, break-even projection, suggested `price_per_work_unit_wei` adjustment).
   6. Cost-attribution view: per-request join across `usage_record` + ticket batch ID + on-chain redemption tx hash, accessible as `GET /admin/metrics/request/:work_id`.
   7. Static HTML dashboard (auto-regenerated nightly): customer revenue vs worker EV vs (operator-input) infra cost over time, per tier.
@@ -228,4 +228,13 @@ Append-only list of known debt. Strike through when resolved; include the PR or 
 - Area: docs / pricing
 - Description: Audit hook attached to the v2 rate-card rebalance (`2c40cbb`). All v1 numbers in `docs/design-docs/pricing-model.md` were replaced with v2 numbers + competitor comparison columns on 2026-04-25 (see "Competitive positioning" + the five "v2, effective 2026-04-25" tables); the matching `pricing.ts` constants were renamed in spirit (the JS const names still read `V1_*` for internal stability — renaming them to `V2_*` is a follow-up scrub). If you find any v1 numbers in design docs (e.g. `$0.20 / $0.60` for starter, `$0.025` for `text-embedding-3-small`, `$18.00` for `tts-1`, `$0.0072` for `whisper-1`), list them in this entry and re-do the sweep.
 - Remediation: at next pricing change, re-grep design docs for stale numbers before publishing. Optional polish: rename the `V1_*` consts in `pricing.ts` to `V2_*` to match the rate-card version string.
+- Resolved: _(open)_
+
+### tokens-drift-unprefixed-names-removal
+
+- Opened: 2026-04-25
+- Severity: low
+- Area: observability / tokenAudit
+- Description: `src/service/tokenAudit/index.ts::emitDrift` currently emits BOTH the legacy unprefixed `MetricsSink` names (`tokens_drift_percent`, `tokens_local_count`, `tokens_reported_count` via `metrics.histogram` / `metrics.gauge`) AND the new prefixed `Recorder` calls (`observeTokenDriftPercent`, `addTokenCountLocal`, `addTokenCountReported`, which surface as `livepeer_bridge_token_*` in Prometheus). Both surfaces are intentional during Pass B's reconciliation window — Grafana panels still keyed off the legacy names need a migration grace period before the unprefixed emissions go away. Tracked separately so the cleanup commit is greppable.
+- Remediation: Phase 2 of the metrics rollout. (1) Delete `emitOne(deps.metrics, ...)` and the `MetricsSink` dependency from `tokenAudit`. (2) Drop `LegacySink` + `MetricsSink` from `src/providers/metrics/*` and the `counter`/`gauge`/`histogram` shims on the recorder impls. (3) Update Grafana panels to the prefixed names. (4) Remove this entry.
 - Resolved: _(open)_

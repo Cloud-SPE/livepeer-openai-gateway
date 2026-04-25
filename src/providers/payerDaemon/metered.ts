@@ -5,19 +5,15 @@
 // same interface as the unwrapped client and is allocation-light when the
 // recorder is the noop.
 //
-// Pass A: this file is dormant; the composition root does not yet wrap the
-// concrete client. Pass B activates by changing the wiring in main.ts.
-//
 // The deposit/reserve gauge updates live here because every successful
 // `getDepositInfo` call already reads both numbers. The decorator forwards
 // them into `setPayerDaemonDepositWei` / `setPayerDaemonReserveWei` so the
 // existing health-loop drives the gauge cadence — no new RPCs are issued.
 //
-// Note: `addNodeCostWei` requires (capability, model, nodeId) in scope, which
-// the `createPayment` arguments do not currently surface. Pass B will plumb
-// those values through `CreatePaymentInput`; until then the decorator skips
-// that emission. This is documented as a known limitation in the Pass A
-// rollout report.
+// `addNodeCostWei` is emitted on every successful `createPayment` against the
+// returned `expectedValueWei`, labeled by the (capability, model, nodeId)
+// fields the route handler attached to the input. Errors skip the emission
+// (the call/observation pair still fires through `measured`).
 
 import type {
   CreatePaymentInput,
@@ -64,11 +60,16 @@ export function withMetrics(client: PayerDaemonClient, recorder: Recorder): Paye
     },
 
     async createPayment(input: CreatePaymentInput): Promise<CreatePaymentOutput> {
-      // Pass A: (capability, model, nodeId) are not on CreatePaymentInput, so
-      // the per-payment node-cost counter is intentionally skipped here. Pass
-      // B plumbs those identifiers in and adds the addNodeCostWei call against
-      // `output.expectedValueWei`.
-      return measured(PAYER_DAEMON_CREATE_PAYMENT, () => client.createPayment(input));
+      const output = await measured(PAYER_DAEMON_CREATE_PAYMENT, () =>
+        client.createPayment(input),
+      );
+      recorder.addNodeCostWei(
+        input.capability,
+        input.model,
+        input.nodeId,
+        output.expectedValueWei.toString(),
+      );
+      return output;
     },
 
     async closeSession(workId: string, signal?: AbortSignal): Promise<void> {

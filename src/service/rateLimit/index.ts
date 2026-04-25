@@ -2,6 +2,14 @@ import { randomUUID } from 'node:crypto';
 import type { RedisClient } from '../../providers/redis.js';
 import type { RateLimitConfig, RateLimitPolicy } from '../../config/rateLimit.js';
 import { resolvePolicy } from '../../config/rateLimit.js';
+import { NoopRecorder } from '../../providers/metrics/noop.js';
+import {
+  RATE_LIMIT_CONCURRENT,
+  RATE_LIMIT_RPD,
+  RATE_LIMIT_RPM,
+  type RateLimitKind,
+  type Recorder,
+} from '../../providers/metrics/recorder.js';
 import { RateLimitExceededError } from './errors.js';
 import { acquireSlot, releaseSlot } from './concurrency.js';
 import { checkWindow, type WindowResult } from './slidingWindow.js';
@@ -29,11 +37,18 @@ export interface RateLimiter {
 export interface RateLimiterDeps {
   redis: RedisClient;
   config: RateLimitConfig;
+  /** Recorder for rate-limit-rejection counters. Defaults to the noop. */
+  recorder?: Recorder;
   now?: () => number;
 }
 
 export function createRateLimiter(deps: RateLimiterDeps): RateLimiter {
   const now = deps.now ?? (() => Date.now());
+  const recorder: Recorder = deps.recorder ?? new NoopRecorder();
+
+  function emitReject(tier: string, kind: RateLimitKind): void {
+    recorder.incRateLimitRejection(tier, kind);
+  }
 
   return {
     async check(customerId, policyName) {
@@ -64,6 +79,7 @@ export function createRateLimiter(deps: RateLimiterDeps): RateLimiter {
       }
 
       if (!minute.allowed) {
+        emitReject(policy.name, RATE_LIMIT_RPM);
         throw new RateLimitExceededError(
           customerId,
           policy.name,
@@ -73,6 +89,7 @@ export function createRateLimiter(deps: RateLimiterDeps): RateLimiter {
         );
       }
       if (!day.allowed) {
+        emitReject(policy.name, RATE_LIMIT_RPD);
         throw new RateLimitExceededError(
           customerId,
           policy.name,
@@ -85,6 +102,7 @@ export function createRateLimiter(deps: RateLimiterDeps): RateLimiter {
       try {
         const slot = await acquireSlot(deps.redis, concurrencyKey, policy.concurrent);
         if (!slot.acquired) {
+          emitReject(policy.name, RATE_LIMIT_CONCURRENT);
           throw new RateLimitExceededError(
             customerId,
             policy.name,

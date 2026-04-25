@@ -23,6 +23,15 @@ export interface StartSessionOutput {
 export interface CreatePaymentInput {
   workId: string;
   workUnits: bigint;
+  // capability/model/nodeId travel with the input solely so the
+  // PayerDaemon `withMetrics` decorator can label `addNodeCostWei` against
+  // the resulting expectedValueWei. They are NOT sent over the wire to the
+  // payment-daemon — the gRPC ProcessPayment call only cares about workId
+  // + workUnits. Empty strings are tolerated (the decorator falls back to
+  // LABEL_UNSET).
+  capability: string;
+  model: string;
+  nodeId: string;
   signal?: AbortSignal;
 }
 

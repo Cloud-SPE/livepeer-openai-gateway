@@ -137,6 +137,8 @@ describe('PaymentsService.createPaymentForRequest', () => {
       nodeId: 'node-a',
       quote: mkQuote(),
       workUnits: 100n,
+      capability: 'openai:/v1/chat/completions',
+      model: 'm',
     });
     expect(out.workId).toBe('wrk-1');
     expect(out.paymentBytes).toBeInstanceOf(Uint8Array);
@@ -149,7 +151,13 @@ describe('PaymentsService.createPaymentForRequest', () => {
     const cache = createSessionCache({ payerDaemon: daemon });
     const svc = createPaymentsService({ payerDaemon: daemon, sessions: cache });
     await expect(
-      svc.createPaymentForRequest({ nodeId: 'node-a', quote: mkQuote(), workUnits: 1n }),
+      svc.createPaymentForRequest({
+        nodeId: 'node-a',
+        quote: mkQuote(),
+        workUnits: 1n,
+        capability: 'openai:/v1/chat/completions',
+        model: 'm',
+      }),
     ).rejects.toBeInstanceOf(PayerDaemonNotHealthyError);
   });
 
@@ -162,6 +170,8 @@ describe('PaymentsService.createPaymentForRequest', () => {
         nodeId: 'node-a',
         quote: mkQuote({ expiresAt: new Date(Date.now() - 1000) }),
         workUnits: 1n,
+        capability: 'openai:/v1/chat/completions',
+        model: 'm',
       }),
     ).rejects.toBeInstanceOf(QuoteExpiredError);
   });
@@ -175,7 +185,13 @@ describe('PaymentsService.createPaymentForRequest', () => {
     const cache = createSessionCache({ payerDaemon: daemon });
     const svc = createPaymentsService({ payerDaemon: daemon, sessions: cache });
     await expect(
-      svc.createPaymentForRequest({ nodeId: 'node-a', quote: mkQuote(), workUnits: 1n }),
+      svc.createPaymentForRequest({
+        nodeId: 'node-a',
+        quote: mkQuote(),
+        workUnits: 1n,
+        capability: 'openai:/v1/chat/completions',
+        model: 'm',
+      }),
     ).rejects.toBe(failure);
   });
 });

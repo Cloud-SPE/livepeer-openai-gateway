@@ -214,6 +214,54 @@ docker compose -f compose.yaml -f compose.prod.yaml logs bridge-migrate
 
 Most common: `PGPASSWORD` differs between what postgres was initialised with (in `pgdata` volume) and what's now in `.env`. If you've rotated the password without recreating the volume, the migration job can't connect. Recreate the volume (non-prod only) or rotate the DB's password through SQL.
 
+## Observability
+
+The bridge exposes a Prometheus exposition endpoint on a SEPARATE Fastify
+listener from the customer-facing one. Customer traffic and scraper traffic
+are independent — a misconfigured scraper cannot break customer traffic, and
+the metrics surface has no auth, body limits, or middleware on purpose.
+
+Enable by setting `METRICS_LISTEN` (see `.env.example` for the format and the
+recommended port). Leave it unset to disable the listener entirely; the
+bridge falls back to a `NoopRecorder` and emits nothing.
+
+```env
+# 127.0.0.1 only — Prometheus exposition has no auth.
+# See livepeer-modules-conventions/port-allocation.md (recommended :9602).
+METRICS_LISTEN=127.0.0.1:9602
+METRICS_MAX_SERIES_PER_METRIC=10000
+```
+
+Important — bind 127.0.0.1 or an internal-LAN interface only. The
+exposition endpoint is unauthenticated; exposing it on a public interface
+leaks operational details (latency, RPC counts, deposit/reserve wei) and
+gives an attacker a precise health signal. Reverse-proxy scraper traffic over
+the cluster network if Prometheus runs elsewhere.
+
+Sample Prometheus scrape config:
+
+```yaml
+scrape_configs:
+  - job_name: livepeer-bridge
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['127.0.0.1:9602']
+        labels:
+          service: livepeer-bridge
+    scrape_interval: 30s
+    scrape_timeout: 10s
+```
+
+All emitted series live under the `livepeer_bridge_` namespace. The recorder
+contract (`src/providers/metrics/recorder.ts`) is the catalog — every method
+name maps to one Prometheus series. Standard `process_*` / `nodejs_*` series
+are wired against the same private registry so they surface alongside.
+
+Cardinality cap: `METRICS_MAX_SERIES_PER_METRIC` (default 10000) bounds the
+distinct label tuples any single metric may track. New tuples past the cap
+are dropped silently and a one-shot warning is logged per metric. Set to 0
+to disable. Tune up before tuning off.
+
 ## What's not yet automated
 
 - **CI image publishing.** No workflow builds and pushes the bridge image on merge; you ship your own tag. Tracked in `docs/exec-plans/tech-debt-tracker.md` as "CI workflow to build + push bridge image."

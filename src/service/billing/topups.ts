@@ -3,6 +3,7 @@ import type { Db } from '../../repo/db.js';
 import * as customersRepo from '../../repo/customers.js';
 import * as topupsRepo from '../../repo/topups.js';
 import { topups, customers } from '../../repo/schema.js';
+import { OUTCOME_OK, type Recorder } from '../../providers/metrics/recorder.js';
 import { CustomerNotFoundError } from './errors.js';
 
 export interface CreditTopupInput {
@@ -19,8 +20,12 @@ export interface CreditTopupResult {
   upgradedFromFree: boolean;
 }
 
-export async function creditTopup(db: Db, input: CreditTopupInput): Promise<CreditTopupResult> {
-  return db.transaction(async (tx) => {
+export async function creditTopup(
+  db: Db,
+  input: CreditTopupInput,
+  recorder?: Recorder,
+): Promise<CreditTopupResult> {
+  const result = await db.transaction(async (tx) => {
     const customer = await customersRepo.selectForUpdate(tx, input.customerId);
     if (!customer) throw new CustomerNotFoundError(input.customerId);
 
@@ -50,6 +55,10 @@ export async function creditTopup(db: Db, input: CreditTopupInput): Promise<Cred
       upgradedFromFree,
     };
   });
+  // The webhook handler also categorizes outcome (succeeded / duplicate /
+  // refunded). This branch is the on-credit success path → outcome=ok.
+  recorder?.incTopup(OUTCOME_OK);
+  return result;
 }
 
 export async function markTopupDisputed(

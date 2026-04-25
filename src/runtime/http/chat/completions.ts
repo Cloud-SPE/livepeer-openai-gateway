@@ -31,6 +31,7 @@ import { MissingUsageError, toHttpError, UpstreamNodeError } from '../errors.js'
 import { ChatCompletionRequestSchema } from '../../../types/openai.js';
 import { handleStreamingChatCompletion } from './streaming.js';
 import type { TokenAuditService } from '../../../service/tokenAudit/index.js';
+import type { Recorder } from '../../../providers/metrics/recorder.js';
 
 export interface ChatCompletionsDeps {
   db: Db;
@@ -40,6 +41,7 @@ export interface ChatCompletionsDeps {
   authService: AuthService;
   rateLimiter?: RateLimiter;
   tokenAudit?: TokenAuditService;
+  recorder?: Recorder;
   pricing: PricingConfig;
   nodeCallTimeoutMs?: number;
   rng?: () => number;
@@ -85,6 +87,7 @@ async function handleChatCompletion(
       paymentsService: deps.paymentsService,
       pricing: deps.pricing,
       ...(deps.tokenAudit !== undefined ? { tokenAudit: deps.tokenAudit } : {}),
+      ...(deps.recorder !== undefined ? { recorder: deps.recorder } : {}),
       ...(deps.nodeCallTimeoutMs !== undefined
         ? { nodeCallTimeoutMs: deps.nodeCallTimeoutMs }
         : {}),
@@ -136,6 +139,8 @@ async function handleChatCompletion(
       nodeId: node.config.id,
       quote,
       workUnits: BigInt(estimate.maxCompletionTokens),
+      capability: capabilityString('chat'),
+      model: body.model,
     });
 
     const paymentHeaderB64 = Buffer.from(payment.paymentBytes).toString('base64');
