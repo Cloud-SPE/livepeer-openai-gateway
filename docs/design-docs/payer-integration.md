@@ -1,7 +1,7 @@
 ---
 title: PayerDaemon integration (gRPC client, sessions, payments)
 status: accepted
-last-reviewed: 2026-04-24
+last-reviewed: 2026-04-25
 ---
 
 # PayerDaemon integration
@@ -52,6 +52,14 @@ interface PayerDaemonClient {
 
 All inputs and outputs use domain types (`bigint`, `0x`-prefixed hex strings). Protobuf wire types never leak past `providers/payerDaemon/`.
 
+### `startSession` requires `priceInfo` (since payment-daemon v0.8.10)
+
+`StartSessionInput` carries a REQUIRED `priceInfo` field — the per-capability `cap.maxPrice` the worker used at quote time, surfaced as the max in `/quote.model_prices` and projected onto `Quote.priceInfo` by `wireQuoteToDomain`. The bridge passes it as the matching `StartSessionRequest.price_info` (proto field 3); the sender daemon stamps it into `Payment.expected_price` for every subsequent `CreatePayment`. The receiver re-derives `recipientRand` from the price as part of its HMAC inputs, so the value MUST match the price the worker used to issue the `TicketParams` — anything else 402s with `validator: invalid recipientRand for recipientRandHash`.
+
+In practice: `service/payments/sessions.ts::createSessionCache.getOrStart` reads `quote.priceInfo` (already populated by `wireQuoteToDomain`) and passes `{pricePerUnit: quote.priceInfo.pricePerUnitWei, pixelsPerUnit: quote.priceInfo.pixelsPerUnit}` on every `startSession` call. There is currently no bridge-side affordance for "free / bootstrap" sessions; the daemon expects the canonical-zero `{0, 1}` to indicate that and the bridge always passes a real price (the worker.yaml's `price_per_work_unit_wei` is the source). Tracked library-side as `bootstrap-session-explicit-price`.
+
+Cross-reference: [livepeer-payment-library wire-compat.md](../../../livepeer-payment-library/docs/design-docs/wire-compat.md#startsessionrequestprice_info-is-required-on-every-non-bootstrap-session) and [redemption-loop.md "Ticket recipientRand derivation"](../../../livepeer-payment-library/docs/design-docs/redemption-loop.md#ticket-recipientrand-derivation).
+
 ## Converters
 
 `src/providers/payerDaemon/convert.ts`:
@@ -86,13 +94,15 @@ Background loop (scheduler-injected, same pattern as 0005 QuoteRefresher):
 
 `src/service/payments/sessions.ts` amortizes sessions across requests. Cache key is `(nodeId, recipient, ticketParams.expirationBlock)` — distinct `expirationBlock` values mean the node's quote rotated, so the old session is no longer usable.
 
-- First request for a key → `startSession(quote.ticketParams)` → cache `{ workId, expiresAt = quote.expiresAt }`.
+- First request for a key → `startSession(quote.ticketParams, priceInfo)` → cache `{ workId, expiresAt = quote.expiresAt }`.
 - Subsequent requests within `expiresAt` → reuse the cached `workId`.
 - Past `expiresAt` → drop the cached entry and open a fresh session.
 - `close(nodeId)` drains all sessions for that node (used on node removal from NodeBook).
 - `closeAll()` drains everything on bridge shutdown.
 
 All `closeSession` calls are best-effort — failures are swallowed so a hung daemon doesn't block shutdown.
+
+**Cache-key fragility (open).** The key is `(nodeId, recipient, expirationBlock)`. It does **not** include `recipientRandHash`. If the worker's daemon restarts (new in-memory HMAC secret → new `recipientRandHash`) but the bridge's cached `expirationBlock` happens to overlap (a freshly-quoted ticket from the new daemon lands in the same expiration window as the old cached entry), the bridge reuses a stale session whose `workId` references a `recipientRand` the daemon can no longer derive. ProcessPayment 402s with `invalid recipientRand for recipientRandHash`. This was investigated during the first mainnet smoke deploy and turned out **not** to be the bug we hit (the actual bug was the missing `priceInfo` in `StartSession`, fixed in `b5190a9` / `d76eb42`), but the cache shape is brittle. Tracked as `bridge-session-cache-misses-recipient-rand-hash` in the bridge tech-debt tracker. Receiver-side the right fix is to persist the secret (`receiver-secret-persistence` in the library tracker); bridge-side we should add `recipientRandHash` to the cache key as defense-in-depth.
 
 ## Call deadlines and AbortSignal
 

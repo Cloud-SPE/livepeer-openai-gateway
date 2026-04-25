@@ -1,7 +1,7 @@
 ---
 title: Deployment — full-stack docker compose
 status: accepted
-last-reviewed: 2026-04-24
+last-reviewed: 2026-04-25
 ---
 
 # Deployment
@@ -68,6 +68,74 @@ docker compose exec postgres psql -U bridge -d bridge \
 ```
 
 See `docs/product-specs/` for the full API key / customer / billing lifecycles.
+
+## Issuing the first admin / smoke API key
+
+In production, customers come into existence implicitly via Stripe checkout — the webhook handler creates a `customers` row and issues an API key on the first successful checkout. For **operator-issued** keys (the very first admin key, smoke-test keys, manually-provisioned customer keys), there is currently no HTTP endpoint that exposes `service/auth.issueKey`. Operators have to drop into SQL.
+
+This is a documented workaround, not the long-term answer — tracked as `admin-issue-customer-key-endpoint` in `docs/exec-plans/tech-debt-tracker.md`. Once the endpoint lands, this section will be replaced with a `curl` recipe.
+
+The recipe used during the first mainnet deploy:
+
+### 1. Generate a key suffix
+
+```bash
+KEY_SUFFIX=$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=')
+echo "API key plaintext: sk-test-${KEY_SUFFIX}"
+```
+
+The `tr` pipeline converts standard base64 to URL-safe base64 and strips padding so the resulting key is safe to copy/paste through any tool. Save the plaintext immediately — the database stores only the hash; you cannot recover the plaintext later.
+
+(Use `sk-live-` for production tier, `sk-test-` for a smoke / staging key. The prefix has no semantic meaning to the bridge — it's a customer-facing convention.)
+
+### 2. Compute the HMAC hash
+
+```bash
+API_KEY_PEPPER='<the value of API_KEY_PEPPER from the bridge .env>'
+HASH=$(printf '%s' "sk-test-${KEY_SUFFIX}" | \
+  openssl dgst -sha256 -hmac "$API_KEY_PEPPER" -binary | \
+  xxd -p -c 256)
+echo "API key hash: ${HASH}"
+```
+
+The bridge stores `sha256_hmac(plaintext, API_KEY_PEPPER)` as a hex string. The pepper is the same one the bridge uses at request time to verify incoming keys; rotating it invalidates every key in the table, so plan rotations carefully.
+
+### 3. Insert the customer + key
+
+```bash
+docker compose exec postgres psql -U bridge -d bridge <<SQL
+-- Adjust id / email / tier to taste. tier ∈ ('free','prepaid','admin').
+INSERT INTO customers (id, email, tier)
+VALUES ('c_smoke_admin', 'ops@example.com', 'admin');
+
+-- Replace 'sk-test-${KEY_SUFFIX}' below with the real plaintext from step 1
+-- if you want the prefix to match for human-eyeballing the row; the
+-- key_prefix column is a convenience, not a uniqueness constraint.
+INSERT INTO api_keys (id, customer_id, key_prefix, key_hash, env)
+VALUES (
+  'ak_' || substr(md5(random()::text), 1, 16),
+  'c_smoke_admin',
+  'sk-test',
+  '${HASH}',
+  'test'
+);
+SQL
+```
+
+### 4. Verify
+
+```bash
+curl -H "Authorization: Bearer sk-test-${KEY_SUFFIX}" \
+     http://localhost:8080/v1/models
+```
+
+A 200 with the model list confirms the key is live. A 401 means either the hash didn't match (wrong pepper) or the customer / key row didn't insert.
+
+### Caveats
+
+- The `api_keys` schema may evolve — re-confirm column names against the current migration in `migrations/` before pasting into a new environment.
+- `API_KEY_PEPPER` rotation invalidates every key in the table; treat it like a database-level secret.
+- The `tier` enum is currently `free | prepaid | admin`; admin tier is unmetered and bypasses rate limiting (defined in `service/auth/`).
 
 ## Prod walkthrough
 

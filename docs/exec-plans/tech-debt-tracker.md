@@ -186,3 +186,30 @@ Append-only list of known debt. Strike through when resolved; include the PR or 
 - Description: `/v1/audio/transcriptions` handler buffers the entire customer upload (up to 25 MiB) in memory before re-encoding the outbound multipart body. The plan called for end-to-end streaming via `Readable.toWeb(...)` so the file never materializes in bridge memory. Re-encoding was the simpler v1 implementation; impact is bounded by the 25 MiB cap and the per-request paid-route concurrency limit.
 - Remediation: switch to a streaming pass-through that preserves the inbound `Content-Type` (boundary intact) and wraps `req.parts()` into a `ReadableStream` for the outbound fetch body. Avoids the buffer and improves time-to-first-byte on the worker.
 - Resolved: _(open)_
+
+### bridge-session-cache-misses-recipient-rand-hash
+
+- Opened: 2026-04-25
+- Severity: medium
+- Area: src/service/payments/sessions.ts
+- Description: `SessionCache` keys cached sessions by `(nodeId, recipient, ticketParams.expirationBlock)` (see `keyToString`). It does **not** include `recipientRandHash`. If the worker's payment daemon restarts (new in-memory HMAC `secret` → new `recipientRandHash` for every freshly-issued ticket-params) but the bridge's cached `expirationBlock` happens to land in an overlap window with the new daemon's quotes, the bridge would reuse a stale `workId` whose underlying `recipientRand` the daemon can no longer derive. ProcessPayment then 402s with `validator: invalid recipientRand for recipientRandHash`. Investigated during the first mainnet smoke deploy; turned out NOT to be the bug we hit (the actual bug was the missing `priceInfo` thread, fixed in `d76eb42` / library `b5190a9`), but the cache shape is fragile in exactly this way.
+- Remediation: include `quote.ticketParams.recipientRandHash` in the cache key. Receiver-side, the right fix is persisting the secret across restarts (`receiver-secret-persistence` in the library tracker); bridge-side this entry is defense-in-depth for the case where the receiver is correctly rotated and we want the bridge to cache-miss cleanly. Update `SessionKey` + `keyToString` + tests; bumps no public surface.
+- Resolved: _(open)_
+
+### admin-issue-customer-key-endpoint
+
+- Opened: 2026-04-25
+- Severity: medium
+- Area: src/runtime/http/admin, src/service/auth
+- Description: `service/auth.issueKey` is the canonical primitive for minting an API key (HMAC over a generated suffix, INSERT into `api_keys`), and the test suites use it directly via the in-process service. There is **no** admin HTTP endpoint that exposes it — `src/runtime/http/admin/routes.ts` exposes refund / suspend / unsuspend / health / nodes / customers GET / escrow but no `POST /admin/customers/:id/issue-key` or `POST /admin/customers/issue-key`. In production, customers come into existence implicitly via Stripe checkout (the webhook handler creates rows), so the absence of an HTTP shape is invisible there. But for **operator-issued** keys — the very first admin key, smoke-test keys, manually-provisioned customer keys for partners — operators have to drop into SQL + `openssl` to reproduce the HMAC by hand. Documented as a workaround in `docs/operations/deployment.md "Issuing the first admin / smoke API key"`; see that recipe.
+- Remediation: add `POST /admin/customers/:id/issue-key` (and optionally `POST /admin/customers/issue-key` that creates the customer + key in one call for the bootstrap flow) under the existing `adminAuthPreHandler`. Body: `{ envPrefix: 'test' | 'live' }`. Response: `{ apiKeyId, plaintext, prefix, last4 }` with the plaintext returned exactly once. Wire to `issueKey(db, ...)`. Test: TestPg + admin token round-trip + rejected without admin token. Update `docs/operations/deployment.md` to replace the SQL recipe with a `curl` recipe once landed.
+- Resolved: _(open)_
+
+### pricing-rebalance-pricing-model-doc-v1-tables
+
+- Opened: 2026-04-25
+- Severity: low
+- Area: docs / pricing
+- Description: Audit hook attached to the v2 rate-card rebalance (`2c40cbb`). All v1 numbers in `docs/design-docs/pricing-model.md` were replaced with v2 numbers + competitor comparison columns on 2026-04-25 (see "Competitive positioning" + the five "v2, effective 2026-04-25" tables); the matching `pricing.ts` constants were renamed in spirit (the JS const names still read `V1_*` for internal stability — renaming them to `V2_*` is a follow-up scrub). If you find any v1 numbers in design docs (e.g. `$0.20 / $0.60` for starter, `$0.025` for `text-embedding-3-small`, `$18.00` for `tts-1`, `$0.0072` for `whisper-1`), list them in this entry and re-do the sweep.
+- Remediation: at next pricing change, re-grep design docs for stale numbers before publishing. Optional polish: rename the `V1_*` consts in `pricing.ts` to `V2_*` to match the rate-card version string.
+- Resolved: _(open)_
