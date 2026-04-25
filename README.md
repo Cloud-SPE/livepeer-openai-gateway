@@ -17,24 +17,24 @@ An OpenAI-compatible API service that fronts a pool of Livepeer WorkerNodes. Cus
 
 **v1 feature-complete.** All sixteen exec-plans (0001 – 0016) are in [`docs/exec-plans/completed/`](docs/exec-plans/completed/). Outstanding items are durable — each is an entry in [`docs/exec-plans/tech-debt-tracker.md`](docs/exec-plans/tech-debt-tracker.md).
 
-| Plan | What it ships                                                      |
-| ---: | ------------------------------------------------------------------ |
-| 0001 | Repo scaffolding, toolchain                                        |
-| 0002 | Zod domain types + 75% coverage gate                               |
-| 0003 | CustomerLedger: atomic reserve/commit/refund, FOR UPDATE row locks |
-| 0004 | AuthLayer: HMAC-SHA-256 API keys, Fastify preHandler               |
-| 0005 | NodeBook: config loader, QuoteRefresher, circuit breaker           |
-| 0006 | PayerDaemon gRPC client + session cache                            |
-| 0007 | `/v1/chat/completions` non-streaming (end-to-end)                  |
-| 0008 | `/v1/chat/completions` streaming + retry policy                    |
-| 0009 | Redis sliding-window rate limiter + concurrency semaphore          |
-| 0010 | Stripe Checkout top-ups + signed webhook + tier upgrade            |
-| 0011 | LocalTokenizer (metric-only)                                       |
-| 0012 | Admin / ops endpoints                                              |
-| 0013 | Process entrypoint, Dockerfile, docker-compose                     |
-| 0014 | Architectural ESLint plugin (layer-check et al.)                   |
-| 0015 | doc-gardener, proto-drift, secret-scan                             |
-| 0016 | Production docker stack (`tztcloud/payment-daemon:v0.8.10`)        |
+| Plan | What it ships                                                        |
+| ---: |----------------------------------------------------------------------|
+| 0001 | Repo scaffolding, toolchain                                          |
+| 0002 | Zod domain types + 75% coverage gate                                 |
+| 0003 | CustomerLedger: atomic reserve/commit/refund, FOR UPDATE row locks   |
+| 0004 | AuthLayer: HMAC-SHA-256 API keys, Fastify preHandler                 |
+| 0005 | NodeBook: config loader, QuoteRefresher, circuit breaker             |
+| 0006 | PayerDaemon gRPC client + session cache                              |
+| 0007 | `/v1/chat/completions` non-streaming (end-to-end)                    |
+| 0008 | `/v1/chat/completions` streaming + retry policy                      |
+| 0009 | Redis sliding-window rate limiter + concurrency semaphore            |
+| 0010 | Stripe Checkout top-ups + signed webhook + tier upgrade              |
+| 0011 | LocalTokenizer (metric-only)                                         |
+| 0012 | Admin / ops endpoints                                                |
+| 0013 | Process entrypoint, Dockerfile, docker-compose                       |
+| 0014 | Architectural ESLint plugin (layer-check et al.)                     |
+| 0015 | doc-gardener, proto-drift, secret-scan                               |
+| 0016 | Production docker stack (`tztcloud/livepeer-payment-daemon:v0.8.10`) |
 
 Test suite: **223 tests, 91 % statement / 80 % branch coverage** (the 75 % floor is mechanically enforced per [core belief #11](docs/design-docs/core-beliefs.md)).
 
@@ -105,7 +105,7 @@ cp .env.example .env
 docker compose up --build
 ```
 
-Stands up `postgres:16-alpine` + `redis:7-alpine` + `tztcloud/payment-daemon:v0.8.10` (sender mode) + the bridge (built from `Dockerfile`). All four services share a `payment-socket` named volume at `/var/run/livepeer/` so the bridge can reach the daemon over its unix socket.
+Stands up `postgres:16-alpine` + `redis:7-alpine` + `tztcloud/livepeer-payment-daemon:v0.8.10` (sender mode) + the bridge (built from `Dockerfile`). All four services share a `payment-socket` named volume at `/var/run/livepeer/` so the bridge can reach the daemon over its unix socket.
 
 See [`docs/operations/deployment.md`](docs/operations/deployment.md) for the full walkthrough including the production override (`compose.prod.yaml`) with pinned image, restart policies, log rotation, resource limits, read-only hardening, and the one-shot migration job.
 

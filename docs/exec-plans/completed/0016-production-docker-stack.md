@@ -1,7 +1,7 @@
 ---
 id: 0016
 slug: production-docker-stack
-title: Production docker stack with tztcloud/payment-daemon:v0.8.10
+title: Production docker stack with tztcloud/livepeer-payment-daemon:v0.8.10
 status: completed
 owner: claude
 opened: 2026-04-24
@@ -10,7 +10,7 @@ closed: 2026-04-24
 
 ## Goal
 
-Wire the published `tztcloud/payment-daemon:v0.8.10` image into the bridge's compose file as a real, default-on sidecar, and layer a `compose.prod.yaml` override for production-shaped defaults (restart policies, resource limits, log rotation, security hardening, migration-as-a-job, parameterised bridge image).
+Wire the published `tztcloud/livepeer-payment-daemon:v0.8.10` image into the bridge's compose file as a real, default-on sidecar, and layer a `compose.prod.yaml` override for production-shaped defaults (restart policies, resource limits, log rotation, security hardening, migration-as-a-job, parameterised bridge image).
 
 Supersedes the commented-out `payer-daemon` service block in `compose.yaml` that 0013 deliberately left as a placeholder.
 
@@ -90,7 +90,7 @@ Reason: The library's own example compose runs the daemon read-only with `no-new
 
 ### 2026-04-24 — Depends-on uses `service_started`, not `service_healthy`, for the daemon
 
-Reason: `tztcloud/payment-daemon:v0.8.10` doesn't expose an HTTP health endpoint, so compose can't synthesise a real healthcheck. The bridge has its own `healthPoller` (see 0006) that handles daemon-not-ready states at runtime. Waiting for `service_started` is good enough as a boot-ordering hint.
+Reason: `tztcloud/livepeer-payment-daemon:v0.8.10` doesn't expose an HTTP health endpoint, so compose can't synthesise a real healthcheck. The bridge has its own `healthPoller` (see 0006) that handles daemon-not-ready states at runtime. Waiting for `service_started` is good enough as a boot-ordering hint.
 
 ### 2026-04-24 — No live smoke test as part of this plan
 
@@ -108,13 +108,13 @@ Reason: An end-to-end smoke against a real Arbitrum endpoint would require a fun
 
 ## Artifacts produced
 
-- `compose.yaml` — default dev stack now includes the `payment-daemon` service pinned to `tztcloud/payment-daemon:v0.8.10` (sender mode, Arbitrum defaults, keystore + password bind-mounted from host). Shared socket volume renamed `payer-socket` → `payment-socket`, mounted at `/var/run/livepeer/` on both bridge and daemon to match the library's convention.
+- `compose.yaml` — default dev stack now includes the `payment-daemon` service pinned to `tztcloud/livepeer-payment-daemon:v0.8.10` (sender mode, Arbitrum defaults, keystore + password bind-mounted from host). Shared socket volume renamed `payer-socket` → `payment-socket`, mounted at `/var/run/livepeer/` on both bridge and daemon to match the library's convention.
 - `compose.prod.yaml` — new override layering restart policies, JSON log rotation, resource limits, `read_only: true` + `no-new-privileges:true` on the daemon, parameterised `${BRIDGE_IMAGE}`, and a one-shot `bridge-migrate` service that runs `node dist/scripts/migrate.js` and gates the bridge via `service_completed_successfully`. Prod sets `BRIDGE_AUTO_MIGRATE=false`.
 - `src/scripts/migrate.ts` — moved from `scripts/migrate.ts` so the main tsc build emits `dist/scripts/migrate.js` for the prod migration job. `package.json` `db:migrate` updated to the new path; `vitest.config.ts` excludes `src/scripts/**` from coverage (entrypoint, not library code).
 - `src/config/payerDaemon.ts` — default socket path flipped to `/var/run/livepeer/payment.sock` (matches the library's baked-in default). Test updated.
 - `.env.example` — adds `CHAIN_RPC`, `PAYER_KEYSTORE_PATH`, `PAYER_KEYSTORE_PASSWORD_PATH`, commented `PAYER_ORCH_ADDRESS` for hot/cold split, commented chain-override block, commented `BRIDGE_IMAGE`. Flips `PAYER_DAEMON_SOCKET` default.
 - `docs/operations/deployment.md` — new operator guide: dev walkthrough, prod walkthrough, multi-replica notes, troubleshooting (keystore decrypt, chain-id mismatch, socket perms, postgres volume staleness, migration job failures), what's-not-yet-automated list.
-- `docs/design-docs/payer-integration.md` — transport line updated to the new socket path; notes it matches the `tztcloud/payment-daemon` image default.
+- `docs/design-docs/payer-integration.md` — transport line updated to the new socket path; notes it matches the `tztcloud/livepeer-payment-daemon` image default.
 - `AGENTS.md` — adds `docs/operations/` to the knowledge-base layout; new row in the "Where to look for X" table.
 - `README.md` — plan index extended to 0016; `docs/` map mentions `operations/`; Run-locally section rewritten for the full-stack default; links to the new deployment guide.
 - Tech-debt closed:
