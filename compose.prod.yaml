@@ -1,17 +1,41 @@
-# Production override for compose.yaml.
+# Production bridge-side stack (standalone).
 #
-# Usage:
-#   docker compose -f compose.yaml -f compose.prod.yaml up -d
+# Paste into Portainer as a single Stack, or run:
+#   docker compose -f compose.prod.yaml --env-file .env up -d
 #
-# Adds: restart policies, JSON log rotation, resource limits, read-only
-# hardening on the daemon, a one-shot bridge-migrate job, and a parameterised
-# BRIDGE_IMAGE (no inline build in prod).
+# Five services:
+#   - postgres        (16-alpine)
+#   - redis           (7-alpine)
+#   - payment-daemon  (sender mode, Arbitrum One mainnet)
+#   - bridge-migrate  (one-shot drizzle migration; exits when done)
+#   - bridge          (the gateway — fronted by Traefik via labels)
+#
+# Ingress:
+#   Traefik (already running on the same VPS, listening on :443) routes
+#   `Host(${BRIDGE_PUBLIC_HOST})` traffic to the bridge container via
+#   the external `ingress` network. Adjust the entrypoint /
+#   certresolver label values via env if your Traefik uses different
+#   names.
 #
 # See docs/operations/deployment.md for the full walkthrough.
 
+name: livepeer-bridge
+
 services:
   postgres:
+    image: postgres:16-alpine
     restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${PGUSER:-bridge}
+      POSTGRES_PASSWORD: ${PGPASSWORD:?set PGPASSWORD}
+      POSTGRES_DB: ${PGDATABASE:-bridge}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', '${PGUSER:-bridge}']
+      interval: 5s
+      timeout: 5s
+      retries: 20
     logging:
       driver: json-file
       options:
@@ -24,7 +48,13 @@ services:
           memory: 2g
 
   redis:
+    image: redis:7-alpine
     restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 20
     logging:
       driver: json-file
       options:
@@ -37,7 +67,19 @@ services:
           memory: 512m
 
   payment-daemon:
+    image: tztcloud/livepeer-payment-daemon:v0.8.10
     restart: unless-stopped
+    command:
+      - --mode=sender
+      - --socket=/var/run/livepeer/payment.sock
+      - --chain-rpc=${CHAIN_RPC:?set CHAIN_RPC (Arbitrum One mainnet RPC URL)}
+      - --keystore-path=/etc/livepeer/keystore.json
+      - --keystore-password-file=/etc/livepeer/keystore-password
+      - --log-level=${DAEMON_LOG_LEVEL:-info}
+    volumes:
+      - ${PAYER_KEYSTORE_PATH:-./keystore.json}:/etc/livepeer/keystore.json:ro
+      - ${PAYER_KEYSTORE_PASSWORD_PATH:-./keystore-password}:/etc/livepeer/keystore-password:ro
+      - payment-socket:/var/run/livepeer
     read_only: true
     security_opt:
       - no-new-privileges:true
@@ -52,13 +94,12 @@ services:
           cpus: '1'
           memory: 512m
 
-  # One-shot migration job. Runs `node dist/scripts/migrate.js` and exits.
-  # The bridge service gates on its successful completion, so this replaces
-  # BRIDGE_AUTO_MIGRATE=true (which races in multi-replica deploys).
+  # One-shot migration job. Runs and exits; the bridge service gates on
+  # its successful completion.
   bridge-migrate:
-    image: ${BRIDGE_IMAGE:?set BRIDGE_IMAGE (e.g. tztcloud/livepeer-openai-gateway:v0.8.10)}
-    command: ['dist/scripts/migrate.js']
+    image: ${BRIDGE_IMAGE:-tztcloud/livepeer-openai-gateway:v0.8.10}
     restart: 'no'
+    command: ['dist/scripts/migrate.js']
     depends_on:
       postgres:
         condition: service_healthy
@@ -75,9 +116,7 @@ services:
         max-file: '5'
 
   bridge:
-    # Override dev's inline build with a pinned, pushed image.
-    build: !reset null
-    image: ${BRIDGE_IMAGE:?set BRIDGE_IMAGE (e.g. tztcloud/livepeer-openai-gateway:v0.8.10)}
+    image: ${BRIDGE_IMAGE:-tztcloud/livepeer-openai-gateway:v0.8.10}
     restart: unless-stopped
     depends_on:
       postgres:
@@ -89,8 +128,69 @@ services:
       bridge-migrate:
         condition: service_completed_successfully
     environment:
-      # Migration runs as a job, not on boot.
+      HOST: '0.0.0.0'
+      PORT: '8080'
+
+      # Database
+      PGHOST: postgres
+      PGPORT: '5432'
+      PGUSER: ${PGUSER:-bridge}
+      PGPASSWORD: ${PGPASSWORD:?set PGPASSWORD}
+      PGDATABASE: ${PGDATABASE:-bridge}
+
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+
+      # Auth (pepper must be ≥ 16 chars)
+      API_KEY_PEPPER: ${API_KEY_PEPPER:?set API_KEY_PEPPER (>= 16 chars)}
+      API_KEY_ENV_PREFIX: ${API_KEY_ENV_PREFIX:-test}
+
+      # PayerDaemon — socket lives on the shared payment-socket volume
+      PAYER_DAEMON_SOCKET: /var/run/livepeer/payment.sock
+
+      # Bridge's own ETH address (must match the payer-daemon keystore).
+      # Sent as ?sender= when probing worker /quote + /quotes.
+      BRIDGE_ETH_ADDRESS: ${BRIDGE_ETH_ADDRESS:?set BRIDGE_ETH_ADDRESS (0x-prefixed 40-hex)}
+
+      # Stripe
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:?set STRIPE_SECRET_KEY (sk_test_... or sk_live_..., placeholder OK for non-Stripe smoke)}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:?set STRIPE_WEBHOOK_SECRET}
+      STRIPE_SUCCESS_URL: ${STRIPE_SUCCESS_URL:-https://${BRIDGE_PUBLIC_HOST}/billing/success}
+      STRIPE_CANCEL_URL: ${STRIPE_CANCEL_URL:-https://${BRIDGE_PUBLIC_HOST}/billing/cancel}
+
+      # Admin
+      ADMIN_TOKEN: ${ADMIN_TOKEN:?set ADMIN_TOKEN (>= 32 chars)}
+      ADMIN_IP_ALLOWLIST: ${ADMIN_IP_ALLOWLIST:-}
+
+      NODES_CONFIG_PATH: /app/nodes.yaml
       BRIDGE_AUTO_MIGRATE: 'false'
+    volumes:
+      - ${NODES_YAML_PATH:-./nodes.yaml}:/app/nodes.yaml:ro
+      - payment-socket:/var/run/livepeer
+    networks:
+      - default
+      - ingress
+    labels:
+      # Adjust TRAEFIK_ENTRYPOINT / TRAEFIK_CERTRESOLVER in .env if your
+      # Traefik uses different names. Common defaults: `websecure` for
+      # the :443 entrypoint, `letsencrypt` for the ACME resolver.
+      - "traefik.enable=true"
+      - "traefik.docker.network=ingress"
+      - "traefik.http.routers.livepeer-bridge.rule=Host(`${BRIDGE_PUBLIC_HOST:?set BRIDGE_PUBLIC_HOST (e.g. openai-sea.cloudspe.cin)}`)"
+      - "traefik.http.routers.livepeer-bridge.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.livepeer-bridge.tls=true"
+      - "traefik.http.routers.livepeer-bridge.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}"
+      - "traefik.http.services.livepeer-bridge.loadbalancer.server.port=8080"
+    healthcheck:
+      test:
+        - 'CMD'
+        - 'node'
+        - '-e'
+        - "require('http').get('http://127.0.0.1:8080/healthz',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 5
     logging:
       driver: json-file
       options:
@@ -101,3 +201,16 @@ services:
         limits:
           cpus: '2'
           memory: 1g
+
+volumes:
+  pgdata:
+  payment-socket:
+
+networks:
+  default:
+  # Traefik already runs on this host; the bridge attaches to its
+  # external `ingress` network so Traefik picks up the labels and
+  # routes Host(${BRIDGE_PUBLIC_HOST}) traffic to it.
+  # Create once on the VPS if absent: `docker network create ingress`.
+  ingress:
+    external: true
