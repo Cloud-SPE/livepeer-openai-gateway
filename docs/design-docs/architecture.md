@@ -1,7 +1,7 @@
 ---
 title: Architecture
 status: accepted
-last-reviewed: 2026-04-24
+last-reviewed: 2026-04-25
 ---
 
 # Architecture
@@ -44,7 +44,7 @@ A module at layer N may import only modules at layers < N, plus `providers/`. No
 
 Concretely: `service/routing` may import `service/nodes`, `service/payments`, and `providers/payerDaemon`, but may not import `runtime/*`, `@grpc/grpc-js`, or `stripe` directly.
 
-Enforced by `lint/layer-check` running as an npm script in CI (and via a custom ESLint rule once the plugin is authored).
+Enforced by the custom ESLint rules in `lint/` (`layer-check`, `no-cross-cutting-import`, `zod-at-boundary`, `no-secrets-in-logs`, `file-size`) wired into `eslint.config.js` and run as part of `npm run lint` in CI.
 
 ## Domain inventory
 
@@ -61,27 +61,36 @@ Enforced by `lint/layer-check` running as an npm script in CI (and via a custom 
 
 ## Runtime surfaces
 
-| Path                                   | Purpose                                                             |
-| -------------------------------------- | ------------------------------------------------------------------- |
-| `src/runtime/http/chat/completions.ts` | OpenAI-compatible `/v1/chat/completions`, streaming + non-streaming |
-| `src/runtime/signup/`                  | Email-verified signup, API key issuance                             |
-| `src/runtime/stripeWebhook/`           | Handle Stripe events (`payment_intent.succeeded`, disputes)         |
-| `src/runtime/admin/`                   | Health, NodeBook inspection, customer ops (manual refund, etc.)     |
+| Path                                   | Purpose                                                                                                                                                 |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/runtime/http/chat/completions.ts` | OpenAI-compatible `/v1/chat/completions` (non-streaming)                                                                                                |
+| `src/runtime/http/chat/streaming.ts`   | OpenAI-compatible `/v1/chat/completions` (SSE streaming)                                                                                                |
+| `src/runtime/http/embeddings/`         | OpenAI-compatible `/v1/embeddings`                                                                                                                      |
+| `src/runtime/http/images/`             | OpenAI-compatible `/v1/images/generations`                                                                                                              |
+| `src/runtime/http/billing/`            | `/v1/billing/balance` + `/v1/billing/topup` for the customer-facing dashboard                                                                           |
+| `src/runtime/http/stripe/`             | Stripe webhook (`payment_intent.succeeded`, disputes)                                                                                                   |
+| `src/runtime/http/admin/`              | Health, NodeBook inspection, customer ops (manual refund, etc.)                                                                                         |
+| `src/runtime/http/middleware/`         | Auth + rate-limit middleware shared by every paid route                                                                                                 |
+| `src/runtime/http/healthz.ts`          | Liveness probe                                                                                                                                          |
+| `src/runtime/http/errors.ts`           | Typed error → OpenAI-style response envelope mapping                                                                                                    |
+
+`/v1/audio/speech` and `/v1/audio/transcriptions` (exec-plan 0019) will land in `src/runtime/http/audio/`.
 
 ## Providers inventory
 
 All cross-cutting concerns enter through `src/providers/`. One interface per concern; one or more implementations.
 
-| Provider            | Interface role                                               | Default implementation                       |
-| ------------------- | ------------------------------------------------------------ | -------------------------------------------- |
-| `PayerDaemonClient` | gRPC client to local payment daemon (`livepeer.payments.v1`) | `@grpc/grpc-js` with generated stubs         |
-| `StripeClient`      | Top-ups, webhooks, disputes                                  | `stripe` SDK                                 |
-| `RedisClient`       | Rate-limit state, ephemeral counters                         | `ioredis`                                    |
-| `Database`          | Postgres connection pool                                     | `pg`                                         |
-| `Tokenizer`         | Model-aware token counting (prompt + completion)             | `tiktoken` default; per-model-family plugins |
-| `ChainInfo`         | Read-only Eth for admin views (escrow status)                | `viem`                                       |
-| `MetricsSink`       | Counter / Gauge / Histogram                                  | No-op default; Prometheus later              |
-| `Logger`            | Structured log                                               | `pino`                                       |
+| Provider            | Interface role                                                                          | Default implementation                       |
+| ------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------- |
+| `PayerDaemonClient` | gRPC client to local payment daemon (`livepeer.payments.v1`)                            | `@grpc/grpc-js` with generated stubs         |
+| `NodeClient`        | HTTP client to WorkerNode `/health`, `/capabilities`, `/quote`, `/quotes`, `/v1/*`      | `fetch`-based impl in `src/providers/nodeClient/` |
+| `StripeClient`      | Top-ups, webhooks, disputes                                                             | `stripe` SDK                                 |
+| `RedisClient`       | Rate-limit state, ephemeral counters                                                    | `ioredis`                                    |
+| `Database`          | Postgres connection pool                                                                | `pg` + Drizzle ORM                           |
+| `Tokenizer`         | Model-aware token counting (drift audit only — no enforcement in v1)                    | `tiktoken` default; per-model-family plugins |
+| `ChainInfo`         | Read-only Eth for admin views (escrow status)                                           | `viem`                                       |
+| `MetricsSink`       | Counter / Gauge / Histogram                                                             | No-op default; Prometheus later              |
+| `Logger`            | Structured log                                                                          | `pino`                                       |
 
 Providers are wired in `src/runtime/` entry points and injected into `service/` and `repo/`.
 
