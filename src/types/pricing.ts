@@ -1,6 +1,22 @@
 import { z } from 'zod';
 
-export const PricingTierSchema = z.enum(['starter', 'standard', 'pro']);
+// Four chat tiers, ordered from cheapest to most expensive:
+//   starter  — heavily-batched commodity workloads (vLLM with ≥8
+//              concurrent requests on consumer GPUs, or any
+//              hyperscaler-class hardware). Strict undercut of OpenAI
+//              gpt-4o-mini class.
+//   standard — moderate batching (vLLM with ~4 concurrent). Targets
+//              Anthropic Claude Haiku class; still cheaper.
+//   pro      — light batching (~2-3 concurrent) on prosumer GPUs.
+//              Targets Together / Replicate llama-70b class.
+//   premium  — single-user serving (no batching), niche models
+//              (fine-tunes, uncensored, privacy-preserving),
+//              specialty domains. Positioned BELOW GPT-4o and Claude
+//              Sonnet, not against the cheapest commodity prices —
+//              workers running specialty models on retail GPUs
+//              without aggressive batching cannot break even at
+//              starter/standard rates.
+export const PricingTierSchema = z.enum(['starter', 'standard', 'pro', 'premium']);
 export type PricingTier = z.infer<typeof PricingTierSchema>;
 
 export const UsdPerMillionTokensSchema = z.number().positive();
@@ -16,7 +32,7 @@ export type ChatRateCardEntry = z.infer<typeof ChatRateCardEntrySchema>;
 export const ChatRateCardSchema = z.object({
   version: z.string().min(1),
   effectiveAt: z.coerce.date(),
-  entries: z.array(ChatRateCardEntrySchema).length(3),
+  entries: z.array(ChatRateCardEntrySchema).length(4),
 });
 export type ChatRateCard = z.infer<typeof ChatRateCardSchema>;
 

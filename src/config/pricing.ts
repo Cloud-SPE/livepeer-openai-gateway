@@ -62,14 +62,25 @@ export interface PricingConfig {
 const V1_RATE_CARD: ChatRateCard = {
   version: 'v2-2026-04-25',
   effectiveAt: new Date('2026-04-25T00:00:00Z'),
-  // Each tier strictly undercuts the cheapest commercial competitor.
-  // starter beats gpt-4o-mini ($0.15/$0.60); standard beats Claude
-  // Haiku ($0.25/$1.25); pro beats Claude Haiku output and matches
-  // gpt-4o-mini-class on input.
+  // Tier targets:
+  //   starter  — heavily-batched commodity workers; strictly undercuts
+  //              OpenAI gpt-4o-mini ($0.15/$0.60).
+  //   standard — moderately-batched; strictly undercuts Anthropic
+  //              Claude Haiku ($0.25/$1.25).
+  //   pro      — light batching on prosumer GPUs; cheaper than Together
+  //              llama-70b ($0.88/$0.88) and Replicate ($0.65/$2.75).
+  //   premium  — single-user serving / niche / fine-tuned models on
+  //              retail GPUs. Positioned BELOW OpenAI gpt-4o
+  //              ($2.50/$10) and Claude Sonnet 3.5 ($3/$15) — premium
+  //              over commodity, but still cheaper than the frontier
+  //              commercial endpoints. See pricing-model.md
+  //              "Worker operator economics" for the throughput-vs-
+  //              break-even math that motivates this tier.
   entries: [
     { tier: 'starter', inputUsdPerMillion: 0.05, outputUsdPerMillion: 0.1 },
     { tier: 'standard', inputUsdPerMillion: 0.15, outputUsdPerMillion: 0.4 },
     { tier: 'pro', inputUsdPerMillion: 0.4, outputUsdPerMillion: 1.2 },
+    { tier: 'premium', inputUsdPerMillion: 2.5, outputUsdPerMillion: 6.0 },
   ],
 };
 
@@ -125,6 +136,11 @@ const V1_MODEL_TO_TIER: Array<[string, PricingTier]> = [
   ['model-small', 'starter'],
   ['model-medium', 'standard'],
   ['model-large', 'pro'],
+  // `model-premium` is a placeholder for tests + the new premium tier
+  // (single-user / niche / fine-tune workloads). Real premium models —
+  // operator-specific fine-tunes or specialty serving — should be
+  // added by the operator when they bring a worker online.
+  ['model-premium', 'premium'],
   // Real model names. Add new entries as workers come online with new
   // models; making this env-driven is tracked as `model-tier-env-config`
   // in the tech-debt tracker.

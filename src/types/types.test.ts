@@ -67,18 +67,19 @@ describe('types/pricing', () => {
     expect(PricingTierSchema.parse('pro')).toBe('pro');
   });
 
-  it('chat rate card requires exactly three tier entries', () => {
+  it('chat rate card requires exactly four tier entries (starter, standard, pro, premium)', () => {
+    const tiers = ['starter', 'standard', 'pro', 'premium'] as const;
     const mk = (n: number) =>
       Array.from({ length: n }, (_, i) => ({
-        tier: (['starter', 'standard', 'pro'] as const)[i % 3]!,
+        tier: tiers[i % tiers.length]!,
         inputUsdPerMillion: 1,
         outputUsdPerMillion: 2,
       }));
     expect(() =>
-      ChatRateCardSchema.parse({ version: 'v1', effectiveAt: new Date(), entries: mk(2) }),
+      ChatRateCardSchema.parse({ version: 'v1', effectiveAt: new Date(), entries: mk(3) }),
     ).toThrow();
     expect(() =>
-      ChatRateCardSchema.parse({ version: 'v1', effectiveAt: new Date(), entries: mk(3) }),
+      ChatRateCardSchema.parse({ version: 'v1', effectiveAt: new Date(), entries: mk(4) }),
     ).not.toThrow();
   });
 

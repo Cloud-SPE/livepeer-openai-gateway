@@ -14,23 +14,93 @@ The bridge prices three distinct endpoint families with three distinct rate stru
 
 ## Competitive positioning
 
-**Design goal: Cloud-SPE is the cheapest mainstream OpenAI-compatible endpoint at every tier in every category.**
+**Design goal: Cloud-SPE is the cheapest mainstream OpenAI-compatible endpoint at every commodity tier (`starter`, `standard`, `pro`), with an additional `premium` tier for niche / fine-tuned / single-user-serving workloads that compete on value rather than price.**
 
-The v2 rate cards below are sized to strictly undercut every competitor we benchmarked at the time of the rebalance (`2c40cbb`, 2026-04-25): OpenAI, Anthropic (Claude), Together, Replicate, Groq, Deepgram, AssemblyAI, ElevenLabs. Margin comes from the worker side: `worker.yaml` `price_per_work_unit_wei` values are sized at roughly **10× cheaper** than the bridge customer rate, leaving the bridge a healthy spread for infra costs, redemption gas, and operations while still beating every commercial endpoint a customer could route to instead.
+The four `v2` chat tiers + the four model-keyed cards (embeddings, images, speech, transcriptions) are sized as follows:
 
-The competitive references that drive each tier's number live in the `pricing.ts` comment block (`src/config/pricing.ts`) and are mirrored below for each rate card. When competitor prices change, the playbook is to re-check those benchmarks and bump our rates only enough to preserve the "strictly cheaper" property.
+- **Commodity tiers** (`starter`, `standard`, `pro`) strictly undercut every benchmarked commercial competitor as of the rebalance (`2c40cbb`, 2026-04-25): OpenAI, Anthropic (Claude), Together, Replicate, Groq, Deepgram, AssemblyAI, ElevenLabs. They assume the worker is heavily-batched commodity hardware (vLLM with high concurrency on a hyperscaler-class GPU, or a prosumer GPU with `--max-num-seqs ≥ 8`).
+- **Premium tier** is positioned BELOW the most expensive commercial frontier offerings (OpenAI gpt-4o, Anthropic Claude Sonnet) but well above commodity. It exists because a single retail GPU running a single model without aggressive batching cannot break even at commodity rates — see "Worker operator economics" below for the math. Premium workers compete on what hyperscalers cannot offer: uncensored fine-tunes, privacy guarantees, specific languages or domains, custom adapters, low-noise serving.
+
+Margin comes from the worker side: `worker.yaml` `price_per_work_unit_wei` values are sized at roughly **70-80% of the bridge customer rate**, leaving the bridge a healthy spread for infra, redemption gas, and operations while still beating every commercial endpoint a customer could route to instead. The competitive references that drive each tier's number live in the `pricing.ts` comment block (`src/config/pricing.ts`) and are mirrored below for each rate card. When competitor prices change, the playbook is to re-check those benchmarks and bump our rates only enough to preserve the "strictly cheaper at commodity, BELOW frontier at premium" property.
+
+## Worker operator economics
+
+**Bridge operator's job: keep worker GPUs humming with concurrent load.** The whole pricing structure assumes high utilization (>50%, ideally >80%) — at low utilization no rate card makes a worker profitable on commodity GPUs. The bridge takes the load-balancing + customer-acquisition burden so workers can saturate.
+
+### Throughput shapes the achievable price
+
+Same GPU, very different cost-per-token depending on batching:
+
+| Mode | Tokens/sec sustained (gemma3 27B class on RTX 5090) | Tokens/day at 100% util |
+| --- | --- | --- |
+| Single user (Ollama, no batching) | ~70 t/s | ~6M |
+| 4× concurrent (vLLM `--max-num-seqs 4`) | ~250 t/s | ~22M |
+| 16× concurrent (vLLM `--max-num-seqs 16`) | ~500 t/s | ~43M |
+
+(Numbers approximate; exact depends on prompt length, model size, quantization, and the inference engine.)
+
+### Break-even math (RTX 5090 at $12/day cost)
+
+Worker break-even price/M tokens = `daily_cost / daily_tokens`:
+
+| Mode | Break-even ($12/day) | $5/day profit ($17/day rev) |
+| --- | --- | --- |
+| Single user | $2.00 | $2.83 |
+| 4× batched | $0.55 | $0.79 |
+| 16× batched | $0.28 | $0.39 |
+
+### Tier-to-throughput mapping
+
+The four chat tiers correspond to the batching the worker can achieve:
+
+| Tier | Bridge customer (avg) | Worker take (~80%) | Required throughput on a 5090 to break even on $12/day | Suggested `worker.yaml` `price_per_work_unit_wei` (at $4k/ETH) |
+| --- | --- | --- | --- | --- |
+| **starter** ($0.05/$0.10) | ~$0.075/M | ~$0.06/M | **~32× concurrent** — heavy server-grade vLLM, multiple models, or hyperscaler hardware | `1_250_000` |
+| **standard** ($0.15/$0.40) | ~$0.25/M | ~$0.20/M | **~10× concurrent** — vLLM with healthy traffic | `5_000_000` |
+| **pro** ($0.40/$1.20) | ~$0.80/M | ~$0.64/M | **~3-4× concurrent** — comfortable for any vLLM deploy | `15_000_000` |
+| **premium** ($2.50/$6.00) | ~$3.75/M | ~$3.00/M | **single-user serving** — Ollama-class without batching | `75_000_000` |
+
+(`price_per_work_unit_wei` math: target USD/M tokens × 80% worker share, divided by ETH/USD, divided by 10⁶ tokens, expressed in wei. These are *recommended starting points*; operators tune up/down against their actual hardware costs and ETH price.)
+
+### Two strategies for a worker operator
+
+**Strategy A — Compete on price (commodity).** Run vLLM, TGI, or a similar batched inference engine. Push concurrency to 8-16+. Pick `starter`/`standard`/`pro` tier matching your sustained throughput. Customer acquisition is easier (you're cheaper than OpenAI) but margin per token is thin.
+
+**Strategy B — Compete on value (premium).** Single-user-friendly serving (Ollama is fine). Differentiate on what hyperscalers can't or won't ship:
+- Uncensored / abliterated models
+- Custom fine-tunes
+- Privacy / no-log guarantees
+- Specific languages or domain expertise
+- Lower latency (geographic proximity, no batching wait)
+
+Customer demand is smaller but per-customer revenue is much higher. Premium tier at $2.50/$6 per 1M tokens leaves the worker ~$3/M after the bridge's cut — a single 5090 at modest utilization (~6M tokens/day, single-user-serving) earns ~$18/day, comfortably above the $12/day GPU cost.
+
+### What the bridge operator does
+
+The bridge's role is to make sure workers have **demand**, not capacity. Every worker stack is a sunk cost (GPU + electricity + bandwidth); the GPU costs the same whether it serves 1 token/day or 40 million. The bridge's job is to:
+
+1. **Route requests to the right tier**, so a customer asking for `gemma4:26b` lands on a worker who can profitably serve it at the matching tier.
+2. **Aggregate demand** across many small customers so each worker sees consistent load.
+3. **Smooth the bursty-traffic problem** with rate-limiting (Redis-backed) and concurrency caps (per-customer, per-worker).
+4. **Keep the worker billed honestly** — workers are paid in ticket EV; the bridge never sees the worker's GPU cost, but the rate-card design assumes the bridge isn't undercutting the worker into unprofitability.
+
+A bridge that cannot keep its worker fleet at >50% utilization is signaling that pricing is too high (lose customers to competitors) or marketing is too thin (no customers know about you). Either way, the worker pulls out and capacity disappears. The pricing here only works if the load shows up.
 
 ## Chat rate card (v2, effective 2026-04-25)
 
-| Tier         | Input $ / 1M tokens | Output $ / 1M tokens | Target model class | Cheapest commercial reference (per 1M, in/out) |
-| ------------ | ------------------- | -------------------- | ------------------ | ---------------------------------------------- |
-| **Starter**  | $0.05               | $0.10                | small (7B–13B)     | OpenAI gpt-4o-mini $0.15 / $0.60               |
-| **Standard** | $0.15               | $0.40                | medium (~70B)      | Anthropic Claude Haiku $0.25 / $1.25           |
-| **Pro**      | $0.40               | $1.20                | large (frontier)   | Together llama-3.1-70b $0.88 / $0.88; Replicate llama-3.1-70b ~$0.65 / $2.75 |
+| Tier         | Input $ / 1M tokens | Output $ / 1M tokens | Worker batching expectation | Commercial reference (per 1M, in/out) |
+| ------------ | ------------------- | -------------------- | --------------------------- | ------------------------------------- |
+| **Starter**  | $0.05               | $0.10                | ≥ 16× concurrent (vLLM heavy) | strictly < OpenAI gpt-4o-mini $0.15 / $0.60 |
+| **Standard** | $0.15               | $0.40                | ~10× concurrent             | strictly < Anthropic Claude Haiku $0.25 / $1.25 |
+| **Pro**      | $0.40               | $1.20                | ~3-4× concurrent            | strictly < Together llama-3.1-70b $0.88 / $0.88; Replicate llama-3.1-70b ~$0.65 / $2.75 |
+| **Premium**  | $2.50               | $6.00                | single-user (no batching), niche / fine-tuned models | strictly < OpenAI gpt-4o $2.50 / $10; Anthropic Claude Sonnet 3.5 $3 / $15 |
 
 Other reference points (2026-04):
 - OpenAI gpt-3.5-turbo $0.50 / $1.50 — Cloud-SPE's standard tier beats this on both sides.
 - Groq llama-70b $0.59 / $0.79 — Cloud-SPE's pro tier beats input; output edged by Groq but Groq is rate-limited.
+- OpenAI gpt-4-turbo $10 / $30 — Cloud-SPE's premium tier 4× cheaper across the board.
+
+Premium is NOT trying to be the cheapest in its class — it exists because a single retail GPU running specialty models without aggressive batching cannot break even at commodity rates (see "Worker operator economics" above). Premium workers earn higher margins; customers pay more for value (uncensored / fine-tuned / privacy / domain expertise) that hyperscalers do not ship.
 
 Free tier consumes against the **Starter** rate for internal cost accounting (quota-capped at 100K tokens / month).
 
