@@ -75,8 +75,8 @@ Additional prerequisites:
 
 - A tagged, pushed bridge image (the compose override does not build). Until CI publishing lands:
   ```bash
-  docker build -t ghcr.io/your-org/openai-livepeer-bridge:v0.1.0 .
-  docker push ghcr.io/your-org/openai-livepeer-bridge:v0.1.0
+  docker build -t tztcloud/livepeer-openai-gateway:v0.8.10 .
+  docker push tztcloud/livepeer-openai-gateway:v0.8.10
   ```
 - Set `BRIDGE_IMAGE` in `.env` to that tag.
 - Rotate every `REQUIRED-*` placeholder in `.env` to a live value (especially `API_KEY_PEPPER`, `ADMIN_TOKEN`, Stripe live keys).
