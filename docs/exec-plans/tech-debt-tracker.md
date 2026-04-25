@@ -169,6 +169,15 @@ Append-only list of known debt. Strike through when resolved; include the PR or 
 - Remediation: extend `src/runtime/http/audio/{speech,transcriptions}.test.ts` with TestPg + fake daemon + fake worker, mirroring `src/runtime/http/embeddings/embeddings.test.ts`. Most fixtures (TestPg, fakeQuotesResponse, etc.) are already in place; new pieces are a fake `/v1/audio/speech` handler that emits `audio/mpeg` bytes and a fake `/v1/audio/transcriptions` handler that sets `x-livepeer-audio-duration-seconds`.
 - Resolved: _(open)_
 
+### model-tier-env-config
+
+- Opened: 2026-04-25
+- Severity: medium
+- Area: src/config/pricing.ts
+- Description: `V1_MODEL_TO_TIER` is hardcoded in source. Adding a new chat model (e.g. `gemma4:26b`, `llama3.1:8b`) requires a code change + image rebuild + republish, even though the model itself can be advertised via `worker.yaml` without touching the bridge. This is fine for first deploy but becomes a coordination tax once the worker fleet starts to accept multiple models.
+- Remediation: introduce a `MODEL_TO_TIER` env var (e.g. `gemma4:26b=starter,llama3.1:8b=standard`) parsed at boot via Zod, merged on top of the hardcoded defaults. Operator can add a model without rebuilding the image. Validate that every advertised model in `nodes.yaml.supportedModels` is either in the env-supplied map or in the default map; fail-closed startup on an unmapped model.
+- Resolved: _(open)_
+
 ### transcriptions-upload-buffering
 
 - Opened: 2026-04-25

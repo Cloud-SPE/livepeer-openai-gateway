@@ -85,6 +85,10 @@ const V1_MODEL_TO_TIER: Array<[string, PricingTier]> = [
   ['model-small', 'starter'],
   ['model-medium', 'standard'],
   ['model-large', 'pro'],
+  // Real model names. Add new entries as workers come online with new
+  // models; making this env-driven is tracked as `model-tier-env-config`
+  // in the tech-debt tracker.
+  ['gemma4:26b', 'starter'],
 ];
 
 export function defaultPricingConfig(): PricingConfig {
