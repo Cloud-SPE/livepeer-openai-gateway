@@ -2,9 +2,10 @@
 id: 0020
 slug: per-capability-nodebook
 title: Per-(capability, model) NodeBook quotes — 0018 phase 2
-status: active
-owner: claude
+status: completed
+owner: agent
 opened: 2026-04-24
+completed: 2026-04-25
 ---
 
 ## Goal

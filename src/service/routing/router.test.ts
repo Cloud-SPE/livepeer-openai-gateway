@@ -1,8 +1,28 @@
 import { describe, expect, it } from 'vitest';
 import { parseNodesYaml } from '../../config/nodes.js';
+import { capabilityString } from '../../types/capability.js';
+import type { Quote } from '../../types/node.js';
 import { NodeBook } from '../nodes/nodebook.js';
 import { NoHealthyNodesError } from '../nodes/errors.js';
 import { pickNode } from './router.js';
+
+function stubQuote(): Quote {
+  return {
+    ticketParams: {
+      recipient: '0x' + 'aa'.repeat(20),
+      faceValueWei: 1n,
+      winProb: '0x01',
+      recipientRandHash: '0x' + 'de'.repeat(32),
+      seed: '0x' + 'be'.repeat(32),
+      expirationBlock: 1n,
+      expirationParams: { creationRound: 1n, creationRoundBlockHash: '0x' + 'ca'.repeat(32) },
+    },
+    priceInfo: { pricePerUnitWei: 1n, pixelsPerUnit: 1n },
+    modelPrices: {},
+    lastRefreshedAt: new Date(),
+    expiresAt: new Date(Date.now() + 60_000),
+  };
+}
 
 const addr = (c: string) => '0x' + c.repeat(20);
 
@@ -34,6 +54,13 @@ nodes:
 function mkNodeBook(yaml: string): NodeBook {
   const nb = new NodeBook();
   nb.replaceAll(parseNodesYaml(yaml));
+  // Seed quotes for every (node, advertised-capability) so post-0020
+  // findNodesFor's quote-presence check is satisfied.
+  for (const entry of nb.list()) {
+    for (const cap of entry.config.capabilities) {
+      nb.setCapabilityQuote(entry.config.id, capabilityString(cap), stubQuote());
+    }
+  }
   return nb;
 }
 

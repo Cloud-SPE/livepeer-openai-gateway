@@ -59,6 +59,32 @@ export function fakeQuoteResponse(overrides: FakeQuoteOverrides = {}): Record<st
   };
 }
 
+/**
+ * Builds a /quotes response body — the batched form, one entry per
+ * capability the worker advertises. Each entry's `quote` field has
+ * the same shape as fakeQuoteResponse(). Used by the quoteRefresher's
+ * single-tick probe.
+ */
+export function fakeQuotesResponse(overrides: {
+  capabilities?: Array<{ capability: string; model: string; priceWei?: string }>;
+} = {}): Record<string, unknown> {
+  const entries =
+    overrides.capabilities ??
+    [
+      {
+        capability: 'openai:/v1/chat/completions',
+        model: 'model-small',
+        priceWei: '1000',
+      },
+    ];
+  return {
+    quotes: entries.map((e) => ({
+      capability: e.capability,
+      quote: fakeQuoteResponse({ model: e.model, pricePerWorkUnitWei: e.priceWei ?? '1000' }),
+    })),
+  };
+}
+
 /** Builds a /capabilities response body matching the worker's current shape. */
 export function fakeCapabilitiesResponse(overrides: {
   capabilities?: Array<{ capability: string; workUnit: string; model: string; priceWei?: string }>;

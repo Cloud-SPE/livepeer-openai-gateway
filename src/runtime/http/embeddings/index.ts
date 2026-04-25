@@ -6,6 +6,7 @@ import type { PricingConfig } from '../../../config/pricing.js';
 import type { NodeClient } from '../../../providers/nodeClient.js';
 import type { PaymentsService } from '../../../service/payments/createPayment.js';
 import type { NodeBook } from '../../../service/nodes/nodebook.js';
+import { capabilityString } from '../../../types/capability.js';
 import {
   commit,
   refund,
@@ -108,13 +109,14 @@ async function handleEmbeddings(
       customerTier,
       'embeddings',
     );
-    if (!node.quote) {
+    const quote = node.quotes.get(capabilityString('embeddings'));
+    if (!quote) {
       throw new UpstreamNodeError(node.config.id, null, 'quote not yet refreshed');
     }
 
     const payment = await deps.paymentsService.createPaymentForRequest({
       nodeId: node.config.id,
-      quote: node.quote,
+      quote,
       workUnits: BigInt(estimate.promptEstimateTokens),
     });
 

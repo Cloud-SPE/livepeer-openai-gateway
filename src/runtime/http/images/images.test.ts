@@ -18,6 +18,7 @@ import {
   TEST_BRIDGE_ETH,
   fakeHealthResponse,
   fakeQuoteResponse,
+  fakeQuotesResponse,
 } from '../../../providers/nodeClient/testFakes.js';
 import { createFastifyServer } from '../../../providers/http/fastify.js';
 import { createGrpcPayerDaemonClient } from '../../../providers/payerDaemon/grpc.js';
@@ -44,6 +45,13 @@ async function startFakeWorkerNode(): Promise<FakeWorkerNode> {
   app.get('/health', async () => fakeHealthResponse());
   app.get('/quote', async () =>
     fakeQuoteResponse({ model: 'dall-e-3', pricePerWorkUnitWei: '1' }),
+  );
+  app.get('/quotes', async () =>
+    fakeQuotesResponse({
+      capabilities: [
+        { capability: 'openai:/v1/images/generations', model: 'dall-e-3', priceWei: '1' },
+      ],
+    }),
   );
   app.post('/v1/images/generations', async (req, reply) => {
     const body = req.body as {

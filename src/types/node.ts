@@ -64,9 +64,16 @@ export const PriceInfoSchema = z.object({
 });
 export type PriceInfo = z.infer<typeof PriceInfoSchema>;
 
+// QuoteSchema captures the bridge's per-capability projection of the
+// worker's /quote response. priceInfo is the representative max-price
+// (used to size the TicketParams face value); modelPrices carries the
+// per-model breakdown the worker emits in `model_prices[]`. Callers
+// that need exact per-model wei look up modelPrices[modelId] when
+// available, else fall back to priceInfo.
 export const QuoteSchema = z.object({
   ticketParams: TicketParamsSchema,
   priceInfo: PriceInfoSchema,
+  modelPrices: z.record(z.string(), z.bigint().nonnegative()),
   lastRefreshedAt: z.coerce.date(),
   expiresAt: z.coerce.date(),
 });

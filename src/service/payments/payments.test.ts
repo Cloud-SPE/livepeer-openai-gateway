@@ -20,6 +20,7 @@ function mkQuote(overrides: Partial<Quote> = {}): Quote {
       },
     },
     priceInfo: { pricePerUnitWei: 1n, pixelsPerUnit: 1n },
+    modelPrices: {},
     lastRefreshedAt: new Date(0),
     expiresAt: new Date(Date.now() + 60_000),
     ...overrides,

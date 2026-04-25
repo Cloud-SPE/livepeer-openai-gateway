@@ -11,6 +11,7 @@ import {
   TEST_BRIDGE_ETH,
   fakeHealthResponse,
   fakeQuoteResponse,
+  fakeQuotesResponse,
 } from '../../providers/nodeClient/testFakes.js';
 import { createNodesLoader } from './loader.js';
 import { createQuoteRefresher } from './quoteRefresher.js';
@@ -47,6 +48,13 @@ async function startFakeNode(): Promise<FakeNode> {
       return;
     }
     return fakeQuoteResponse();
+  });
+  app.get('/quotes', async (_req, reply) => {
+    if (mode === 'quote-500') {
+      await reply.code(500).send({ error: 'down' });
+      return;
+    }
+    return fakeQuotesResponse();
   });
   const address = await app.listen({ host: '127.0.0.1', port: 0 });
   const port = Number(address.split(':').pop());
@@ -122,8 +130,9 @@ describe('nodes integration (Testcontainers + fake Fastify node)', () => {
       await refresher.tickNode('node-a');
       const entry = nodeBook.get('node-a');
       expect(entry?.circuit.status).toBe('healthy');
-      expect(entry?.quote).not.toBeNull();
-      expect(entry?.quote?.priceInfo.pricePerUnitWei).toBe(1000n);
+      const chatQuote = entry?.quotes.get('openai:/v1/chat/completions');
+      expect(chatQuote).toBeDefined();
+      expect(chatQuote?.priceInfo.pricePerUnitWei).toBe(1000n);
 
       const row = await nodeHealthRepo.findNodeHealth(pg.db, 'node-a');
       expect(row?.status).toBe('healthy');

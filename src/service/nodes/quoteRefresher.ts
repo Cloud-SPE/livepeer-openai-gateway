@@ -1,6 +1,9 @@
 import type { Db } from '../../repo/db.js';
 import * as nodeHealthRepo from '../../repo/nodeHealth.js';
 import type { NodeClient } from '../../providers/nodeClient.js';
+import { wireQuoteToDomain } from '../../providers/nodeClient/wireQuote.js';
+import { CAPABILITY_STRINGS as CAPABILITY_TO_CANONICAL } from '../../types/capability.js';
+import type { Quote } from '../../types/node.js';
 import { onFailure, onSuccess, shouldProbe, type CircuitResult } from './circuitBreaker.js';
 import type { NodeBook } from './nodebook.js';
 import type { Scheduler, ScheduledTask } from './scheduler.js';
@@ -61,24 +64,31 @@ export function createQuoteRefresher(deps: QuoteRefresherDeps): QuoteRefresher {
       if (health.status !== 'ok' && health.status !== 'degraded') {
         throw new Error(`unexpected health status: ${String(health.status)}`);
       }
-      // Phase 1 (0018): one quote per node, keyed on the single
-      // chat-completions capability. Phase 2 will probe /capabilities +
-      // /quotes to populate per-(capability, model) quotes on the
-      // NodeBook. Until then, every node is treated as a chat node for
-      // quote-refresh purposes.
-      const quote = await deps.nodeClient.getQuote({
+      // Probe /quotes (batched) — one round-trip pulls quotes for
+      // every capability the worker advertises. We then split into
+      // per-capability NodeBook entries, dropping any capability the
+      // operator's nodes.yaml doesn't advertise (defense-in-depth
+      // against a misbehaving worker offering more than configured).
+      const batched = await deps.nodeClient.getQuotes({
         url: entry.config.url,
         sender: deps.bridgeEthAddress,
-        capability: 'openai:/v1/chat/completions',
         timeoutMs: entry.config.refresh.quoteTimeoutMs,
       });
+      const advertisedCanonical = new Set(
+        entry.config.capabilities.map((c) => CAPABILITY_TO_CANONICAL[c]),
+      );
+      const newQuotes = new Map<string, Quote>();
+      for (const { capability, quote } of batched.quotes) {
+        if (!advertisedCanonical.has(capability)) continue;
+        newQuotes.set(capability, wireQuoteToDomain(quote));
+      }
       const result = onSuccess(
         deps.nodeBook.get(nodeId)?.circuit ?? probeDecision.result.state,
         entry.config.breaker,
         deps.scheduler.now(),
       );
       deps.nodeBook.setCircuit(nodeId, result.state);
-      deps.nodeBook.setQuote(nodeId, quote);
+      deps.nodeBook.setAllQuotes(nodeId, newQuotes);
       await persist(deps.db, nodeId, result);
     } catch (err) {
       const result = onFailure(

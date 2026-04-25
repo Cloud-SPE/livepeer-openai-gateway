@@ -1,12 +1,25 @@
 import type { ResolvedNodeConfig, NodesConfig } from '../../config/nodes.js';
 import type { NodeCapability, Quote } from '../../types/node.js';
+import { capabilityString } from '../../types/capability.js';
 import { CircuitState, initialCircuitState } from './circuitBreaker.js';
 import { NoHealthyNodesError } from './errors.js';
 
+/**
+ * NodeEntry carries one Quote per advertised capability, keyed by
+ * the canonical capability string (e.g. "openai:/v1/chat/completions").
+ * Pre-0020 the entry held a single Quote regardless of capability;
+ * with multi-capability workers that meant non-chat requests rode
+ * on the chat quote (wrong recipient_rand_hash, wrong face_value
+ * sizing).
+ *
+ * A node advertised in nodes.yaml but missing a quote for a given
+ * capability is treated like circuit_broken for that capability —
+ * findNodesFor excludes it from the candidate list.
+ */
 export interface NodeEntry {
   config: ResolvedNodeConfig;
   circuit: CircuitState;
-  quote: Quote | null;
+  quotes: Map<string, Quote>;
 }
 
 export class NodeBook {
@@ -19,7 +32,7 @@ export class NodeBook {
       this.entries.set(node.id, {
         config: node,
         circuit: prev?.circuit ?? initialCircuitState(),
-        quote: prev?.quote ?? null,
+        quotes: prev?.quotes ?? new Map(),
       });
     }
   }
@@ -42,10 +55,27 @@ export class NodeBook {
     this.entries.set(nodeId, { ...entry, circuit });
   }
 
-  setQuote(nodeId: string, quote: Quote): void {
+  /**
+   * Set the quote for a specific (node, capability) pair. The
+   * capability key is the canonical worker-emitted string (use
+   * `capabilityString('chat')` etc., NOT the short-form enum).
+   */
+  setCapabilityQuote(nodeId: string, capability: string, quote: Quote): void {
     const entry = this.entries.get(nodeId);
     if (!entry) return;
-    this.entries.set(nodeId, { ...entry, quote });
+    const quotes = new Map(entry.quotes);
+    quotes.set(capability, quote);
+    this.entries.set(nodeId, { ...entry, quotes });
+  }
+
+  /**
+   * Replace all quotes for a node atomically. Used by the refresher
+   * after a successful /quotes batch.
+   */
+  setAllQuotes(nodeId: string, quotes: Map<string, Quote>): void {
+    const entry = this.entries.get(nodeId);
+    if (!entry) return;
+    this.entries.set(nodeId, { ...entry, quotes: new Map(quotes) });
   }
 
   findNodesFor(
@@ -53,13 +83,15 @@ export class NodeBook {
     tier: 'free' | 'prepaid',
     capability: NodeCapability = 'chat',
   ): NodeEntry[] {
+    const cap = capabilityString(capability);
     const candidates = this.list().filter(
       (e) =>
         e.config.enabled &&
         e.config.capabilities.includes(capability) &&
         e.config.supportedModels.includes(model) &&
         e.config.tierAllowed.includes(tier) &&
-        e.circuit.status !== 'circuit_broken',
+        e.circuit.status !== 'circuit_broken' &&
+        e.quotes.has(cap),
     );
     if (candidates.length === 0) throw new NoHealthyNodesError(model, tier);
     return candidates.sort((a, b) => b.config.weight - a.config.weight);

@@ -6,6 +6,7 @@ import type { PricingConfig } from '../../../config/pricing.js';
 import type { NodeClient } from '../../../providers/nodeClient.js';
 import type { PaymentsService } from '../../../service/payments/createPayment.js';
 import type { NodeBook } from '../../../service/nodes/nodebook.js';
+import { capabilityString } from '../../../types/capability.js';
 import {
   commit,
   commitQuota,
@@ -113,7 +114,8 @@ export async function handleStreamingChatCompletion(
     },
     async (ctx) => {
       const node = ctx.node;
-      if (!node.quote) {
+      const quote = node.quotes.get(capabilityString('chat'));
+      if (!quote) {
         return {
           ok: false as const,
           error: new Error('node quote not yet refreshed'),
@@ -124,7 +126,7 @@ export async function handleStreamingChatCompletion(
       try {
         const payment = await deps.paymentsService.createPaymentForRequest({
           nodeId: node.config.id,
-          quote: node.quote,
+          quote,
           workUnits: BigInt(estimate.maxCompletionTokens),
         });
         const paymentHeaderB64 = Buffer.from(payment.paymentBytes).toString('base64');
