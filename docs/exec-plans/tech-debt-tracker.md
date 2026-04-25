@@ -140,7 +140,7 @@ Append-only list of known debt. Strike through when resolved; include the PR or 
 - Area: deployment
 - Description: The bridge's `compose.yaml` keeps the payer-daemon service block commented out because the library repo doesn't publish a container image yet. Local full-stack dev requires bringing your own daemon.
 - Remediation: publish a sender-mode image from `livepeer-payment-library` (its own ops plan), then uncomment the block in `compose.yaml`.
-- Resolved: 2026-04-24 in exec-plan 0016. Library published `tztcloud/payment-daemon:v0.8.10`; `compose.yaml` wires it as the default `payment-daemon` service (sender mode), and `compose.prod.yaml` layers prod hardening. Socket path reconciled to the library's convention (`/var/run/livepeer/payment.sock`, `payment-socket` volume).
+- Resolved: 2026-04-24 in exec-plan 0016. Library published `tztcloud/livepeer-payment-daemon:v0.8.10`; `compose.yaml` wires it as the default `payment-daemon` service (sender mode), and `compose.prod.yaml` layers prod hardening. Socket path reconciled to the library's convention (`/var/run/livepeer/payment.sock`, `payment-socket` volume).
 
 ### CI workflow to build + push bridge image
 
@@ -159,3 +159,21 @@ Append-only list of known debt. Strike through when resolved; include the PR or 
 - Description: 0002-types-and-zod calls for a lint that asserts every file in `src/types/` exports both a Zod schema and the inferred `z.infer` type. Currently relying on code review. Convention is respected by every file authored in 0002.
 - Remediation: add as a rule in the ESLint plugin work (see above).
 - Resolved: 2026-04-25 — entry was stale; rule is implemented as `livepeer-bridge/types-shape` (lint/eslint-plugin-livepeer-bridge/rules/types-shape.js, 82 LOC) and is wired into `eslint.config.js`. Verified by `npx eslint .` running clean against `src/types/`.
+
+### audio-endpoints-integration-test
+
+- Opened: 2026-04-25
+- Severity: low
+- Area: tests / runtime/http/audio
+- Description: 0019 shipped `/v1/audio/speech` and `/v1/audio/transcriptions` with unit-level coverage on the schemas, pricing helpers, and migration. Full integration tests against a fake worker node + fake gRPC daemon (mirroring the embeddings/images pattern) were deferred. End-to-end behaviour — multipart round-trip, header propagation, mid-stream cancellation, duration-missing 503+refund — is currently only covered by code review and the lint+typecheck surface.
+- Remediation: extend `src/runtime/http/audio/{speech,transcriptions}.test.ts` with TestPg + fake daemon + fake worker, mirroring `src/runtime/http/embeddings/embeddings.test.ts`. Most fixtures (TestPg, fakeQuotesResponse, etc.) are already in place; new pieces are a fake `/v1/audio/speech` handler that emits `audio/mpeg` bytes and a fake `/v1/audio/transcriptions` handler that sets `x-livepeer-audio-duration-seconds`.
+- Resolved: _(open)_
+
+### transcriptions-upload-buffering
+
+- Opened: 2026-04-25
+- Severity: low
+- Area: runtime/http/audio
+- Description: `/v1/audio/transcriptions` handler buffers the entire customer upload (up to 25 MiB) in memory before re-encoding the outbound multipart body. The plan called for end-to-end streaming via `Readable.toWeb(...)` so the file never materializes in bridge memory. Re-encoding was the simpler v1 implementation; impact is bounded by the 25 MiB cap and the per-request paid-route concurrency limit.
+- Remediation: switch to a streaming pass-through that preserves the inbound `Content-Type` (boundary intact) and wraps `req.parts()` into a `ReadableStream` for the outbound fetch body. Avoids the buffer and improves time-to-first-byte on the worker.
+- Resolved: _(open)_

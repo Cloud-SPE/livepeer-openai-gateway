@@ -9,12 +9,18 @@ import type {
   ImagesRateCard,
   ImagesRateCardEntry,
   PricingTier,
+  SpeechRateCard,
+  SpeechRateCardEntry,
+  TranscriptionsRateCard,
+  TranscriptionsRateCardEntry,
 } from '../types/pricing.js';
 
 export interface PricingConfig {
   rateCard: ChatRateCard;
   embeddingsRateCard: EmbeddingsRateCard;
   imagesRateCard: ImagesRateCard;
+  speechRateCard: SpeechRateCard;
+  transcriptionsRateCard: TranscriptionsRateCard;
   modelToTier: Map<string, PricingTier>;
   defaultMaxTokensPrepaid: number;
   defaultMaxTokensFree: number;
@@ -54,6 +60,27 @@ const V1_IMAGES_RATE_CARD: ImagesRateCard = {
   ],
 };
 
+const V1_SPEECH_RATE_CARD: SpeechRateCard = {
+  version: 'v1-2026-04-25',
+  effectiveAt: new Date('2026-04-25T00:00:00Z'),
+  // 20% premium over OpenAI list as of 2026-04 (matches the embeddings/images
+  // pattern from 0017). tts-1: $15/1M chars → $18; tts-1-hd: $30/1M → $36.
+  // Open-source backend (Kokoro / XTTS) priced at a smaller premium against
+  // OpenAI's lowest tier so it stays competitive.
+  entries: [
+    { model: 'tts-1', usdPerMillionChars: 18.0 },
+    { model: 'tts-1-hd', usdPerMillionChars: 36.0 },
+    { model: 'kokoro', usdPerMillionChars: 6.0 },
+  ],
+};
+
+const V1_TRANSCRIPTIONS_RATE_CARD: TranscriptionsRateCard = {
+  version: 'v1-2026-04-25',
+  effectiveAt: new Date('2026-04-25T00:00:00Z'),
+  // OpenAI whisper-1 list is $0.006/min as of 2026-04. 20% premium ⇒ $0.0072.
+  entries: [{ model: 'whisper-1', usdPerMinute: 0.0072 }],
+};
+
 const V1_MODEL_TO_TIER: Array<[string, PricingTier]> = [
   ['model-small', 'starter'],
   ['model-medium', 'standard'],
@@ -65,6 +92,8 @@ export function defaultPricingConfig(): PricingConfig {
     rateCard: V1_RATE_CARD,
     embeddingsRateCard: V1_EMBEDDINGS_RATE_CARD,
     imagesRateCard: V1_IMAGES_RATE_CARD,
+    speechRateCard: V1_SPEECH_RATE_CARD,
+    transcriptionsRateCard: V1_TRANSCRIPTIONS_RATE_CARD,
     modelToTier: new Map(V1_MODEL_TO_TIER),
     defaultMaxTokensPrepaid: 4096,
     defaultMaxTokensFree: 1024,
@@ -116,5 +145,23 @@ export function rateForImageSku(
       `no images rate card entry for model=${model} size=${size} quality=${quality}`,
     );
   }
+  return entry;
+}
+
+export function rateForSpeechModel(
+  rateCard: SpeechRateCard,
+  model: string,
+): SpeechRateCardEntry {
+  const entry = rateCard.entries.find((e) => e.model === model);
+  if (!entry) throw new Error(`no speech rate card entry for model=${model}`);
+  return entry;
+}
+
+export function rateForTranscriptionsModel(
+  rateCard: TranscriptionsRateCard,
+  model: string,
+): TranscriptionsRateCardEntry {
+  const entry = rateCard.entries.find((e) => e.model === model);
+  if (!entry) throw new Error(`no transcriptions rate card entry for model=${model}`);
   return entry;
 }

@@ -29,7 +29,13 @@ export const nodeHealthEventKind = pgEnum('node_health_event_kind', [
   'config_reloaded',
   'eth_address_changed_rejected',
 ]);
-export const usageRecordKind = pgEnum('usage_record_kind', ['chat', 'embeddings', 'images']);
+export const usageRecordKind = pgEnum('usage_record_kind', [
+  'chat',
+  'embeddings',
+  'images',
+  'speech',
+  'transcriptions',
+]);
 
 export const customers = pgTable('customer', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -108,6 +114,8 @@ export const usageRecords = pgTable(
     promptTokensLocal: integer('prompt_tokens_local'),
     completionTokensLocal: integer('completion_tokens_local'),
     imageCount: integer('image_count'),
+    charCount: integer('char_count'),
+    durationSeconds: integer('duration_seconds'),
     costUsdCents: bigint('cost_usd_cents', { mode: 'bigint' }).notNull(),
     nodeCostWei: text('node_cost_wei').notNull(),
     status: usageStatus('status').notNull(),
@@ -125,6 +133,10 @@ export const usageRecords = pgTable(
           ${t.kind} = 'embeddings' AND ${t.promptTokensReported} IS NOT NULL
         ) OR (
           ${t.kind} = 'images' AND ${t.imageCount} IS NOT NULL
+        ) OR (
+          ${t.kind} = 'speech' AND ${t.charCount} IS NOT NULL
+        ) OR (
+          ${t.kind} = 'transcriptions' AND ${t.durationSeconds} IS NOT NULL
         )
       `,
     ),

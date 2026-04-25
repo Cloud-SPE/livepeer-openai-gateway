@@ -21,9 +21,14 @@ import {
   type NodeQuoteResponse,
   type NodeQuotesResponse,
   type RawSseEvent,
+  type SpeechCallInput,
+  type SpeechCallResult,
   type StreamChatCompletionInput,
   type StreamChatCompletionResult,
+  type TranscriptionCallInput,
+  type TranscriptionCallResult,
 } from '../nodeClient.js';
+import { TRANSCRIPTIONS_DURATION_HEADER } from '../../types/transcriptions.js';
 import { wireQuoteToDomain } from './wireQuote.js';
 
 export function createFetchNodeClient(): NodeClient {
@@ -140,6 +145,70 @@ export function createFetchNodeClient(): NodeClient {
         status: res.status,
         response: parsed.success ? parsed.data : null,
         rawBody,
+      };
+    },
+
+    async createSpeech(input: SpeechCallInput): Promise<SpeechCallResult> {
+      const timeoutSignal = AbortSignal.timeout(input.timeoutMs);
+      const signal = input.signal ? AbortSignal.any([input.signal, timeoutSignal]) : timeoutSignal;
+      const res = await fetch(trimSlash(input.url) + '/v1/audio/speech', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'livepeer-payment': input.paymentHeaderB64,
+        },
+        body: JSON.stringify(input.body),
+        signal,
+      });
+      if (!res.ok || !res.body) {
+        const rawErrorBody = await res.text().catch(() => '');
+        return { status: res.status, stream: null, contentType: null, rawErrorBody };
+      }
+      return {
+        status: res.status,
+        stream: res.body,
+        contentType: res.headers.get('content-type'),
+        rawErrorBody: null,
+      };
+    },
+
+    async createTranscription(input: TranscriptionCallInput): Promise<TranscriptionCallResult> {
+      const timeoutSignal = AbortSignal.timeout(input.timeoutMs);
+      const signal = input.signal ? AbortSignal.any([input.signal, timeoutSignal]) : timeoutSignal;
+      const res = await fetch(trimSlash(input.url) + '/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: {
+          'content-type': input.contentType,
+          'livepeer-payment': input.paymentHeaderB64,
+        },
+        body: input.body,
+        // Required by Node's fetch when streaming a body via Web ReadableStream.
+        // Cast: Node's RequestInit accepts the option but DOM lib types omit it.
+        duplex: 'half',
+        signal,
+      } as RequestInit & { duplex: 'half' });
+      const bodyText = await res.text();
+      if (!res.ok) {
+        return {
+          status: res.status,
+          contentType: res.headers.get('content-type'),
+          bodyText: '',
+          reportedDurationSeconds: null,
+          rawErrorBody: bodyText,
+        };
+      }
+      const headerVal = res.headers.get(TRANSCRIPTIONS_DURATION_HEADER);
+      let reported: number | null = null;
+      if (headerVal !== null) {
+        const n = Number(headerVal);
+        if (Number.isFinite(n) && n > 0) reported = n;
+      }
+      return {
+        status: res.status,
+        contentType: res.headers.get('content-type'),
+        bodyText,
+        reportedDurationSeconds: reported,
+        rawErrorBody: null,
       };
     },
 

@@ -23,6 +23,8 @@ import { registerTopupRoute } from './runtime/http/billing/topup.js';
 import { registerChatCompletionsRoute } from './runtime/http/chat/completions.js';
 import { registerEmbeddingsRoute } from './runtime/http/embeddings/index.js';
 import { registerImagesGenerationsRoute } from './runtime/http/images/generations.js';
+import { registerSpeechRoute } from './runtime/http/audio/speech.js';
+import { registerTranscriptionsRoute } from './runtime/http/audio/transcriptions.js';
 import { registerHealthzRoute } from './runtime/http/healthz.js';
 import { registerStripeWebhookRoute } from './runtime/http/stripe/webhook.js';
 import { createAdminService } from './service/admin/index.js';
@@ -125,6 +127,24 @@ async function main(): Promise<void> {
     pricing: pricingConfig,
   });
   registerImagesGenerationsRoute(server.app, {
+    db,
+    nodeBook,
+    nodeClient,
+    paymentsService,
+    authService,
+    rateLimiter,
+    pricing: pricingConfig,
+  });
+  registerSpeechRoute(server.app, {
+    db,
+    nodeBook,
+    nodeClient,
+    paymentsService,
+    authService,
+    rateLimiter,
+    pricing: pricingConfig,
+  });
+  await registerTranscriptionsRoute(server.app, {
     db,
     nodeBook,
     nodeClient,

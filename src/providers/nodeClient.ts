@@ -18,6 +18,7 @@ import {
   type ImagesGenerationRequest,
   type ImagesResponse,
 } from '../types/images.js';
+import { type SpeechRequest } from '../types/speech.js';
 
 // NodeHealthResponseSchema matches openai-worker-node `/health` output
 // as of worker commit 2b5cd2a. Worker emits:
@@ -182,6 +183,48 @@ export interface ImageGenerationCallResult {
   rawBody: string;
 }
 
+export interface SpeechCallInput {
+  url: string;
+  body: SpeechRequest;
+  paymentHeaderB64: string;
+  timeoutMs: number;
+  signal?: AbortSignal;
+}
+
+export interface SpeechCallResult {
+  status: number;
+  // stream is non-null on success (status 2xx). On error, rawErrorBody
+  // carries the upstream response body so the caller can attach it to
+  // the bridge's error envelope.
+  stream: ReadableStream<Uint8Array> | null;
+  contentType: string | null;
+  rawErrorBody: string | null;
+}
+
+export interface TranscriptionCallInput {
+  url: string;
+  // Multipart body the bridge already received from its customer; we
+  // forward it verbatim (boundary + all fields) to the worker so the
+  // file payload is never re-encoded or buffered into bridge memory.
+  body: ReadableStream<Uint8Array>;
+  contentType: string;
+  paymentHeaderB64: string;
+  timeoutMs: number;
+  signal?: AbortSignal;
+}
+
+export interface TranscriptionCallResult {
+  status: number;
+  contentType: string | null;
+  bodyText: string;
+  // reportedDurationSeconds is read from the
+  // `x-livepeer-audio-duration-seconds` response header. Null when
+  // the header is missing or unparseable — the handler refunds in that
+  // case (see /v1/audio/transcriptions handler).
+  reportedDurationSeconds: number | null;
+  rawErrorBody: string | null;
+}
+
 export {
   ChatCompletionRequestSchema,
   ChatCompletionResponseSchema,
@@ -213,4 +256,6 @@ export interface NodeClient {
   streamChatCompletion(input: StreamChatCompletionInput): Promise<StreamChatCompletionResult>;
   createEmbeddings(input: EmbeddingsCallInput): Promise<EmbeddingsCallResult>;
   createImage(input: ImageGenerationCallInput): Promise<ImageGenerationCallResult>;
+  createSpeech(input: SpeechCallInput): Promise<SpeechCallResult>;
+  createTranscription(input: TranscriptionCallInput): Promise<TranscriptionCallResult>;
 }

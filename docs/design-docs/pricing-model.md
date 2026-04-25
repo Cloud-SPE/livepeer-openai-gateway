@@ -56,13 +56,39 @@ Images are priced per `(model, size, quality)`. The customer pays `n × usdPerIm
 
 **Partial delivery.** If the node returns fewer images than `n`, the customer is billed for `data.length × usdPerImage` and the delta is refunded. A zero-image response is a node contract violation (503 + full refund). See `docs/references/worker-node-contract.md §5.3`.
 
+## Speech rate card (v1 starter)
+
+Speech (TTS) is priced per character of `input`. Char count is exact at the bridge boundary, so the upfront reservation equals the final commit — no reconciliation drift.
+
+| Model     | $ / 1M chars | Reference                          |
+| --------- | ------------ | ---------------------------------- |
+| `tts-1`    | $18.00      | OpenAI $15 — 20% premium           |
+| `tts-1-hd` | $36.00      | OpenAI $30 — 20% premium           |
+| `kokoro`   | $6.00       | open-source backend, smaller premium |
+
+Free tier is not available for `/v1/audio/speech` in v1 (matches embeddings + images precedent).
+
+## Transcriptions rate card (v1 starter)
+
+Transcriptions (STT) is priced per minute of audio. The upfront reservation is sized at a worst-case bitrate (64 kbps) capped at 60 minutes; the actual commit uses the duration the node reports via the `x-livepeer-audio-duration-seconds` response header.
+
+| Model       | $ / min   | Reference                   |
+| ----------- | --------- | --------------------------- |
+| `whisper-1`  | $0.0072  | OpenAI $0.006 — 20% premium |
+
+If the worker omits the duration header on a 2xx response, the bridge returns `503 service_unavailable` and refunds the reservation in full (matches the universal "no usage = no bill" rule from 0007 — see `docs/references/worker-node-contract.md §7.3`).
+
+Free tier is not available for `/v1/audio/transcriptions` in v1.
+
 ## Types
 
-- `src/types/pricing.ts` exports three sibling rate card types, each with its own `version` + `effectiveAt`:
+- `src/types/pricing.ts` exports five sibling rate card types, each with its own `version` + `effectiveAt`:
   - `ChatRateCard` — exactly three entries (`starter | standard | pro`), enforced by Zod.
   - `EmbeddingsRateCard` — list of `{ model, usdPerMillionTokens }` entries.
   - `ImagesRateCard` — list of `{ model, size, quality, usdPerImage }` entries.
-- `ModelTierMap` maps chat models to pricing tiers; embeddings and images do not use tiers.
+  - `SpeechRateCard` — list of `{ model, usdPerMillionChars }` entries.
+  - `TranscriptionsRateCard` — list of `{ model, usdPerMinute }` entries.
+- `ModelTierMap` maps chat models to pricing tiers; embeddings, images, speech, and transcriptions do not use tiers (model-keyed rates).
 
 ## Margin math
 
@@ -96,7 +122,27 @@ margin_percent  = (est_cost_usd − est_cost_wei × eth_usd) / est_cost_usd
 
 Tracked per `(model, size, quality, node)`.
 
-`margin_percent` is the single top-line metric for pricing health across all three endpoint families.
+### Speech
+
+```
+est_cost_usd    = chars × rateForSpeechModel(model)               # exact at the boundary
+est_cost_wei    = chars × node_price_per_char
+margin_percent  = (est_cost_usd − est_cost_wei × eth_usd) / est_cost_usd
+```
+
+Tracked per `(model, node)`.
+
+### Transcriptions
+
+```
+commit_cost_usd = ceil(reported_seconds) × rateForTranscriptionsModel(model) / 60
+commit_cost_wei = ceil(reported_seconds) × node_price_per_second
+margin_percent  = (commit_cost_usd − commit_cost_wei × eth_usd) / commit_cost_usd
+```
+
+Tracked per `(model, node)`. Reservation drift between the upfront 64-kbps estimate and the committed duration is invisible to margin tracking — both reservation and commit observe the same rate.
+
+`margin_percent` is the single top-line metric for pricing health across all five endpoint families.
 
 ## Adjustment policy
 
@@ -123,4 +169,4 @@ The rate card deliberately quotes USD only. Wei-denominated node cost is an inpu
 - **Volume-discount tiers.** Not in v1. Revisit once revenue shape justifies it.
 - ~~**Per-model rate cards.**~~ Resolved in 0017 — embeddings and images are model-keyed; chat remains tier-based.
 - **Auto-reprice on margin drop.** Manual in v1; automation requires a policy doc of its own.
-- **Audio endpoints pricing.** `/v1/audio/speech` (per-character) and `/v1/audio/transcriptions` (per-minute) will need their own rate tables. Deferred to the audio plan.
+- ~~**Audio endpoints pricing.**~~ Resolved in 0019 — speech is per-character, transcriptions is per-minute, both model-keyed. See "Speech rate card" and "Transcriptions rate card" sections above.

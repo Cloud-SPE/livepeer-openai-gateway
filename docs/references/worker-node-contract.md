@@ -35,7 +35,7 @@ If `capabilities` is omitted for a node, the bridge defaults to `['chat']` (back
 These apply to every capability.
 
 - **Response shape is OpenAI-compatible.** The bridge parses every successful response with Zod against the OpenAI schema. Extra fields are ignored; missing required fields are a 503.
-- **`usage` object is present on success.** If a response is 2xx but carries no `usage` (or a malformed one), the bridge treats it as a node contract violation → 503 + full refund. See `docs/exec-plans/completed/0007-chat-completions-nonstreaming.md` for the original decision.
+- **`usage` object is present on success — except where a capability section opts out.** If a response is 2xx but carries no `usage` (or a malformed one), the bridge treats it as a node contract violation → 503 + full refund. See `docs/exec-plans/completed/0007-chat-completions-nonstreaming.md` for the original decision. Exceptions are explicit per-section: `speech` (§6) carries no body usage at all; `transcriptions` (§7) carries duration in a response header instead of a usage block.
 - **Error envelope on node-side failure.** Nodes return an OpenAI-shaped error body on non-2xx; the bridge passes the `message` through to the customer with its own error `type`/`code` normalization (see `src/runtime/http/errors.ts`).
 - **No silent parameter dropping.** If a node cannot honor a request parameter (e.g., `dimensions`, `response_format`), it MUST error, not return a response with the parameter silently ignored.
 
@@ -103,7 +103,57 @@ The (`model`, `size`, `quality`) triple determines the bridge's reservation and 
 | 4xx / 5xx with error envelope                | Pass through to customer (normalized code)  |
 | Network / timeout                            | 503 + refund, circuit-break counters tick   |
 
-## 6. Non-compliance
+## 6. `speech` capability (TTS)
+
+### 6.1 Request shape
+
+- `model: string` (required), `input: string` (required, ≤ 4096 chars enforced by the bridge), `voice: string` (required).
+- Optional: `response_format: 'mp3' | 'opus' | 'aac' | 'flac' | 'wav' | 'pcm'`, `speed: 0.25..4.0`.
+
+### 6.2 Response obligations
+
+- **Body is the audio bytes** for the requested format. No JSON envelope, no base64 wrapping.
+- **`Content-Type` reflects the format.** The bridge proxies the header verbatim. If absent, the bridge defaults the customer-visible response to `audio/mpeg`.
+- **No `usage` object expected.** Char count is exact at the bridge boundary (`input.length`), so the upfront reservation is the final charge — no reconciliation. This is the codified exception to §2's universal usage obligation.
+- **Streaming.** The node SHOULD start writing bytes as soon as synthesis begins; the bridge pipes them through chunk-for-chunk. The bridge never sets `Content-Length` and the node SHOULD NOT rely on the bridge forwarding any length it sets.
+- **Mid-stream cancellation.** When the customer disconnects, the bridge cancels the upstream fetch via `AbortSignal`. The node SHOULD release any held resources (GPU, voice model) on cancellation.
+
+### 6.3 Failure modes
+
+| Node returns                                       | Bridge action                              |
+| -------------------------------------------------- | ------------------------------------------ |
+| 4xx / 5xx with error envelope                      | Pass through to customer (normalized code) |
+| Network / timeout                                  | 503 + refund, circuit-break counters tick  |
+| 2xx with empty body                                | Customer sees a 0-byte response            |
+
+The customer is billed for the full `len(input)` even when the node returns a partial stream — synthesis work is not refundable once dispatched.
+
+## 7. `transcriptions` capability (STT)
+
+### 7.1 Request shape
+
+- `multipart/form-data`, ≤ 25 MiB upload (enforced by the bridge).
+- Required fields: `model`, `file`.
+- Optional fields: `prompt`, `response_format: 'json' | 'text' | 'srt' | 'verbose_json' | 'vtt'` (default `json`), `temperature: 0.0..1.0`, `language: ISO-639-1`.
+
+The node is responsible for MIME validation. The bridge does NOT maintain a codec allowlist — wrong-MIME uploads are rejected by the node with `400 invalid_request` and the bridge passes that through.
+
+### 7.2 Response obligations
+
+- **Content-Type matches `response_format`.** `application/json` for `json` and `verbose_json`; `text/plain` for `text`; `text/srt` for `srt`; `text/vtt` for `vtt`.
+- **`x-livepeer-audio-duration-seconds` response header is REQUIRED on every successful response.** Value is the audio duration in seconds (integer or decimal). This is the single source of truth for billing across every `response_format` — the bridge does NOT parse `verbose_json.duration` as a fallback.
+- **No `usage` object required.** Duration in the header replaces the universal usage obligation. This is the codified exception to §2.
+
+### 7.3 Failure modes
+
+| Node returns                                            | Bridge action                              |
+| ------------------------------------------------------- | ------------------------------------------ |
+| 2xx without `x-livepeer-audio-duration-seconds`         | 503 `service_unavailable` + full refund    |
+| 2xx with header that does not parse to `> 0`            | 503 `service_unavailable` + full refund    |
+| 4xx / 5xx with error envelope (incl. unsupported MIME)  | Pass through to customer (normalized code) |
+| Network / timeout                                       | 503 + refund, circuit-break counters tick  |
+
+## 8. Non-compliance
 
 If ops discovers a node that cannot meet the obligations for a capability it has advertised:
 
@@ -112,14 +162,15 @@ If ops discovers a node that cannot meet the obligations for a capability it has
 
 The bridge does NOT add per-node compatibility shims. Shims accumulate, drift, and erode the drop-in OpenAI-compatibility promise that customers rely on.
 
-## 7. Versioning
+## 9. Versioning
 
 This contract is versioned by the bridge's git tag. Breaking changes (new required fields, removed obligations) land in a new major version and are announced to node operators via the ops channel. Additive changes (new optional fields, new capability) are backwards-compatible and do not require a node update.
 
-## 8. Related docs
+## 10. Related docs
 
 - `docs/references/openai-bridge-architecture.md` — bridge architecture, payment layer.
 - `docs/design-docs/pricing-model.md` — rate card, margin math.
 - `docs/design-docs/retry-policy.md` — router-side retry / circuit-break behavior.
 - `docs/exec-plans/completed/0007-chat-completions-nonstreaming.md` — origin of the missing-usage 503+refund rule.
-- `docs/exec-plans/active/0017-embeddings-and-images.md` — plan that introduced the `embeddings` and `images` capabilities.
+- `docs/exec-plans/completed/0017-embeddings-and-images.md` — plan that introduced the `embeddings` and `images` capabilities.
+- `docs/exec-plans/completed/0019-audio-endpoints.md` — plan that introduced the `speech` and `transcriptions` capabilities (this contract's §6, §7).

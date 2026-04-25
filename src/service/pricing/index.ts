@@ -2,7 +2,13 @@ import type { PricingConfig } from '../../config/pricing.js';
 import type { CustomerTier } from '../../types/customer.js';
 import type { ChatCompletionRequest, Usage } from '../../types/openai.js';
 import type { ImageQuality, ImageSize, PricingTier } from '../../types/pricing.js';
-import { rateForEmbeddingsModel, rateForImageSku, rateForTier } from '../../config/pricing.js';
+import {
+  rateForEmbeddingsModel,
+  rateForImageSku,
+  rateForSpeechModel,
+  rateForTier,
+  rateForTranscriptionsModel,
+} from '../../config/pricing.js';
 import { ModelNotFoundError } from '../routing/errors.js';
 import type { TokenAuditService } from '../tokenAudit/index.js';
 
@@ -164,5 +170,82 @@ export function computeImagesActualCost(
 
 function computePerImageCents(usdPerImage: number): bigint {
   const micro = BigInt(Math.round(usdPerImage * 100 * 10_000));
+  return (micro + 9999n) / 10_000n;
+}
+
+export interface SpeechReservationEstimate {
+  estCents: bigint;
+  charCount: number;
+}
+
+export function estimateSpeechReservation(
+  inputCharCount: number,
+  model: string,
+  config: PricingConfig,
+): SpeechReservationEstimate {
+  const rate = rateForSpeechModel(config.speechRateCard, model);
+  const charCount = Math.max(0, inputCharCount);
+  const estCents = computePerCharCents(BigInt(charCount), rate.usdPerMillionChars);
+  return { estCents, charCount };
+}
+
+export function computeSpeechActualCost(
+  charsBilled: number,
+  model: string,
+  config: PricingConfig,
+): { actualCents: bigint } {
+  const rate = rateForSpeechModel(config.speechRateCard, model);
+  const actualCents = computePerCharCents(
+    BigInt(Math.max(0, charsBilled)),
+    rate.usdPerMillionChars,
+  );
+  return { actualCents };
+}
+
+function computePerCharCents(chars: bigint, usdPerMillion: number): bigint {
+  const centsPerMillion = BigInt(Math.round(usdPerMillion * 100 * 10_000));
+  const micro = (chars * centsPerMillion) / MILLION;
+  return (micro + 9999n) / 10_000n;
+}
+
+export interface TranscriptionsReservationEstimate {
+  estCents: bigint;
+  estimatedSeconds: number;
+}
+
+// Worst-case estimate: 64 kbps audio (8 KiB/s). This over-estimates
+// duration for higher-bitrate uploads, which costs the customer reserve
+// (refunded on commit) rather than risking under-charge.
+const TRANSCRIPTIONS_BITRATE_BYTES_PER_SEC = 8_000;
+const TRANSCRIPTIONS_MAX_RESERVE_SECONDS = 60 * 60;
+
+export function estimateTranscriptionsReservation(
+  fileSizeBytes: number,
+  model: string,
+  config: PricingConfig,
+): TranscriptionsReservationEstimate {
+  const rate = rateForTranscriptionsModel(config.transcriptionsRateCard, model);
+  const raw = Math.ceil(Math.max(0, fileSizeBytes) / TRANSCRIPTIONS_BITRATE_BYTES_PER_SEC);
+  const estimatedSeconds = Math.max(1, Math.min(raw, TRANSCRIPTIONS_MAX_RESERVE_SECONDS));
+  const estCents = computePerSecondCents(estimatedSeconds, rate.usdPerMinute);
+  return { estCents, estimatedSeconds };
+}
+
+export function computeTranscriptionsActualCost(
+  reportedSeconds: number,
+  model: string,
+  config: PricingConfig,
+): { actualCents: bigint } {
+  const rate = rateForTranscriptionsModel(config.transcriptionsRateCard, model);
+  const seconds = Math.max(0, Math.ceil(reportedSeconds));
+  const actualCents = computePerSecondCents(seconds, rate.usdPerMinute);
+  return { actualCents };
+}
+
+function computePerSecondCents(seconds: number, usdPerMinute: number): bigint {
+  // cents per second × 10_000 (micro-cents) for precision before round-up.
+  // usdPerMinute × 100 cents = cents per minute. /60 = cents per second.
+  const microCentsPerSecond = BigInt(Math.round((usdPerMinute * 100 * 10_000) / 60));
+  const micro = BigInt(Math.max(0, seconds)) * microCentsPerSecond;
   return (micro + 9999n) / 10_000n;
 }

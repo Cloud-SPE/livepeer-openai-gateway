@@ -19,6 +19,7 @@ Use `// eslint-disable-next-line livepeer-bridge/<rule>` with a one-line justifi
 
 - `src/runtime/http/chat/streaming.ts:handleStreamingChatCompletion` — body already Zod-parsed by the non-streaming handler that branches into it.
 - `src/runtime/http/stripe/webhook.ts:handleWebhook` — validates via `stripe.webhooks.constructEvent` (signature check), which serves the same invariant.
+- `src/runtime/http/audio/transcriptions.ts:handleTranscription` — multipart body must be drained before form fields exist as values to Zod-parse; `TranscriptionsFormFieldsSchema.safeParse(...)` runs immediately after the multipart loop terminates.
 
 ## Plugin skeleton
 

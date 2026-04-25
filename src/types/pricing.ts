@@ -62,3 +62,35 @@ export const ImagesRateCardSchema = z.object({
   entries: z.array(ImagesRateCardEntrySchema).min(1),
 });
 export type ImagesRateCard = z.infer<typeof ImagesRateCardSchema>;
+
+export const UsdPerMillionCharsSchema = z.number().positive();
+export type UsdPerMillionChars = z.infer<typeof UsdPerMillionCharsSchema>;
+
+export const SpeechRateCardEntrySchema = z.object({
+  model: ModelIdSchema,
+  usdPerMillionChars: UsdPerMillionCharsSchema,
+});
+export type SpeechRateCardEntry = z.infer<typeof SpeechRateCardEntrySchema>;
+
+export const SpeechRateCardSchema = z.object({
+  version: z.string().min(1),
+  effectiveAt: z.coerce.date(),
+  entries: z.array(SpeechRateCardEntrySchema).min(1),
+});
+export type SpeechRateCard = z.infer<typeof SpeechRateCardSchema>;
+
+export const UsdPerMinuteSchema = z.number().positive();
+export type UsdPerMinute = z.infer<typeof UsdPerMinuteSchema>;
+
+export const TranscriptionsRateCardEntrySchema = z.object({
+  model: ModelIdSchema,
+  usdPerMinute: UsdPerMinuteSchema,
+});
+export type TranscriptionsRateCardEntry = z.infer<typeof TranscriptionsRateCardEntrySchema>;
+
+export const TranscriptionsRateCardSchema = z.object({
+  version: z.string().min(1),
+  effectiveAt: z.coerce.date(),
+  entries: z.array(TranscriptionsRateCardEntrySchema).min(1),
+});
+export type TranscriptionsRateCard = z.infer<typeof TranscriptionsRateCardSchema>;
