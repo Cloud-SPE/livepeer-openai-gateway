@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { defaultPricingConfig } from '../../config/pricing.js';
-import { computeActualCost, estimateReservation, resolveTierForModel } from './index.js';
+import {
+  computeActualCost,
+  computeEmbeddingsActualCost,
+  computeImagesActualCost,
+  estimateEmbeddingsReservation,
+  estimateImagesReservation,
+  estimateReservation,
+  resolveTierForModel,
+} from './index.js';
 import { ModelNotFoundError } from '../routing/errors.js';
 
 const cfg = defaultPricingConfig();
@@ -88,5 +96,79 @@ describe('computeActualCost', () => {
       cfg,
     );
     expect(c.actualCents).toBe(400n);
+  });
+});
+
+describe('estimateEmbeddingsReservation', () => {
+  it('estimates with a char-div-3 upper bound and model rate', () => {
+    // 30 chars / 3 = 10 tokens at $0.025/1M → well below 1¢; result rounds to 0¢
+    const est = estimateEmbeddingsReservation(
+      ['x'.repeat(30)],
+      'text-embedding-3-small',
+      cfg,
+    );
+    expect(est.promptEstimateTokens).toBe(10);
+    expect(est.estCents).toBe(0n);
+  });
+
+  it('rounds sub-cent embeddings cost up to 1¢ when non-zero', () => {
+    // 300_000 chars / 3 = 100_000 tokens × $0.025/1M = $0.0025 = 0.25¢ → ceil 1¢
+    const est = estimateEmbeddingsReservation(
+      ['x'.repeat(300_000)],
+      'text-embedding-3-small',
+      cfg,
+    );
+    expect(est.promptEstimateTokens).toBe(100_000);
+    expect(est.estCents).toBe(1n);
+  });
+
+  it('sums across batched inputs', () => {
+    const est = estimateEmbeddingsReservation(
+      ['x'.repeat(30), 'y'.repeat(60)],
+      'text-embedding-3-large',
+      cfg,
+    );
+    expect(est.promptEstimateTokens).toBe(30);
+  });
+
+  it('throws for unknown embeddings model', () => {
+    expect(() =>
+      estimateEmbeddingsReservation(['hi'], 'nonexistent-emb-model', cfg),
+    ).toThrow();
+  });
+});
+
+describe('computeEmbeddingsActualCost', () => {
+  it('charges input tokens only at the model rate', () => {
+    // 1_000_000 tokens × $0.15/1M = $0.15 = 15¢
+    const c = computeEmbeddingsActualCost(1_000_000, 'text-embedding-3-large', cfg);
+    expect(c.actualCents).toBe(15n);
+  });
+});
+
+describe('estimateImagesReservation', () => {
+  it('reserves n × per-image cents (model, size, quality)', () => {
+    // dall-e-3 1024x1024 standard = $0.05 = 5¢, × 3 images = 15¢
+    const est = estimateImagesReservation(3, 'dall-e-3', '1024x1024', 'standard', cfg);
+    expect(est.perImageCents).toBe(5n);
+    expect(est.estCents).toBe(15n);
+  });
+
+  it('throws for unknown (model, size, quality) combination', () => {
+    expect(() =>
+      estimateImagesReservation(1, 'dall-e-3', '1024x1024', 'hd', cfg),
+    ).not.toThrow();
+    expect(() =>
+      estimateImagesReservation(1, 'nonexistent', '1024x1024', 'standard', cfg),
+    ).toThrow();
+  });
+});
+
+describe('computeImagesActualCost', () => {
+  it('bills at returned count × per-image rate', () => {
+    // 2 images × $0.09 = $0.18 = 18¢ (hd)
+    const c = computeImagesActualCost(2, 'dall-e-3', '1024x1024', 'hd', cfg);
+    expect(c.actualCents).toBe(18n);
+    expect(c.perImageCents).toBe(9n);
   });
 });

@@ -64,6 +64,57 @@ describe('NodeBook', () => {
     expect(prepaidMedium.map((e) => e.config.id)).toEqual(['node-a']);
   });
 
+  it('defaults capability to chat so pre-capability callers match', () => {
+    const book = new NodeBook();
+    book.replaceAll(parseNodesYaml(yaml));
+    // yaml above omits `capabilities`; parser defaults to ['chat']
+    const picks = book.findNodesFor('model-medium', 'prepaid');
+    expect(picks.map((e) => e.config.id)).toEqual(['node-b', 'node-a']);
+  });
+
+  it('filters by capability when the caller asks for embeddings', () => {
+    const book = new NodeBook();
+    book.replaceAll(
+      parseNodesYaml(`
+nodes:
+  - id: node-chat-only
+    url: https://node-chat.example.com
+    ethAddress: "${addressA}"
+    supportedModels: ["text-embedding-3-small"]
+    capabilities: ["chat"]
+    enabled: true
+    tierAllowed: ["prepaid"]
+    weight: 10
+  - id: node-embeddings
+    url: https://node-emb.example.com
+    ethAddress: "${addressB}"
+    supportedModels: ["text-embedding-3-small"]
+    capabilities: ["embeddings"]
+    enabled: true
+    tierAllowed: ["prepaid"]
+    weight: 20
+  - id: node-both
+    url: https://node-both.example.com
+    ethAddress: "0x${'dd'.repeat(20)}"
+    supportedModels: ["text-embedding-3-small"]
+    capabilities: ["chat", "embeddings"]
+    enabled: true
+    tierAllowed: ["prepaid"]
+    weight: 5
+`),
+    );
+    const picks = book.findNodesFor('text-embedding-3-small', 'prepaid', 'embeddings');
+    expect(picks.map((e) => e.config.id).sort()).toEqual(['node-both', 'node-embeddings']);
+  });
+
+  it('throws NoHealthyNodesError when no node advertises the capability', () => {
+    const book = new NodeBook();
+    book.replaceAll(parseNodesYaml(yaml));
+    expect(() => book.findNodesFor('model-medium', 'prepaid', 'images')).toThrow(
+      NoHealthyNodesError,
+    );
+  });
+
   it('preserves existing circuit state when configuration is replaced', () => {
     const book = new NodeBook();
     book.replaceAll(parseNodesYaml(yaml));

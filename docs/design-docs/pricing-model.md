@@ -6,9 +6,13 @@ last-reviewed: 2026-04-24
 
 # Pricing model
 
-The bridge runs a three-tier rate card. Models are grouped into tiers; rate cards price tiers, not individual models. This keeps the customer-facing surface stable when new models are added or nodes are swapped.
+The bridge prices three distinct endpoint families with three distinct rate structures:
 
-## Rate card (v1 starter, monitor and adjust)
+- **Chat** (`/v1/chat/completions`) — tier-based. Models are grouped into tiers; rates price tiers, not individual models. Keeps the customer-facing surface stable when new models are added or swapped.
+- **Embeddings** (`/v1/embeddings`) — model-keyed. Embedding models are not swappable (vector dimensions differ), so tier abstraction adds no value.
+- **Images** (`/v1/images/generations`) — model × size × quality keyed. Per-image pricing is the industry standard; there is no token dimension.
+
+## Chat rate card (v1 starter, monitor and adjust)
 
 | Tier         | Input $ / 1M tokens | Output $ / 1M tokens | Target model class |
 | ------------ | ------------------- | -------------------- | ------------------ |
@@ -24,14 +28,45 @@ Competitive reference points (late-2025 / early-2026):
 
 Free tier consumes against the **Starter** rate for internal cost accounting (quota-capped at 100K tokens / month).
 
+## Embeddings rate card (v1 starter)
+
+Embeddings are priced per model, input-tokens only. Free tier is not available for embeddings in v1.
+
+| Model                      | Input $ / 1M tokens | Notes                                    |
+| -------------------------- | ------------------- | ---------------------------------------- |
+| `text-embedding-3-small`   | $0.025              | vs. OpenAI $0.02 — 25% premium           |
+| `text-embedding-3-large`   | $0.150              | vs. OpenAI $0.13 — 15% premium           |
+| `text-embedding-bge-m3`    | $0.020              | open-source, smaller margin target       |
+
+Rationale: a modest premium over OpenAI reflects the probabilistic-micropayment overhead and leaves headroom if ETH/USD swings widen node costs. Adjust per the margin policy below.
+
+## Images rate card (v1 starter)
+
+Images are priced per `(model, size, quality)`. The customer pays `n × usdPerImage` for a request that returns `n` images.
+
+| Model     | Size       | Quality  | $ / image | Reference                    |
+| --------- | ---------- | -------- | --------- | ---------------------------- |
+| `dall-e-3` | 1024×1024  | standard | $0.050    | OpenAI $0.040 — 25% premium  |
+| `dall-e-3` | 1024×1024  | hd       | $0.090    | OpenAI $0.080 — 12.5% premium |
+| `dall-e-3` | 1024×1792  | standard | $0.090    | OpenAI $0.080 — 12.5% premium |
+| `dall-e-3` | 1024×1792  | hd       | $0.130    | OpenAI $0.120 — 8.3% premium |
+| `dall-e-3` | 1792×1024  | standard | $0.090    | OpenAI $0.080 — 12.5% premium |
+| `dall-e-3` | 1792×1024  | hd       | $0.130    | OpenAI $0.120 — 8.3% premium |
+| `sdxl`    | 1024×1024  | standard | $0.010    | open-source, volume play     |
+
+**Partial delivery.** If the node returns fewer images than `n`, the customer is billed for `data.length × usdPerImage` and the delta is refunded. A zero-image response is a node contract violation (503 + full refund). See `docs/references/worker-node-contract.md §5.3`.
+
 ## Types
 
-- `src/types/pricing.ts` — `PricingTier` (`starter | standard | pro`), `RateCardEntry`, `RateCard`, `ModelTierMap`.
-- A `RateCard` carries exactly three entries (enforced by Zod) and a `version` + `effectiveAt` so we can version rate cards in-repo and reprice without mutating history.
+- `src/types/pricing.ts` exports three sibling rate card types, each with its own `version` + `effectiveAt`:
+  - `ChatRateCard` — exactly three entries (`starter | standard | pro`), enforced by Zod.
+  - `EmbeddingsRateCard` — list of `{ model, usdPerMillionTokens }` entries.
+  - `ImagesRateCard` — list of `{ model, size, quality, usdPerImage }` entries.
+- `ModelTierMap` maps chat models to pricing tiers; embeddings and images do not use tiers.
 
 ## Margin math
 
-Per request:
+### Chat
 
 ```
 est_cost_usd    = max_tokens × customer_rate_per_token           # from rate card
@@ -39,7 +74,29 @@ est_cost_wei    = max_tokens × node_price_per_token              # from NodeBoo
 margin_percent  = (est_cost_usd − est_cost_wei × eth_usd) / est_cost_usd
 ```
 
-`margin_percent` is tracked per `(tier, model, node)` and is the single top-line metric for pricing health.
+`margin_percent` is tracked per `(tier, model, node)`.
+
+### Embeddings
+
+```
+est_cost_usd    = input_tokens × rateForModel(model)             # model-keyed
+est_cost_wei    = input_tokens × node_price_per_token
+margin_percent  = (est_cost_usd − est_cost_wei × eth_usd) / est_cost_usd
+```
+
+Tracked per `(model, node)`.
+
+### Images
+
+```
+est_cost_usd    = n × usdPerImage(model, size, quality)
+est_cost_wei    = n × node_price_per_image                        # node quote is per-image
+margin_percent  = (est_cost_usd − est_cost_wei × eth_usd) / est_cost_usd
+```
+
+Tracked per `(model, size, quality, node)`.
+
+`margin_percent` is the single top-line metric for pricing health across all three endpoint families.
 
 ## Adjustment policy
 
@@ -64,5 +121,6 @@ The rate card deliberately quotes USD only. Wei-denominated node cost is an inpu
 ## Open items (deferred)
 
 - **Volume-discount tiers.** Not in v1. Revisit once revenue shape justifies it.
-- **Per-model rate cards.** Explicitly deferred; the three-tier policy is the v1 simplification.
+- ~~**Per-model rate cards.**~~ Resolved in 0017 — embeddings and images are model-keyed; chat remains tier-based.
 - **Auto-reprice on margin drop.** Manual in v1; automation requires a policy doc of its own.
+- **Audio endpoints pricing.** `/v1/audio/speech` (per-character) and `/v1/audio/transcriptions` (per-minute) will need their own rate tables. Deferred to the audio plan.

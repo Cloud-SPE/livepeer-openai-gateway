@@ -29,6 +29,58 @@ describe('config/nodes', () => {
     expect(node.breaker.coolDownSeconds).toBe(30);
   });
 
+  it('defaults capabilities to [chat] when absent (backwards compat)', () => {
+    const cfg = parseNodesYaml(yamlOk);
+    expect(cfg.nodes[0]!.capabilities).toEqual(['chat']);
+  });
+
+  it('accepts an explicit capabilities list', () => {
+    const cfg = parseNodesYaml(`
+nodes:
+  - id: node-multi
+    url: https://node-multi.example.com
+    ethAddress: "${addressA}"
+    supportedModels: ["m1", "text-embedding-3-small"]
+    capabilities: ["chat", "embeddings"]
+    enabled: true
+    tierAllowed: ["prepaid"]
+    weight: 1
+`);
+    expect(cfg.nodes[0]!.capabilities).toEqual(['chat', 'embeddings']);
+  });
+
+  it('rejects an empty capabilities array', () => {
+    expect(() =>
+      parseNodesYaml(`
+nodes:
+  - id: node-bad
+    url: https://node.example.com
+    ethAddress: "${addressA}"
+    supportedModels: ["m"]
+    capabilities: []
+    enabled: true
+    tierAllowed: ["prepaid"]
+    weight: 1
+`),
+    ).toThrow();
+  });
+
+  it('rejects an unknown capability', () => {
+    expect(() =>
+      parseNodesYaml(`
+nodes:
+  - id: node-bad
+    url: https://node.example.com
+    ethAddress: "${addressA}"
+    supportedModels: ["m"]
+    capabilities: ["chat", "speech"]
+    enabled: true
+    tierAllowed: ["prepaid"]
+    weight: 1
+`),
+    ).toThrow();
+  });
+
   it('rejects a malformed ethAddress', () => {
     expect(() =>
       parseNodesYaml(`

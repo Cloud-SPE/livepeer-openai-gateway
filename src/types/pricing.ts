@@ -6,22 +6,59 @@ export type PricingTier = z.infer<typeof PricingTierSchema>;
 export const UsdPerMillionTokensSchema = z.number().positive();
 export type UsdPerMillionTokens = z.infer<typeof UsdPerMillionTokensSchema>;
 
-export const RateCardEntrySchema = z.object({
+export const ChatRateCardEntrySchema = z.object({
   tier: PricingTierSchema,
   inputUsdPerMillion: UsdPerMillionTokensSchema,
   outputUsdPerMillion: UsdPerMillionTokensSchema,
 });
-export type RateCardEntry = z.infer<typeof RateCardEntrySchema>;
+export type ChatRateCardEntry = z.infer<typeof ChatRateCardEntrySchema>;
 
-export const RateCardSchema = z.object({
+export const ChatRateCardSchema = z.object({
   version: z.string().min(1),
   effectiveAt: z.coerce.date(),
-  entries: z.array(RateCardEntrySchema).length(3),
+  entries: z.array(ChatRateCardEntrySchema).length(3),
 });
-export type RateCard = z.infer<typeof RateCardSchema>;
+export type ChatRateCard = z.infer<typeof ChatRateCardSchema>;
 
 export const ModelIdSchema = z.string().min(1).max(256);
 export type ModelId = z.infer<typeof ModelIdSchema>;
 
 export const ModelTierMapSchema = z.record(ModelIdSchema, PricingTierSchema);
 export type ModelTierMap = z.infer<typeof ModelTierMapSchema>;
+
+export const EmbeddingsRateCardEntrySchema = z.object({
+  model: ModelIdSchema,
+  usdPerMillionTokens: UsdPerMillionTokensSchema,
+});
+export type EmbeddingsRateCardEntry = z.infer<typeof EmbeddingsRateCardEntrySchema>;
+
+export const EmbeddingsRateCardSchema = z.object({
+  version: z.string().min(1),
+  effectiveAt: z.coerce.date(),
+  entries: z.array(EmbeddingsRateCardEntrySchema).min(1),
+});
+export type EmbeddingsRateCard = z.infer<typeof EmbeddingsRateCardSchema>;
+
+export const ImageSizeSchema = z.enum(['1024x1024', '1024x1792', '1792x1024']);
+export type ImageSize = z.infer<typeof ImageSizeSchema>;
+
+export const ImageQualitySchema = z.enum(['standard', 'hd']);
+export type ImageQuality = z.infer<typeof ImageQualitySchema>;
+
+export const UsdPerImageSchema = z.number().positive();
+export type UsdPerImage = z.infer<typeof UsdPerImageSchema>;
+
+export const ImagesRateCardEntrySchema = z.object({
+  model: ModelIdSchema,
+  size: ImageSizeSchema,
+  quality: ImageQualitySchema,
+  usdPerImage: UsdPerImageSchema,
+});
+export type ImagesRateCardEntry = z.infer<typeof ImagesRateCardEntrySchema>;
+
+export const ImagesRateCardSchema = z.object({
+  version: z.string().min(1),
+  effectiveAt: z.coerce.date(),
+  entries: z.array(ImagesRateCardEntrySchema).min(1),
+});
+export type ImagesRateCard = z.infer<typeof ImagesRateCardSchema>;

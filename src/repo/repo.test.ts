@@ -94,7 +94,7 @@ describe('repo/topups', () => {
 });
 
 describe('repo/usageRecords', () => {
-  it('insertUsageRecord stores a record', async () => {
+  it('insertUsageRecord stores a chat record with defaulted kind', async () => {
     const customer = await customersRepo.insertCustomer(pg.db, {
       email: 'u@x.io',
       tier: 'prepaid',
@@ -111,5 +111,67 @@ describe('repo/usageRecords', () => {
       status: 'success',
     });
     expect(rec.workId).toBe('w-u');
+    expect(rec.kind).toBe('chat');
+  });
+
+  it('insertUsageRecord stores an embeddings record (completion_tokens null)', async () => {
+    const customer = await customersRepo.insertCustomer(pg.db, {
+      email: 'u-emb@x.io',
+      tier: 'prepaid',
+    });
+    const rec = await usageRecordsRepo.insertUsageRecord(pg.db, {
+      customerId: customer.id,
+      workId: 'w-emb',
+      kind: 'embeddings',
+      model: 'text-embedding-3-small',
+      nodeUrl: 'https://node.example',
+      promptTokensReported: 42,
+      costUsdCents: 1n,
+      nodeCostWei: '1000',
+      status: 'success',
+    });
+    expect(rec.kind).toBe('embeddings');
+    expect(rec.completionTokensReported).toBeNull();
+  });
+
+  it('insertUsageRecord stores an images record (token columns null)', async () => {
+    const customer = await customersRepo.insertCustomer(pg.db, {
+      email: 'u-img@x.io',
+      tier: 'prepaid',
+    });
+    const rec = await usageRecordsRepo.insertUsageRecord(pg.db, {
+      customerId: customer.id,
+      workId: 'w-img',
+      kind: 'images',
+      model: 'dall-e-3',
+      nodeUrl: 'https://node.example',
+      imageCount: 2,
+      costUsdCents: 10n,
+      nodeCostWei: '500000',
+      status: 'success',
+    });
+    expect(rec.kind).toBe('images');
+    expect(rec.imageCount).toBe(2);
+    expect(rec.promptTokensReported).toBeNull();
+  });
+
+  it('insertUsageRecord rejects kind/column mismatch via CHECK constraint', async () => {
+    const customer = await customersRepo.insertCustomer(pg.db, {
+      email: 'u-bad@x.io',
+      tier: 'prepaid',
+    });
+    await expect(
+      usageRecordsRepo.insertUsageRecord(pg.db, {
+        customerId: customer.id,
+        workId: 'w-bad',
+        kind: 'images',
+        model: 'dall-e-3',
+        nodeUrl: 'https://node.example',
+        // imageCount intentionally missing — CHECK should reject
+        costUsdCents: 10n,
+        nodeCostWei: '500000',
+        status: 'success',
+      }),
+    ).rejects.toThrow();
   });
 });

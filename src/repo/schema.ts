@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   bigint,
+  check,
   index,
   integer,
   pgEnum,
@@ -28,6 +29,7 @@ export const nodeHealthEventKind = pgEnum('node_health_event_kind', [
   'config_reloaded',
   'eth_address_changed_rejected',
 ]);
+export const usageRecordKind = pgEnum('usage_record_kind', ['chat', 'embeddings', 'images']);
 
 export const customers = pgTable('customer', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -98,12 +100,14 @@ export const usageRecords = pgTable(
       .references(() => customers.id),
     workId: text('work_id').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    kind: usageRecordKind('kind').notNull().default('chat'),
     model: text('model').notNull(),
     nodeUrl: text('node_url').notNull(),
-    promptTokensReported: integer('prompt_tokens_reported').notNull(),
-    completionTokensReported: integer('completion_tokens_reported').notNull(),
+    promptTokensReported: integer('prompt_tokens_reported'),
+    completionTokensReported: integer('completion_tokens_reported'),
     promptTokensLocal: integer('prompt_tokens_local'),
     completionTokensLocal: integer('completion_tokens_local'),
+    imageCount: integer('image_count'),
     costUsdCents: bigint('cost_usd_cents', { mode: 'bigint' }).notNull(),
     nodeCostWei: text('node_cost_wei').notNull(),
     status: usageStatus('status').notNull(),
@@ -112,6 +116,18 @@ export const usageRecords = pgTable(
   (t) => ({
     byCustomer: index('usage_record_customer_idx').on(t.customerId, t.createdAt),
     byWork: index('usage_record_work_idx').on(t.workId),
+    kindColumnsConsistent: check(
+      'usage_record_kind_columns_chk',
+      sql`
+        (
+          ${t.kind} = 'chat' AND ${t.promptTokensReported} IS NOT NULL AND ${t.completionTokensReported} IS NOT NULL
+        ) OR (
+          ${t.kind} = 'embeddings' AND ${t.promptTokensReported} IS NOT NULL
+        ) OR (
+          ${t.kind} = 'images' AND ${t.imageCount} IS NOT NULL
+        )
+      `,
+    ),
   }),
 );
 
@@ -199,4 +215,5 @@ export const schema = {
   reservationKind,
   nodeHealthStatus,
   nodeHealthEventKind,
+  usageRecordKind,
 };

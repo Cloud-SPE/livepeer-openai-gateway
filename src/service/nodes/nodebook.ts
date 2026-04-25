@@ -1,5 +1,5 @@
 import type { ResolvedNodeConfig, NodesConfig } from '../../config/nodes.js';
-import type { Quote } from '../../types/node.js';
+import type { NodeCapability, Quote } from '../../types/node.js';
 import { CircuitState, initialCircuitState } from './circuitBreaker.js';
 import { NoHealthyNodesError } from './errors.js';
 
@@ -48,10 +48,15 @@ export class NodeBook {
     this.entries.set(nodeId, { ...entry, quote });
   }
 
-  findNodesFor(model: string, tier: 'free' | 'prepaid'): NodeEntry[] {
+  findNodesFor(
+    model: string,
+    tier: 'free' | 'prepaid',
+    capability: NodeCapability = 'chat',
+  ): NodeEntry[] {
     const candidates = this.list().filter(
       (e) =>
         e.config.enabled &&
+        e.config.capabilities.includes(capability) &&
         e.config.supportedModels.includes(model) &&
         e.config.tierAllowed.includes(tier) &&
         e.circuit.status !== 'circuit_broken',

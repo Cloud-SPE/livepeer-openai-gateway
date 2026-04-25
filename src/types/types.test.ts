@@ -1,14 +1,21 @@
 import { describe, it, expect } from 'vitest';
 import {
   ChatCompletionRequestSchema,
+  ChatRateCardSchema,
   CustomerSchema,
   CustomerTierSchema,
+  EmbeddingsRateCardSchema,
+  EmbeddingsRequestSchema,
+  EmbeddingsResponseSchema,
   ErrorCodeSchema,
   ErrorEnvelopeSchema,
+  ImagesGenerationRequestSchema,
+  ImagesRateCardSchema,
+  ImagesResponseSchema,
   NodeConfigSchema,
   PricingTierSchema,
-  RateCardSchema,
   WorkIdSchema,
+  normalizeEmbeddingsInput,
 } from './index.js';
 
 describe('types/error', () => {
@@ -60,7 +67,7 @@ describe('types/pricing', () => {
     expect(PricingTierSchema.parse('pro')).toBe('pro');
   });
 
-  it('rate card requires exactly three tier entries', () => {
+  it('chat rate card requires exactly three tier entries', () => {
     const mk = (n: number) =>
       Array.from({ length: n }, (_, i) => ({
         tier: (['starter', 'standard', 'pro'] as const)[i % 3]!,
@@ -68,11 +75,61 @@ describe('types/pricing', () => {
         outputUsdPerMillion: 2,
       }));
     expect(() =>
-      RateCardSchema.parse({ version: 'v1', effectiveAt: new Date(), entries: mk(2) }),
+      ChatRateCardSchema.parse({ version: 'v1', effectiveAt: new Date(), entries: mk(2) }),
     ).toThrow();
     expect(() =>
-      RateCardSchema.parse({ version: 'v1', effectiveAt: new Date(), entries: mk(3) }),
+      ChatRateCardSchema.parse({ version: 'v1', effectiveAt: new Date(), entries: mk(3) }),
     ).not.toThrow();
+  });
+
+  it('embeddings rate card is model-keyed and requires ≥1 entry', () => {
+    expect(() =>
+      EmbeddingsRateCardSchema.parse({ version: 'v1', effectiveAt: new Date(), entries: [] }),
+    ).toThrow();
+    const parsed = EmbeddingsRateCardSchema.parse({
+      version: 'v1',
+      effectiveAt: new Date(),
+      entries: [{ model: 'text-embedding-3-small', usdPerMillionTokens: 0.02 }],
+    });
+    expect(parsed.entries[0]!.model).toBe('text-embedding-3-small');
+  });
+
+  it('embeddings rate card rejects non-positive rates', () => {
+    const r = EmbeddingsRateCardSchema.safeParse({
+      version: 'v1',
+      effectiveAt: new Date(),
+      entries: [{ model: 'm', usdPerMillionTokens: 0 }],
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it('images rate card accepts a (model, size, quality, usdPerImage) entry', () => {
+    const parsed = ImagesRateCardSchema.parse({
+      version: 'v1',
+      effectiveAt: new Date(),
+      entries: [
+        { model: 'dall-e-3', size: '1024x1024', quality: 'standard', usdPerImage: 0.05 },
+      ],
+    });
+    expect(parsed.entries[0]!.size).toBe('1024x1024');
+  });
+
+  it('images rate card rejects an unknown size', () => {
+    const r = ImagesRateCardSchema.safeParse({
+      version: 'v1',
+      effectiveAt: new Date(),
+      entries: [{ model: 'x', size: '512x512', quality: 'standard', usdPerImage: 0.01 }],
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it('images rate card rejects an unknown quality', () => {
+    const r = ImagesRateCardSchema.safeParse({
+      version: 'v1',
+      effectiveAt: new Date(),
+      entries: [{ model: 'x', size: '1024x1024', quality: 'ultra', usdPerImage: 0.01 }],
+    });
+    expect(r.success).toBe(false);
   });
 });
 
@@ -130,5 +187,80 @@ describe('types/openai', () => {
       messages: [],
     });
     expect(r.success).toBe(false);
+  });
+});
+
+describe('types/embeddings', () => {
+  it('accepts a single-string input', () => {
+    const req = EmbeddingsRequestSchema.parse({
+      model: 'text-embedding-3-small',
+      input: 'hello world',
+    });
+    expect(req.input).toBe('hello world');
+  });
+
+  it('accepts a batched string[] input', () => {
+    const req = EmbeddingsRequestSchema.parse({
+      model: 'text-embedding-3-small',
+      input: ['a', 'b', 'c'],
+      encoding_format: 'base64',
+      dimensions: 512,
+    });
+    expect(Array.isArray(req.input)).toBe(true);
+  });
+
+  it('rejects an empty input array', () => {
+    const r = EmbeddingsRequestSchema.safeParse({ model: 'm', input: [] });
+    expect(r.success).toBe(false);
+  });
+
+  it('normalizeEmbeddingsInput returns an array regardless of shape', () => {
+    expect(normalizeEmbeddingsInput('x')).toEqual(['x']);
+    expect(normalizeEmbeddingsInput(['x', 'y'])).toEqual(['x', 'y']);
+  });
+
+  it('accepts a valid embeddings response', () => {
+    const parsed = EmbeddingsResponseSchema.parse({
+      object: 'list',
+      data: [{ object: 'embedding', index: 0, embedding: [0.1, 0.2, 0.3] }],
+      model: 'text-embedding-3-small',
+      usage: { prompt_tokens: 3, total_tokens: 3 },
+    });
+    expect(parsed.data).toHaveLength(1);
+  });
+});
+
+describe('types/images', () => {
+  it('accepts a minimal images request', () => {
+    const req = ImagesGenerationRequestSchema.parse({
+      model: 'dall-e-3',
+      prompt: 'a cat',
+    });
+    expect(req.prompt).toBe('a cat');
+  });
+
+  it('rejects an unknown size', () => {
+    const r = ImagesGenerationRequestSchema.safeParse({
+      model: 'dall-e-3',
+      prompt: 'x',
+      size: '512x512',
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it('rejects an over-long prompt', () => {
+    const r = ImagesGenerationRequestSchema.safeParse({
+      model: 'dall-e-3',
+      prompt: 'x'.repeat(5_000),
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it('accepts a valid response with url-format images', () => {
+    const parsed = ImagesResponseSchema.parse({
+      created: 1_700_000_000,
+      data: [{ url: 'https://example.com/a.png' }, { url: 'https://example.com/b.png' }],
+    });
+    expect(parsed.data).toHaveLength(2);
   });
 });
