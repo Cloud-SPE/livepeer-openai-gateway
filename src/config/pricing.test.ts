@@ -2,14 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { defaultPricingConfig, loadPricingConfig, rateForTier } from './pricing.js';
 
 describe('pricing config', () => {
-  it('default pricing config matches the v1 design-doc rate card', () => {
+  it('default pricing config matches the v2 rate card (cheapest mainstream)', () => {
     const cfg = defaultPricingConfig();
     expect(cfg.rateCard.entries).toHaveLength(3);
     const starter = rateForTier(cfg.rateCard, 'starter');
-    expect(starter.inputUsdPerMillion).toBe(0.2);
-    expect(starter.outputUsdPerMillion).toBe(0.6);
+    expect(starter.inputUsdPerMillion).toBe(0.05);
+    expect(starter.outputUsdPerMillion).toBe(0.1);
     const pro = rateForTier(cfg.rateCard, 'pro');
-    expect(pro.outputUsdPerMillion).toBe(10.0);
+    expect(pro.outputUsdPerMillion).toBe(1.2);
   });
 
   it('resolves model → tier using the default map', () => {

@@ -85,14 +85,22 @@ function computeCostCents(
   inputUsdPerMillion: number,
   outputUsdPerMillion: number,
 ): bigint {
+  // micro = micro-cents = ¹⁄₁₀_₀₀₀ of a cent. inputCentsPerMillion is
+  // already in micro-cents per 1M tokens, so token × rate gives micro
+  // directly (no division until the end).
+  //
+  // Earlier impl divided each side by MILLION before summing, which
+  // truncated small amounts to 0 before the ceil could fire — at the
+  // v2 cheap rates a 5+3 token request would round to 0 cents instead
+  // of 1. Sum the micros first, then divide+ceil exactly once.
   const inputCentsPerMillion = BigInt(Math.round(inputUsdPerMillion * 100 * 10_000));
   const outputCentsPerMillion = BigInt(Math.round(outputUsdPerMillion * 100 * 10_000));
 
-  const inputMicro = (promptTokens * inputCentsPerMillion) / MILLION;
-  const outputMicro = (outputTokens * outputCentsPerMillion) / MILLION;
-  const micro = inputMicro + outputMicro;
+  const microPerMillion = promptTokens * inputCentsPerMillion + outputTokens * outputCentsPerMillion;
 
-  return (micro + 9999n) / 10_000n;
+  // Round-up division by (MILLION × 10_000) = combined token-and-microcent denom.
+  const denom = MILLION * 10_000n;
+  return (microPerMillion + denom - 1n) / denom;
 }
 
 export interface EmbeddingsReservationEstimate {

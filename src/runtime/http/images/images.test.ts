@@ -266,8 +266,8 @@ describe('/v1/images/generations (end-to-end)', () => {
 
       const after = await customersRepo.findById(pg.db, bridge.customerId);
       expect(after!.reservedUsdCents).toBe(0n);
-      // dall-e-3 1024x1024 standard = 5¢; starting 10_000 → 9_995
-      expect(after!.balanceUsdCents).toBe(9_995n);
+      // dall-e-3 1024x1024 standard (v2) = $0.025 → 3¢ (ceil); starting 10_000 → 9_997
+      expect(after!.balanceUsdCents).toBe(9_997n);
 
       const usage = await pg.db.execute(
         sql`SELECT kind, image_count, status FROM usage_record WHERE customer_id = ${bridge.customerId}`,
@@ -299,8 +299,8 @@ describe('/v1/images/generations (end-to-end)', () => {
 
       const after = await customersRepo.findById(pg.db, bridge.customerId);
       expect(after!.reservedUsdCents).toBe(0n);
-      // 2 × 5¢ = 10¢ billed; reservation was 3 × 5¢ = 15¢; balance = 10_000 - 10 = 9_990
-      expect(after!.balanceUsdCents).toBe(9_990n);
+      // 2 × 3¢ = 6¢ billed (v2); reservation was 3 × 3¢ = 9¢; balance = 10_000 - 6 = 9_994
+      expect(after!.balanceUsdCents).toBe(9_994n);
 
       const usage = await pg.db.execute(
         sql`SELECT image_count, status FROM usage_record WHERE customer_id = ${bridge.customerId}`,

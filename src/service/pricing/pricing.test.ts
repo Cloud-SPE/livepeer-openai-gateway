@@ -87,15 +87,15 @@ describe('computeActualCost', () => {
   });
 
   it('returns integer cents (round up) for large token counts', () => {
-    // model-medium → standard: $1/1M input, $3/1M output.
-    // 1_000_000 + 1_000_000 = $1 + $3 = $4.00 → 400 cents.
+    // model-medium → standard (v2): $0.15/1M input, $0.40/1M output.
+    // 1_000_000 + 1_000_000 = $0.15 + $0.40 = $0.55 → 55 cents.
     const c = computeActualCost(
       { prompt_tokens: 1_000_000, completion_tokens: 1_000_000, total_tokens: 2_000_000 },
       'prepaid',
       'model-medium',
       cfg,
     );
-    expect(c.actualCents).toBe(400n);
+    expect(c.actualCents).toBe(55n);
   });
 });
 
@@ -140,18 +140,23 @@ describe('estimateEmbeddingsReservation', () => {
 
 describe('computeEmbeddingsActualCost', () => {
   it('charges input tokens only at the model rate', () => {
-    // 1_000_000 tokens × $0.15/1M = $0.15 = 15¢
+    // 1_000_000 tokens × $0.05/1M (v2) = $0.05 = 5¢
     const c = computeEmbeddingsActualCost(1_000_000, 'text-embedding-3-large', cfg);
-    expect(c.actualCents).toBe(15n);
+    expect(c.actualCents).toBe(5n);
   });
 });
 
 describe('estimateImagesReservation', () => {
   it('reserves n × per-image cents (model, size, quality)', () => {
-    // dall-e-3 1024x1024 standard = $0.05 = 5¢, × 3 images = 15¢
+    // dall-e-3 1024x1024 standard (v2) = $0.025 = 3¢ (ceil), × 3 images = 9¢ ... wait
+    // $0.025/img → 2.5¢ → ceil 3¢ per image. 3 × 3¢ = 9¢. But pre-multiply
+    // the integer math: chars = 3 × 250 micro-cents = 750 micro-cents → 1¢. Hmm
+    // Per-image cents from the actual computePerImageCents pipeline:
+    // micro = round(0.025 × 100 × 10000) = 25_000; (25000 + 9999) / 10000 = 3.
+    // So perImageCents = 3, estCents = 3 × 3 = 9.
     const est = estimateImagesReservation(3, 'dall-e-3', '1024x1024', 'standard', cfg);
-    expect(est.perImageCents).toBe(5n);
-    expect(est.estCents).toBe(15n);
+    expect(est.perImageCents).toBe(3n);
+    expect(est.estCents).toBe(9n);
   });
 
   it('throws for unknown (model, size, quality) combination', () => {
@@ -166,9 +171,9 @@ describe('estimateImagesReservation', () => {
 
 describe('computeImagesActualCost', () => {
   it('bills at returned count × per-image rate', () => {
-    // 2 images × $0.09 = $0.18 = 18¢ (hd)
+    // 2 images × $0.05 = $0.10 = 10¢ (hd, v2)
     const c = computeImagesActualCost(2, 'dall-e-3', '1024x1024', 'hd', cfg);
-    expect(c.actualCents).toBe(18n);
-    expect(c.perImageCents).toBe(9n);
+    expect(c.actualCents).toBe(10n);
+    expect(c.perImageCents).toBe(5n);
   });
 });
