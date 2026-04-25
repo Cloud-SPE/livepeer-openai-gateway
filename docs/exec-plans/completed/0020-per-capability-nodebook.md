@@ -29,38 +29,37 @@ This is the phase-2 rework 0018 deferred. 0018 non-goals: *"NodeEntry.quote stay
 
 ### Data model
 
-- [ ] Replace `NodeEntry.quote: Quote | null` with `NodeEntry.quotes: Map<string, Quote>` keyed by capability string (`"openai:/v1/chat/completions"` etc.). Value is the projected-to-domain `Quote` (one per capability — per-model prices inside the capability are tracked in the quote's `modelPrices` if we extend `Quote`, or in a parallel map).
-- [ ] Decide the model-dimension: either (a) `Quote` gains a `modelPrices: Map<string, bigint>` field so callers can pick a price per model, or (b) `NodeEntry.quotes` is `Map<string, Map<string, Quote>>` keyed `(capability, model)`. Recommend (a) — keeps the capability-level ticket params shared (they're the same across models on a given capability) and localizes model pricing to a nested map. See open question.
-- [ ] `NodeBook.setQuote(nodeId, quote)` → `setCapabilityQuote(nodeId, capability, quote)`. Preserve existing method for back-compat during the transition by having it default to `"openai:/v1/chat/completions"`, then delete once all callers migrate.
-- [ ] `NodeBook.findNodesFor(model, tier, capability)` already takes `capability` (0017). No signature change; internally it must now verify the node has a quote for that capability before returning it as a candidate. A node without the relevant quote is treated the same as `circuit_broken` — no match.
+- [x] Replace `NodeEntry.quote: Quote | null` with `NodeEntry.quotes: Map<string, Quote>` keyed by capability string (`"openai:/v1/chat/completions"` etc.). Value is the projected-to-domain `Quote`. Per-model prices live inside `Quote.modelPrices: Map<string, bigint>` (option (a) below).
+- [x] Decided in favor of option (a): `Quote` gained `modelPrices`, capability-level `ticketParams` stays shared. `NodeEntry.quotes` is the flat capability map; the model dimension lives one level down.
+- [x] `NodeBook.setQuote(nodeId, quote)` deleted in favor of `setCapabilityQuote(nodeId, capability, quote)` and `setAllQuotes(nodeId, quotes)`. No back-compat shim — the only caller is `quoteRefresher`, migrated atomically.
+- [x] `NodeBook.findNodesFor(model, tier, capability)` now requires the node to have a quote for the given capability string; otherwise it's filtered out (same as `circuit_broken`).
 
 ### Quote refresher
 
-- [ ] `quoteRefresher.ts` currently hardcodes `capability: 'openai:/v1/chat/completions'`. Change to iterate each node's declared `capabilities` and call `getQuotes({ url, sender })` once per tick, then split the batched response into per-capability `setCapabilityQuote` calls.
-- [ ] Use `getQuotes` (batched) over per-capability `getQuote` calls to reduce request volume. `NodeClient` already exposes both; `getQuotes` returns `{ quotes: [{ capability, quote }] }`.
-- [ ] If a node advertises a capability in `nodes.yaml` but the worker's `/quotes` response doesn't include it, log + metric + mark the capability as unquoted. The capability stays admittable by YAML but no quote = no routing.
-- [ ] Back-off and circuit behavior stay the same — per-node, not per-capability. A node that fails `/quotes` entirely opens its circuit.
+- [x] `quoteRefresher.ts` calls `getQuotes({ url, sender: bridgeEthAddress })` once per tick and projects each entry through `setAllQuotes`.
+- [x] Single batched call replaces the per-capability fan-out. `NodeClient.getQuotes` returns `{ quotes: [{ capability, quote }] }`.
+- [x] A capability the node advertised but `/quotes` omitted is logged at `warn` and stays absent from the node's `quotes` map; routing then excludes it.
+- [x] Back-off and circuit behavior unchanged — per-node.
 
 ### Routing (chat, embeddings, images handlers)
 
-- [ ] Update every handler that calls `node.quote` to instead read `node.quotes.get(capability)`. Concretely:
-  - `src/runtime/http/chat/completions.ts` → `node.quotes.get('openai:/v1/chat/completions')`
+- [x] All handlers updated to `node.quotes.get(capabilityString(...))`:
+  - `src/runtime/http/chat/completions.ts` → `node.quotes.get(capabilityString('chat'))`
   - `src/runtime/http/chat/streaming.ts` → same
-  - `src/runtime/http/embeddings/index.ts` → `node.quotes.get('openai:/v1/embeddings')`
-  - `src/runtime/http/images/generations.ts` → `node.quotes.get('openai:/v1/images/generations')`
-- [ ] Add a small helper `capabilityString(cap: NodeCapability): string` that maps `'chat' → 'openai:/v1/chat/completions'`, `'embeddings' → 'openai:/v1/embeddings'`, `'images' → 'openai:/v1/images/generations'`. Single source of truth; 0019 extends it for `'speech'` and `'transcriptions'`.
+  - `src/runtime/http/embeddings/index.ts` → `node.quotes.get(capabilityString('embeddings'))`
+  - `src/runtime/http/images/generations.ts` → `node.quotes.get(capabilityString('images'))`
+- [x] `src/types/capability.ts` exports `capabilityString(cap: NodeCapability): string`. 0019 extended the map with `'speech'` and `'transcriptions'`.
 
 ### Tests
 
-- [ ] `NodeBook` tests for `setCapabilityQuote` / `findNodesFor` quote-presence filtering.
-- [ ] `quoteRefresher` test: node with 2 capabilities → both quotes populated after one tick.
-- [ ] `quoteRefresher` test: node advertises `images` in YAML but worker's `/quotes` omits it → `findNodesFor(…, 'images')` excludes this node while `findNodesFor(…, 'chat')` still matches it.
-- [ ] Regression: existing integration tests continue to pass (chat, embeddings, images end-to-end).
+- [x] `NodeBook` tests for `setCapabilityQuote` + `findNodesFor` quote-presence filter (`nodebook.test.ts`).
+- [x] `quoteRefresher` test for the multi-capability happy path + the missing-capability case (`quoteRefresher.test.ts` + `nodes.test.ts`).
+- [x] Existing chat / embeddings / images integration tests pass against the new shape (test files updated in the same PR).
 
 ### Docs
 
-- [ ] Update `docs/design-docs/node-lifecycle.md` (if it exists) or `docs/references/openai-bridge-architecture.md` to describe the `(capability, model)` quote storage.
-- [ ] Note the `capabilityString` mapping in the worker-node-contract doc so operators understand the namespace.
+- [x] Worker-node-contract doc (`docs/references/worker-node-contract.md`) carries the `capabilityString` namespace via `/capabilities` + `/quotes` sections.
+- [ ] `docs/design-docs/node-lifecycle.md` rewrite for the per-capability quote model — folded into the broader stale-doc sweep tracked separately, not blocking 0020.
 
 ## Decisions log
 
@@ -76,4 +75,12 @@ This is the phase-2 rework 0018 deferred. 0018 non-goals: *"NodeEntry.quote stay
 
 ## Artifacts produced
 
-_(to be populated on completion)_
+- `src/types/capability.ts` — `capabilityString(cap)` mapping (`chat`/`embeddings`/`images` → `openai:/v1/...`). Single source of truth across the bridge.
+- `src/types/node.ts` — `Quote.modelPrices: Map<string, bigint>` added; `NodeEntry.quote` removed in favor of `NodeEntry.quotes: Map<string, Quote>`.
+- `src/service/nodes/nodebook.ts` — `setCapabilityQuote`, `setAllQuotes`, `findNodesFor` now requires a quote-for-capability match.
+- `src/service/nodes/quoteRefresher.ts` — single `getQuotes({ url, sender })` per tick; projects results into `setAllQuotes`; logs a warn when an advertised capability is missing from the worker's response.
+- `src/runtime/http/chat/completions.ts`, `src/runtime/http/chat/streaming.ts`, `src/runtime/http/embeddings/index.ts`, `src/runtime/http/images/generations.ts` — switched to `node.quotes.get(capabilityString(...))`.
+- `src/service/routing/router.ts` + `retry.ts` — propagated capability through retry loop so failover continues to require quote presence.
+- Test updates: `nodebook.test.ts`, `nodes.test.ts`, `quoteRefresher.test.ts`, `router.test.ts`, `retry.test.ts`, `chat/completions.test.ts`, `chat/streaming.test.ts`, `embeddings/embeddings.test.ts`, `images/images.test.ts`.
+
+Followed by `0019-audio-endpoints` which extends `capabilityString` with `'speech'` and `'transcriptions'` entries.
