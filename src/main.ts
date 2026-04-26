@@ -47,6 +47,7 @@ import { createPaymentsService } from './service/payments/createPayment.js';
 import { createSessionCache } from './service/payments/sessions.js';
 import { createNodesLoader } from './service/nodes/loader.js';
 import { NodeBook } from './service/nodes/nodebook.js';
+import { createNodeBookRegistry } from './service/nodes/nodebookRegistry.js';
 import { createQuoteRefresher } from './service/nodes/quoteRefresher.js';
 import { realScheduler } from './service/nodes/scheduler.js';
 import { createRateLimiter } from './service/rateLimit/index.js';
@@ -144,6 +145,12 @@ async function main(): Promise<void> {
   // Services.
   const authService = createAuthService({ db, config: authConfig });
   const authResolver = createAuthResolver({ authService });
+  // ServiceRegistryClient — stage-1 NodeBook-backed wrapper. Stage-2 swaps
+  // for a gRPC client to livepeer-modules-project/service-registry-daemon
+  // and threads serviceRegistry through dispatchers + quoteRefresher;
+  // route handlers don't consume it yet.
+  const serviceRegistry = createNodeBookRegistry({ nodeBook });
+  void serviceRegistry; // wired here; stage-2 makes the pass-through exclusive
   const sessionCache = createSessionCache({ payerDaemon });
   const paymentsService = createPaymentsService({ payerDaemon, sessions: sessionCache });
   const rateLimiter = createRateLimiter({ redis, config: rateLimitConfig, recorder });
