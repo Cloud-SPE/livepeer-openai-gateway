@@ -9,7 +9,7 @@ opened: 2026-04-26
 
 ## Goal
 
-Stage 3 of a 4-stage extraction. With interfaces ([`0024`](../completed/0024-engine-extraction-interfaces.md)) and dispatchers ([`0025`](./0025-engine-extraction-dispatchers.md)) in place, this stage performs the actual file moves: convert the repo to npm workspaces, create `packages/bridge-core/` (engine) and `packages/livepeer-openai-gateway/` (shell), split the Postgres schema into `engine.*` and `app.*` namespaces, rewrite the migration history clean (nothing is deployed; we drop `migrations/0000-0006.sql` and start fresh per package), split metric-name prefixes, set up per-package ESLint configs, and rename this repo from `openai-livepeer-bridge` to `livepeer-openai-gateway`.
+Stage 3 of a 4-stage extraction. With interfaces ([`0024`](../completed/0024-engine-extraction-interfaces.md)) and dispatchers ([`0025`](../completed/0025-engine-extraction-dispatchers.md)) in place, this stage performs the actual file moves: convert the repo to npm workspaces, create `packages/bridge-core/` (engine) and `packages/livepeer-openai-gateway/` (shell), split the Postgres schema into `engine.*` and `app.*` namespaces, rewrite the migration history clean (nothing is deployed; we drop `migrations/0000-0006.sql` and start fresh per package), split metric-name prefixes, set up per-package ESLint configs, and rename this repo from `openai-livepeer-bridge` to `livepeer-openai-gateway`.
 
 After this stage:
 - `packages/bridge-core/` is a self-contained engine package with its own `package.json`, `tsconfig.json`, `vitest.config.ts`, ESLint config, migrations, tests, dashboard, and proto-generated stubs for both daemons (payment + service-registry).

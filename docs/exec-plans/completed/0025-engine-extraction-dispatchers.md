@@ -2,9 +2,10 @@
 id: 0025
 slug: engine-extraction-dispatchers
 title: Engine extraction stage 2 — extract framework-free dispatchers from runtime/http/* route handlers; split AdminService into engine + shell halves; replace NodeBook with the service-registry-daemon gRPC client and retire nodes.yaml; scaffold the read-only operator dashboard
-status: active
+status: completed
 owner: agent
 opened: 2026-04-26
+closed: 2026-04-26
 ---
 
 ## Goal
