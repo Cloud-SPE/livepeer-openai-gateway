@@ -9,11 +9,11 @@ opened: 2026-04-26
 
 ## Goal
 
-Stage 2 of a 4-stage extraction. With adapter interfaces in place from [`0024-engine-extraction-interfaces.md`](./0024-engine-extraction-interfaces.md), this stage pulls the orchestration logic out of the Fastify route handlers (`src/runtime/http/chat/completions.ts`, `streaming.ts`, `embeddings/`, `images/`, `audio/`) into framework-free dispatcher functions under a new `src/dispatch/` directory. Each dispatcher takes adapter dependencies (`wallet`, `caller`, `body`, plus engine providers) and returns the response — no Fastify dependency, unit-testable in isolation, callable from any HTTP framework.
+Stage 2 of a 4-stage extraction. With adapter interfaces in place from [`0024-engine-extraction-interfaces.md`](../completed/0024-engine-extraction-interfaces.md), this stage pulls the orchestration logic out of the Fastify route handlers (`src/runtime/http/chat/completions.ts`, `streaming.ts`, `embeddings/`, `images/`, `audio/`) into framework-free dispatcher functions under a new `src/dispatch/` directory. Each dispatcher takes adapter dependencies (`wallet`, `caller`, `body`, plus engine providers) and returns the response — no Fastify dependency, unit-testable in isolation, callable from any HTTP framework.
 
 This stage also splits the existing `AdminService` into an engine half (node + payment ops: `listNodes`, `nodeDetail`, `listReservations`, `nodesConfigView`) and a shell half (customer ops: `searchCustomers`, `customerDetail`, `searchTopups`, `auditFeed`, `issueKey`, `refund`, `suspend`, `unsuspend`). Two separate service factories, two separate route registration functions, both wired through the same `adminAuth` middleware.
 
-This stage also retires the engine's static node registry. The `ServiceRegistryClient` interface defined in [`0024`](./0024-engine-extraction-interfaces.md) gets its real implementation: a gRPC client to `livepeer-modules-project/service-registry-daemon`. `NodeBook`, `loader.ts`, `nodes.yaml`, and the `src/service/nodes/` directory retire. Selection moves daemon-side via `Select(capability, model, tier, geo, excludeIds)` calls. Quote refresh and circuit-breaker stay bridge-side (they're per-process state, not shared). The `service/nodes/` files that aren't strictly node-discovery (`quoteRefresher`, `circuitBreaker`, `scheduler`) move into `service/routing/`. The bridge now requires both daemons (payment + service-registry) as sidecars.
+This stage also retires the engine's static node registry. The `ServiceRegistryClient` interface defined in [`0024`](../completed/0024-engine-extraction-interfaces.md) gets its real implementation: a gRPC client to `livepeer-modules-project/service-registry-daemon`. `NodeBook`, `loader.ts`, `nodes.yaml`, and the `src/service/nodes/` directory retire. Selection moves daemon-side via `Select(capability, model, tier, geo, excludeIds)` calls. Quote refresh and circuit-breaker stay bridge-side (they're per-process state, not shared). The `service/nodes/` files that aren't strictly node-discovery (`quoteRefresher`, `circuitBreaker`, `scheduler`) move into `service/routing/`. The bridge now requires both daemons (payment + service-registry) as sidecars.
 
 Finally, this stage scaffolds the engine's optional read-only operator dashboard at `src/dashboard/` (vanilla TS, server-rendered HTML + minimal client JS, no Lit/RxJS dependencies, no shared code with `bridge-ui/`). Mounted via a Fastify plugin at `/admin/ops/*`. v1 is read-only (node health, quote freshness, payer-daemon status, recent dispatches, build info). Action surface deferred to backlog.
 
@@ -96,7 +96,7 @@ Each route handler shrinks to a Fastify wrapper that parses the body, calls the 
 
 ### 4. RegistryDaemonClient + retire NodeBook + reshape routing
 
-The `ServiceRegistryClient` interface from stage 1 ([`0024`](./0024-engine-extraction-interfaces.md)) gets its real implementation, and the static-YAML path retires.
+The `ServiceRegistryClient` interface from stage 1 ([`0024`](../completed/0024-engine-extraction-interfaces.md)) gets its real implementation, and the static-YAML path retires.
 
 **4a. Generate proto stubs and add the gRPC client.**
 

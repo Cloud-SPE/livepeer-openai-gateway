@@ -9,7 +9,7 @@ opened: 2026-04-26
 
 ## Goal
 
-Author the community-hygiene artifacts the public engine repo (`Cloud-SPE/livepeer-bridge-core`) needs before its first external adopter shows up. Runs in parallel with the four extraction stages ([`0024`](./0024-engine-extraction-interfaces.md) through [`0027`](./0027-engine-extraction-public-release.md)) — the docs are drafted here and committed to the public repo when stage 4 bootstraps it.
+Author the community-hygiene artifacts the public engine repo (`Cloud-SPE/livepeer-bridge-core`) needs before its first external adopter shows up. Runs in parallel with the four extraction stages ([`0024`](../completed/0024-engine-extraction-interfaces.md) through [`0027`](./0027-engine-extraction-public-release.md)) — the docs are drafted here and committed to the public repo when stage 4 bootstraps it.
 
 Non-blocking for stages 1–3 (which produce no public artifacts). Hard-blocks stage 4's `npm publish` until LICENSE + README are written; the rest can land within the first week post-publish.
 
