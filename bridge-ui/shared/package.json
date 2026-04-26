@@ -1,0 +1,11 @@
+{
+  "name": "@bridge-ui/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Cross-UI primitives for bridge-ui consumers (portal, admin). A workspace member with no own deps — consumers (portal, admin) carry lit + rxjs and shared resolves them via the hoisted bridge-ui/node_modules.",
+  "peerDependencies": {
+    "lit": "^3.3.0",
+    "rxjs": "^7.8.0"
+  }
+}

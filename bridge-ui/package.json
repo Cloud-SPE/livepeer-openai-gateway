@@ -1,0 +1,22 @@
+{
+  "name": "@bridge-ui/root",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "npm-workspace root for the bridge-ui modules. Hoists lit + rxjs into one node_modules so shared and consumer modules (portal, admin) resolve a single instance.",
+  "workspaces": [
+    "shared",
+    "portal",
+    "admin"
+  ],
+  "scripts": {
+    "build:portal": "npm run build -w portal",
+    "build:admin": "npm run build -w admin",
+    "build:all": "npm run build:portal && npm run build:admin",
+    "dev:portal": "npm run dev -w portal",
+    "dev:admin": "npm run dev -w admin",
+    "test:portal": "npm test -w portal",
+    "test:admin": "npm test -w admin",
+    "test:all": "npm run test:portal && npm run test:admin"
+  }
+}

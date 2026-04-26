@@ -1,0 +1,196 @@
+/* Portal stylesheet — pulls shared layers via @import, then defines per-module
+   layout and component blocks. Layer order is the project standard. */
+
+@layer reset, tokens, base, layout, components, utilities;
+
+@import url("../shared/css/reset.css") layer(reset);
+@import url("../shared/css/tokens.css") layer(tokens);
+@import url("../shared/css/base.css") layer(base);
+@import url("../shared/css/utilities.css") layer(utilities);
+
+@layer layout {
+  portal-app {
+    display: grid;
+    min-height: 100dvh;
+    grid-template-rows: auto 1fr;
+    background: var(--surface-0);
+  }
+
+  portal-app header.app-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-3) var(--space-5);
+    background: var(--surface-1);
+    border-bottom: 1px solid var(--border-1);
+  }
+
+  portal-app header.app-bar .brand {
+    font-weight: 700;
+    font-size: var(--font-size-lg);
+    letter-spacing: -0.01em;
+  }
+
+  portal-app header.app-bar .nav {
+    display: flex;
+    gap: var(--space-1);
+  }
+  portal-app header.app-bar .nav button {
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    color: var(--text-2);
+    transition: background var(--duration-fast) var(--ease-standard),
+                color var(--duration-fast) var(--ease-standard);
+  }
+  portal-app header.app-bar .nav button:hover { background: var(--surface-2); color: var(--text-1); }
+  portal-app header.app-bar .nav button[aria-current='page'] {
+    background: var(--accent-tint);
+    color: var(--accent);
+  }
+
+  portal-app header.app-bar .meta {
+    display: flex;
+    gap: var(--space-3);
+    align-items: center;
+    font-size: var(--font-size-sm);
+    color: var(--text-2);
+  }
+  portal-app header.app-bar .tier-pill {
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-pill);
+    background: var(--accent-tint);
+    color: var(--accent);
+    font-weight: 600;
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  portal-app main.app-main {
+    padding: var(--space-6) var(--space-5);
+    max-width: 72rem;
+    width: 100%;
+    margin: 0 auto;
+    view-transition-name: portal-main;
+  }
+}
+
+@layer components {
+  /* Sign-in */
+  portal-login {
+    display: grid;
+    place-items: center;
+    min-height: 100dvh;
+    padding: var(--space-5);
+  }
+  portal-login .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border-1);
+    border-radius: var(--radius-lg);
+    padding: var(--space-7);
+    width: min(28rem, 100%);
+    box-shadow: var(--shadow-md);
+    display: grid;
+    gap: var(--space-4);
+  }
+  portal-login h1 { font-size: var(--font-size-2xl); margin: 0; }
+  portal-login p { font-size: var(--font-size-sm); margin: 0; }
+  portal-login .field { display: grid; gap: var(--space-2); }
+  portal-login label { font-size: var(--font-size-sm); color: var(--text-2); }
+  portal-login input {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-sm);
+  }
+  portal-login .error {
+    color: var(--danger);
+    font-size: var(--font-size-sm);
+    background: var(--danger-tint);
+    border-radius: var(--radius-md);
+    padding: var(--space-2) var(--space-3);
+  }
+
+  /* Dashboard */
+  portal-dashboard {
+    display: grid;
+    gap: var(--space-5);
+  }
+  portal-dashboard h1 { margin: 0; }
+  portal-dashboard .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: var(--space-4);
+  }
+  portal-dashboard .tile {
+    background: var(--surface-1);
+    border: 1px solid var(--border-1);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+  }
+  portal-dashboard .tile .label {
+    font-size: var(--font-size-sm);
+    color: var(--text-3);
+    margin-bottom: var(--space-2);
+  }
+  portal-dashboard .tile .value {
+    font-size: clamp(1.75rem, 1.4rem + 1.5vw, 2.5rem);
+    font-weight: 700;
+    color: var(--text-1);
+    font-feature-settings: "tnum";
+  }
+  portal-dashboard .tile.has-warning:has([data-low='true']) {
+    border-color: var(--warning);
+  }
+  portal-dashboard .quota-bar {
+    height: 6px;
+    background: var(--surface-3);
+    border-radius: var(--radius-pill);
+    overflow: hidden;
+    margin-top: var(--space-3);
+  }
+  portal-dashboard .quota-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width var(--duration-base) var(--ease-standard);
+  }
+
+  /* Keys */
+  portal-keys h1 { margin-top: 0; }
+  portal-keys .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+  }
+  portal-keys .new-key {
+    background: var(--success-tint);
+    border: 1px solid var(--success);
+    border-radius: var(--radius-md);
+    padding: var(--space-3) var(--space-4);
+    margin-bottom: var(--space-4);
+    display: grid;
+    gap: var(--space-2);
+  }
+  portal-keys .new-key code {
+    user-select: all;
+    background: var(--surface-1);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-sm);
+    overflow-wrap: anywhere;
+  }
+  portal-keys .key-status[data-revoked='true'] { color: var(--text-3); }
+  portal-keys .key-status[data-revoked='false'] { color: var(--success); font-weight: 600; }
+
+  /* Page header */
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-3);
+    margin-bottom: var(--space-5);
+  }
+  .page-header h1 { margin: 0; }
+}

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
 import { startTestPg, type TestPg } from '../service/billing/testPg.js';
+import * as apiKeysRepo from './apiKeys.js';
 import * as customersRepo from './customers.js';
 import * as reservationsRepo from './reservations.js';
 import * as topupsRepo from './topups.js';
@@ -90,6 +91,106 @@ describe('repo/topups', () => {
     expect(inserted.status).toBe('pending');
 
     await topupsRepo.updateTopupStatus(pg.db, 'cs_t_1', 'succeeded');
+  });
+
+  it('findByCustomer paginates desc by createdAt with cursor', async () => {
+    const a = await customersRepo.insertCustomer(pg.db, { email: 'pa@x.io', tier: 'prepaid' });
+    const b = await customersRepo.insertCustomer(pg.db, { email: 'pb@x.io', tier: 'prepaid' });
+
+    // Insert with manual createdAt to control ordering
+    for (let i = 1; i <= 5; i++) {
+      await topupsRepo.insertTopup(pg.db, {
+        customerId: a.id,
+        stripeSessionId: `cs_a_${i}`,
+        amountUsdCents: BigInt(i * 1000),
+        status: 'succeeded',
+        createdAt: new Date(`2026-04-${10 + i}T10:00:00Z`),
+      });
+    }
+    await topupsRepo.insertTopup(pg.db, {
+      customerId: b.id,
+      stripeSessionId: 'cs_b_1',
+      amountUsdCents: 9999n,
+      status: 'succeeded',
+    });
+
+    const page1 = await topupsRepo.findByCustomer(pg.db, a.id, { limit: 2 });
+    expect(page1).toHaveLength(2);
+    expect(page1[0]?.stripeSessionId).toBe('cs_a_5');
+    expect(page1[1]?.stripeSessionId).toBe('cs_a_4');
+
+    const cursor = page1[1]?.createdAt;
+    expect(cursor).toBeInstanceOf(Date);
+    const page2 = await topupsRepo.findByCustomer(pg.db, a.id, {
+      limit: 2,
+      cursorCreatedAt: cursor!,
+    });
+    expect(page2).toHaveLength(2);
+    expect(page2[0]?.stripeSessionId).toBe('cs_a_3');
+    expect(page2[1]?.stripeSessionId).toBe('cs_a_2');
+
+    // Customer isolation — b's row never appears in a's pages
+    const all = [...page1, ...page2];
+    expect(all.some((r) => r.stripeSessionId === 'cs_b_1')).toBe(false);
+  });
+
+  it('findByCustomer returns empty for unknown customer', async () => {
+    const rows = await topupsRepo.findByCustomer(pg.db, '00000000-0000-4000-8000-000000000000', {
+      limit: 10,
+    });
+    expect(rows).toEqual([]);
+  });
+});
+
+describe('repo/apiKeys (extensions)', () => {
+  it('findByCustomer returns all keys (active + revoked) sorted desc', async () => {
+    const customer = await customersRepo.insertCustomer(pg.db, {
+      email: 'ka@x.io',
+      tier: 'prepaid',
+    });
+    const k1 = await apiKeysRepo.insertApiKey(pg.db, {
+      customerId: customer.id,
+      hash: 'hash-1',
+      label: 'old',
+    });
+    const k2 = await apiKeysRepo.insertApiKey(pg.db, {
+      customerId: customer.id,
+      hash: 'hash-2',
+      label: 'newer',
+    });
+    await apiKeysRepo.revoke(pg.db, k1.id, new Date());
+
+    const rows = await apiKeysRepo.findByCustomer(pg.db, customer.id);
+    expect(rows).toHaveLength(2);
+    // Newer first
+    expect(rows[0]?.id).toBe(k2.id);
+    expect(rows[0]?.revokedAt).toBeNull();
+    expect(rows[1]?.id).toBe(k1.id);
+    expect(rows[1]?.revokedAt).toBeInstanceOf(Date);
+  });
+
+  it('countActiveByCustomer excludes revoked keys', async () => {
+    const customer = await customersRepo.insertCustomer(pg.db, {
+      email: 'kc@x.io',
+      tier: 'prepaid',
+    });
+    const k1 = await apiKeysRepo.insertApiKey(pg.db, { customerId: customer.id, hash: 'h-c-1' });
+    await apiKeysRepo.insertApiKey(pg.db, { customerId: customer.id, hash: 'h-c-2' });
+    await apiKeysRepo.insertApiKey(pg.db, { customerId: customer.id, hash: 'h-c-3' });
+    await apiKeysRepo.revoke(pg.db, k1.id, new Date());
+
+    expect(await apiKeysRepo.countActiveByCustomer(pg.db, customer.id)).toBe(2);
+  });
+
+  it('findByCustomer isolates per customer', async () => {
+    const a = await customersRepo.insertCustomer(pg.db, { email: 'iso-a@x.io', tier: 'prepaid' });
+    const b = await customersRepo.insertCustomer(pg.db, { email: 'iso-b@x.io', tier: 'prepaid' });
+    await apiKeysRepo.insertApiKey(pg.db, { customerId: a.id, hash: 'iso-h-a' });
+    await apiKeysRepo.insertApiKey(pg.db, { customerId: b.id, hash: 'iso-h-b' });
+
+    const rowsA = await apiKeysRepo.findByCustomer(pg.db, a.id);
+    expect(rowsA).toHaveLength(1);
+    expect(rowsA[0]?.hash).toBe('iso-h-a');
   });
 });
 

@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, desc, eq, lt } from 'drizzle-orm';
 import type { Db } from './db.js';
 import { nodeHealth, nodeHealthEvents } from './schema.js';
 
@@ -42,4 +42,23 @@ export async function insertNodeHealthEvent(
 
 export async function listEventsForNode(db: Db, nodeId: string): Promise<NodeHealthEventRow[]> {
   return db.select().from(nodeHealthEvents).where(eq(nodeHealthEvents.nodeId, nodeId));
+}
+
+/** Cursor-paginated, descending — newest events first. */
+export async function searchEventsForNode(
+  db: Db,
+  options: { nodeId: string; limit: number; cursorOccurredAt?: Date },
+): Promise<NodeHealthEventRow[]> {
+  const where = options.cursorOccurredAt
+    ? and(
+        eq(nodeHealthEvents.nodeId, options.nodeId),
+        lt(nodeHealthEvents.occurredAt, options.cursorOccurredAt),
+      )
+    : eq(nodeHealthEvents.nodeId, options.nodeId);
+  return db
+    .select()
+    .from(nodeHealthEvents)
+    .where(where)
+    .orderBy(desc(nodeHealthEvents.occurredAt))
+    .limit(options.limit);
 }

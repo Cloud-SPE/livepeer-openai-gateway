@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, asc, eq, gt } from 'drizzle-orm';
 import type { Db } from './db.js';
 import { reservations } from './schema.js';
 
@@ -27,4 +27,24 @@ export async function updateState(
   resolvedAt: Date,
 ): Promise<void> {
   await db.update(reservations).set({ state, resolvedAt }).where(eq(reservations.id, id));
+}
+
+/**
+ * List reservations in a given state, oldest first — operators investigating
+ * stuck reservations want the longest-open ones at the top. Cursor pages by
+ * (createdAt, id) ascending; pass the last seen createdAt to continue.
+ */
+export async function listByState(
+  db: Db,
+  options: { state: ReservationState; limit: number; cursorCreatedAt?: Date },
+): Promise<ReservationRow[]> {
+  const where = options.cursorCreatedAt
+    ? and(eq(reservations.state, options.state), gt(reservations.createdAt, options.cursorCreatedAt))
+    : eq(reservations.state, options.state);
+  return db
+    .select()
+    .from(reservations)
+    .where(where)
+    .orderBy(asc(reservations.createdAt))
+    .limit(options.limit);
 }

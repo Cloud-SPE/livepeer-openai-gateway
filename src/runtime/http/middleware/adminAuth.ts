@@ -52,7 +52,15 @@ export function adminAuthPreHandler(deps: AdminAuthDeps): preHandlerAsyncHookHan
       return;
     }
 
-    req.adminActor = actorFromToken(token);
+    // Honor X-Admin-Actor when present and well-formed — operators set this
+    // at sign-in so audit rows carry a human-readable handle. Falls back to
+    // the token-hash when missing or malformed.
+    const actorHeader = req.headers['x-admin-actor'];
+    const actorClaim =
+      typeof actorHeader === 'string' && ADMIN_ACTOR_PATTERN.test(actorHeader)
+        ? actorHeader
+        : null;
+    req.adminActor = actorClaim ?? actorFromToken(token);
 
     // Record success after the handler replies so status_code reflects outcome.
     reply.raw.on('close', () => {
@@ -98,6 +106,11 @@ async function writeAuditAndReject(
     },
   });
 }
+
+// X-Admin-Actor header validation regex. Bounded free-text — keeps the column
+// useful (recognizable handles, not opaque hashes) without inviting injection
+// or unbounded growth. Matches the regex documented in 0023's plan.
+const ADMIN_ACTOR_PATTERN = /^[a-z0-9._-]{1,64}$/;
 
 function actorFromToken(token: string): string {
   return createHash('sha256').update(token).digest('hex').slice(0, 16);

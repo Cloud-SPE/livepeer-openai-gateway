@@ -1,4 +1,4 @@
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and, desc, isNull } from 'drizzle-orm';
 import type { Db } from './db.js';
 import { apiKeys, customers } from './schema.js';
 import type { CustomerRow } from './customers.js';
@@ -38,4 +38,20 @@ export async function revoke(db: Db, id: string, revokedAt: Date): Promise<void>
 
 export async function markUsed(db: Db, id: string, at: Date): Promise<void> {
   await db.update(apiKeys).set({ lastUsedAt: at }).where(eq(apiKeys.id, id));
+}
+
+export async function findByCustomer(db: Db, customerId: string): Promise<ApiKeyRow[]> {
+  return db
+    .select()
+    .from(apiKeys)
+    .where(eq(apiKeys.customerId, customerId))
+    .orderBy(desc(apiKeys.createdAt));
+}
+
+export async function countActiveByCustomer(db: Db, customerId: string): Promise<number> {
+  const rows = await db
+    .select()
+    .from(apiKeys)
+    .where(and(eq(apiKeys.customerId, customerId), isNull(apiKeys.revokedAt)));
+  return rows.length;
 }

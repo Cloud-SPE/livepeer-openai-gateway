@@ -72,6 +72,8 @@ async function buildServer(opts: { ipAllowlist?: string[] } = {}) {
     db: pg.db,
     config: { token: ADMIN_TOKEN, ipAllowlist: opts.ipAllowlist ?? [] },
     adminService,
+    authConfig: { pepper: 'admin-test-pepper-000', envPrefix: 'test', cacheTtlMs: 60_000 },
+    nodesConfigPath: '/dev/null',
   });
   await server.app.ready();
   return server;

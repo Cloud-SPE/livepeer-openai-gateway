@@ -24,8 +24,11 @@ import { createSdkStripeClient } from './providers/stripe/sdk.js';
 import { createTiktokenProvider } from './providers/tokenizer/tiktoken.js';
 import { makeDb } from './repo/db.js';
 import { runMigrations } from './repo/migrate.js';
+import { registerAccountRoutes } from './runtime/http/account/routes.js';
+import { registerAdminConsoleStatic } from './runtime/http/admin/console/static.js';
 import { registerAdminRoutes } from './runtime/http/admin/routes.js';
 import { registerTopupRoute } from './runtime/http/billing/topup.js';
+import { registerPortalStatic } from './runtime/http/portal/static.js';
 import { registerChatCompletionsRoute } from './runtime/http/chat/completions.js';
 import { registerEmbeddingsRoute } from './runtime/http/embeddings/index.js';
 import { registerImagesGenerationsRoute } from './runtime/http/images/generations.js';
@@ -235,7 +238,21 @@ async function main(): Promise<void> {
   });
   registerTopupRoute(server.app, { authService, stripe, config: stripeConfig });
   registerStripeWebhookRoute(server.app, { db, stripe, recorder });
-  registerAdminRoutes(server.app, { db, config: adminConfig, adminService });
+  registerAccountRoutes(server.app, {
+    db,
+    authService,
+    authConfig,
+    rateLimitConfig,
+  });
+  registerAdminRoutes(server.app, {
+    db,
+    config: adminConfig,
+    adminService,
+    authConfig,
+    nodesConfigPath: env.NODES_CONFIG_PATH,
+  });
+  await registerPortalStatic(server.app);
+  await registerAdminConsoleStatic(server.app);
 
   // Graceful shutdown.
   let shuttingDown = false;

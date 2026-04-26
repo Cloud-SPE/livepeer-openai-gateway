@@ -11,6 +11,7 @@ export default tseslint.config(
       'coverage/**',
       '**/*.d.ts',
       'src/providers/payerDaemon/gen/**',
+      'bridge-ui/**',
     ],
   },
   ...tseslint.configs.recommended,
