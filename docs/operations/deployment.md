@@ -19,15 +19,19 @@ How to run the bridge + payment daemon + postgres + redis stack end-to-end, for 
 
 - `compose.yaml` — dev stack: bridge (inline build), postgres, redis, `tztcloud/livepeer-payment-daemon:v0.8.10`.
 - `compose.prod.yaml` — prod override: pinned bridge image, restart policies, log rotation, resource limits, read-only hardening on the daemon, one-shot migration job.
+- `compose.smoke.yaml` — minimum-deps standalone smoke: postgres + redis + bridge only. No payment daemon, dummy Stripe values, all secrets inline. Use to verify the image + UIs + non-payment HTTP surface without standing up an EVM keystore / RPC / Stripe account. See "Smoke a built image" below.
 
-Dev invokes one file; prod layers both:
+Dev invokes one file; prod layers two; smoke is standalone:
 
 ```bash
-# dev
+# dev (inline build)
 docker compose up --build
 
-# prod
+# prod (consumes a pre-built image)
 docker compose -f compose.yaml -f compose.prod.yaml up -d
+
+# smoke (consumes openai-livepeer-bridge:local)
+docker compose -f compose.smoke.yaml up -d
 ```
 
 ## Dev walkthrough
@@ -195,6 +199,84 @@ Manual recipe today, CI workflow later. A future GitHub Actions workflow can wra
 ```
 
 Tracked as [`tech-debt`](../exec-plans/tech-debt-tracker.md) — local recipe is in place; the workflow is the remaining gap.
+
+## Smoke a built image (no daemon, no Stripe)
+
+`compose.smoke.yaml` brings up `postgres + redis + bridge` against the locally-built `openai-livepeer-bridge:local` image with the payment daemon stripped out, dummy Stripe values inline, and pre-baked dummy secrets. Use to verify the bridge image starts cleanly and serves the UIs (`/portal/*` + `/admin/console/*`) and the non-payment HTTP surface (`/healthz`, `/admin/*`, `/v1/account/*`) without standing up an Ethereum keystore + RPC + a real Stripe account.
+
+`/v1/chat/completions` and friends will return 503 (Invariant 6 — the bridge fails-closed when the PayerDaemon socket is unreachable). That's correct behavior, not a regression.
+
+### Bring it up
+
+```bash
+npm run docker:build                                       # if you haven't yet
+[ -f nodes.yaml ] || cp nodes.example.yaml nodes.yaml      # smoke needs at least one node
+docker compose -f compose.smoke.yaml up -d
+docker compose -f compose.smoke.yaml ps                    # all three should be healthy in ~15s
+```
+
+### Verify the wire
+
+```bash
+curl -s http://localhost:8080/healthz                       # → {"ok":true}
+curl -s http://localhost:8080/portal/                       # → SPA index.html
+curl -s http://localhost:8080/admin/console/                # → SPA index.html
+
+# Admin endpoints — token + actor are baked into compose.smoke.yaml
+TOKEN='smoke-admin-token-1234567890ABCDEFGHIJ'
+curl -s -H "X-Admin-Token: $TOKEN" -H 'X-Admin-Actor: smoke' \
+  http://localhost:8080/admin/health | python3 -m json.tool
+```
+
+`payerDaemonHealthy: false` is expected (the daemon is intentionally absent). `dbOk` + `redisOk` should be `true` and `nodeCount` should match `nodes.yaml`.
+
+### Seed a customer + key, exercise `/v1/account`
+
+```bash
+PEPPER='smoke-test-pepper-1234567890ABCDEF'
+SUFFIX=$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=')
+KEY="sk-test-${SUFFIX}"
+HASH=$(printf '%s' "$KEY" | openssl dgst -sha256 -hmac "$PEPPER" -hex | awk '{print $NF}')
+
+docker compose -f compose.smoke.yaml exec -T postgres \
+  psql -U bridge -d bridge -v ON_ERROR_STOP=1 <<SQL
+WITH c AS (
+  INSERT INTO customer (email, tier, balance_usd_cents)
+  VALUES ('smoke@example.com', 'prepaid', 1234)
+  RETURNING id
+)
+INSERT INTO api_key (customer_id, hash, label)
+SELECT id, '$HASH', 'smoke' FROM c;
+SQL
+
+curl -s -H "Authorization: Bearer $KEY" http://localhost:8080/v1/account | python3 -m json.tool
+# → {"balance_usd": "12.34", "tier": "prepaid", "email": "smoke@example.com", ...}
+```
+
+### Click around in the UIs
+
+- http://localhost:8080/portal/ — paste `$KEY` from the seed step. Dashboard shows `$12.34`.
+- http://localhost:8080/admin/console/ — paste `smoke-admin-token-1234567890ABCDEFGHIJ` + any handle (`alice`). The Health page renders the same data the curl above returned.
+
+### Tear down
+
+```bash
+docker compose -f compose.smoke.yaml down --volumes
+```
+
+`--volumes` drops the `pgdata` volume so the next smoke starts on a fresh schema.
+
+### What this smoke verifies vs. doesn't
+
+| Verified                                                         | Not verified                                                  |
+| ---------------------------------------------------------------- | ------------------------------------------------------------- |
+| Image builds + boots                                             | `/v1/chat/completions`, `/v1/embeddings`, `/v1/images/*` etc. |
+| Auto-migration runs against an empty DB                          | Real Stripe Checkout (dummy keys 401 against Stripe's API)    |
+| Both UI `dist/`s ship inside the image and serve correctly       | Real payment issuance (needs daemon + worker node + reserve)  |
+| Auth gates: `Authorization: Bearer` + `X-Admin-Token`             |                                                               |
+| `nodes.yaml` loads at startup; `/admin/nodes` reflects it         |                                                               |
+| USD-only formatting (cents → `$X.YZ`); never wei in customer view |                                                               |
+| 401 on missing/wrong auth                                         |                                                               |
 
 ## Prod walkthrough
 

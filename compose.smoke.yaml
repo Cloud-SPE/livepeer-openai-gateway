@@ -1,0 +1,99 @@
+# Local smoke stack — postgres + redis + bridge, no payment-daemon, no Stripe.
+#
+# Use this to verify the bridge image starts cleanly and serves the UIs
+# (/portal/* + /admin/console/*) and the non-payment HTTP surface (/healthz,
+# /admin/*, /v1/account/*) without standing up an Ethereum keystore + RPC + a
+# real Stripe account. The /v1/chat/completions path will fail-closed
+# (Invariant 6) — that's correct behavior, not a regression.
+#
+# Usage:
+#   npm run docker:build                                   # build the image first
+#   docker compose -f compose.smoke.yaml up -d
+#   curl http://localhost:8080/healthz
+#   docker compose -f compose.smoke.yaml down --volumes    # tear down (drops pgdata)
+#
+# Boot-time secrets are dummy values intentionally — never reuse for prod.
+
+name: livepeer-bridge-smoke
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: bridge
+      POSTGRES_PASSWORD: smokepw
+      POSTGRES_DB: bridge
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', 'bridge']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  bridge:
+    image: openai-livepeer-bridge:local
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      HOST: '0.0.0.0'
+      PORT: '8080'
+
+      # Database
+      PGHOST: postgres
+      PGPORT: '5432'
+      PGUSER: bridge
+      PGPASSWORD: smokepw
+      PGDATABASE: bridge
+
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+
+      # Auth — dummy but valid (>= 16 chars)
+      API_KEY_PEPPER: smoke-test-pepper-1234567890ABCDEF
+      API_KEY_ENV_PREFIX: test
+
+      # PayerDaemon — point at a path that doesn't exist. The health loop
+      # will log unhealthy + retry forever; the bridge stays up. /v1/chat
+      # and friends will return 503 (Invariant 6 — correct fail-closed).
+      PAYER_DAEMON_SOCKET: /tmp/no-payer-daemon.sock
+      BRIDGE_ETH_ADDRESS: '0x0000000000000000000000000000000000000001'
+
+      # Stripe — dummy values; webhook signature verification will reject any
+      # real Stripe call, but the bridge starts and /v1/billing/topup will
+      # construct a Checkout Session URL using the dummy secret (it'll 401
+      # against Stripe's real API; that's fine for a smoke).
+      STRIPE_SECRET_KEY: sk_test_smoke_dummy_does_not_authenticate
+      STRIPE_WEBHOOK_SECRET: whsec_smoke_dummy
+      STRIPE_SUCCESS_URL: http://localhost:8080/portal/billing/return
+      STRIPE_CANCEL_URL: http://localhost:8080/portal/billing
+
+      # Admin — dummy but valid (>= 32 chars)
+      ADMIN_TOKEN: smoke-admin-token-1234567890ABCDEFGHIJ
+      ADMIN_IP_ALLOWLIST: ''
+
+      NODES_CONFIG_PATH: /app/nodes.yaml
+      BRIDGE_AUTO_MIGRATE: 'true'
+    volumes:
+      - ./nodes.yaml:/app/nodes.yaml:ro
+    ports:
+      - '8080:8080'
+    healthcheck:
+      test:
+        - 'CMD'
+        - '/nodejs/bin/node'
+        - '-e'
+        - "require('http').get('http://127.0.0.1:8080/healthz',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
+      interval: 5s
+      timeout: 3s
+      retries: 20
