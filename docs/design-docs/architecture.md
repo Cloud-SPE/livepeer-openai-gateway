@@ -19,7 +19,7 @@ The TypeScript server lives under `src/`. Browser UIs (customer portal, operator
 └─────────────────────────────────────────────────────────┘
                         ↕ HTTP (no source imports)
 ┌─────────────────────────────────────────────────────────┐
-│  runtime/           HTTP, webhook, admin + portal endpoints  │  ← may import service, repo, providers, config, types
+│  runtime/           HTTP, webhook, admin + portal endpoints  │  ← may import service, repo, providers, config, types, interfaces
 │    ├─ http/chat/completions.ts                          │
 │    ├─ http/account/                                     │
 │    ├─ http/portal/        @fastify/static for /portal/* │
@@ -27,7 +27,7 @@ The TypeScript server lives under `src/`. Browser UIs (customer portal, operator
 │    ├─ admin/                                            │
 │    └─ admin/console/      @fastify/static for /admin/console/*
 ├─────────────────────────────────────────────────────────┤
-│  service/           business logic                      │  ← may import repo, providers, config, types
+│  service/           business logic                      │  ← may import repo, providers, config, types, interfaces
 │    ├─ auth/                                             │
 │    ├─ billing/                                          │
 │    ├─ routing/                                          │
@@ -44,7 +44,8 @@ The TypeScript server lives under `src/`. Browser UIs (customer portal, operator
 │  types/             Zod schemas, domain types           │  ← imports nothing in src/
 └─────────────────────────────────────────────────────────┘
 
-  providers/          cross-cutting interfaces + defaults
+  providers/          cross-cutting interfaces + defaults (engine-internal)
+  interfaces/         operator-overridable adapter contracts (per exec-plan 0024)
 ```
 
 ## Dependency rule
@@ -102,9 +103,23 @@ All cross-cutting concerns enter through `src/providers/`. One interface per con
 | `Tokenizer`         | Model-aware token counting (drift audit only — no enforcement in v1)                    | `tiktoken` default; per-model-family plugins |
 | `ChainInfo`         | Read-only Eth for admin views (escrow status)                                           | `viem`                                       |
 | `MetricsSink`       | Counter / Gauge / Histogram                                                             | No-op default; Prometheus later              |
-| `Logger`            | Structured log                                                                          | `pino`                                       |
+| `ServiceRegistryClient` | Engine-internal node discovery + selection (NOT operator-overridable)                | `createNodeBookRegistry` wrapping today's NodeBook (stage-1); stage-2 swaps for a gRPC client to `livepeer-modules-project/service-registry-daemon` |
 
 Providers are wired in `src/runtime/` entry points and injected into `service/` and `repo/`.
+
+## Operator-overridable adapters (`src/interfaces/`)
+
+Per exec-plan 0024 (engine-extraction-interfaces), the engine exposes five adapter contracts that operators implement to plug their own billing, auth, rate-limit, logging, and admin-auth into the engine. Distinct from `providers/` (which is engine-internal); operators replace these to integrate, not to extend.
+
+| Adapter             | Role                                                                                  | Default impl in this repo                                                |
+| ------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `Wallet`            | reserve/commit/refund against the operator's billing model (USD-prepaid, free-quota, postpaid, crypto, etc.) | `createPrepaidQuotaWallet` in `src/service/billing/wallet.ts` — wraps the existing reserve/commit/refund branches |
+| `AuthResolver`      | Resolve an inbound HTTP request to a `Caller {id, tier, metadata?}` or null             | `createAuthResolver` in `src/service/auth/authResolver.ts` — wraps the existing AuthService |
+| `RateLimiter`       | Per-caller rate-limit policy enforcement (optional, opt-in at route registration)       | `createRateLimiter` in `src/service/rateLimit/index.ts` — Redis sliding-window + concurrent-request semaphore |
+| `Logger`            | `info` / `warn` / `error` structured log                                                | `createConsoleLogger` in `src/providers/logger/console.ts`              |
+| `AdminAuthResolver` | Hook for the engine's optional read-only operator dashboard (lands in stage 2)          | `createAdminAuthResolver` in `src/service/admin/authResolver.ts` — X-Admin-Token + X-Admin-Actor + IP allowlist |
+
+A generic `Caller {id, tier, metadata?}` is the engine's view of "who's calling." `metadata` is operator-defined and opaque to the engine; shell-side route handlers narrow via `caller.metadata as AuthenticatedCaller` to reach the customer row, API key, or other shell-specific fields.
 
 ## Build artifacts
 
