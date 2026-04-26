@@ -42,6 +42,9 @@ import { createMetricsServer } from './runtime/metrics/server.js';
 import { createAdminService } from './service/admin/index.js';
 import { createAuthService } from './service/auth/index.js';
 import { createAuthResolver } from './service/auth/authResolver.js';
+import { createBasicAdminAuthResolver } from './service/admin/basicAuthResolver.js';
+import { createEngineAdminService } from './service/admin/engine.js';
+import { registerOperatorDashboard } from './dashboard/index.js';
 import { createPrepaidQuotaWallet } from './service/billing/wallet.js';
 import { createMetricsSampler } from './service/metrics/sampler.js';
 import { createPaymentsService } from './service/payments/createPayment.js';
@@ -65,6 +68,12 @@ const MainEnvSchema = z.object({
     .union([z.literal('true'), z.literal('false')])
     .transform((v) => v === 'true')
     .default('true'),
+  BRIDGE_DASHBOARD_ENABLED: z
+    .union([z.literal('true'), z.literal('false')])
+    .transform((v) => v === 'true')
+    .default('false'),
+  BRIDGE_OPS_USER: z.string().optional(),
+  BRIDGE_OPS_PASS: z.string().optional(),
 });
 
 async function main(): Promise<void> {
@@ -309,6 +318,30 @@ async function main(): Promise<void> {
   });
   await registerPortalStatic(server.app);
   await registerAdminConsoleStatic(server.app);
+
+  // Engine's optional read-only operator dashboard. Off by default; the
+  // shell ships its own richer admin SPA at /admin/console. OSS adopters
+  // who don't have a token-issuing shell wire BRIDGE_DASHBOARD_ENABLED=
+  // true + BRIDGE_OPS_USER/PASS for HTTP basic auth.
+  if (env.BRIDGE_DASHBOARD_ENABLED) {
+    if (!env.BRIDGE_OPS_USER || !env.BRIDGE_OPS_PASS) {
+      throw new Error(
+        'BRIDGE_DASHBOARD_ENABLED=true requires BRIDGE_OPS_USER and BRIDGE_OPS_PASS',
+      );
+    }
+    registerOperatorDashboard(server.app, {
+      adminAuthResolver: createBasicAdminAuthResolver({
+        user: env.BRIDGE_OPS_USER,
+        pass: env.BRIDGE_OPS_PASS,
+      }),
+      engineAdminService: createEngineAdminService({ db, payerDaemon, redis, nodeBook }),
+      buildInfo: {
+        version: pkgVersion,
+        nodeVersion: process.versions.node,
+        environment: process.env.NODE_ENV ?? 'development',
+      },
+    });
+  }
 
   // Graceful shutdown.
   void quoteCache;
