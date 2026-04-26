@@ -120,4 +120,4 @@ The admin services do **not** auto-poll in v1. Each page fetches once on mount; 
 - [`docs/product-specs/admin-endpoints.md`](./admin-endpoints.md) — JSON surface this console consumes.
 - [`docs/design-docs/ui-architecture.md`](../design-docs/ui-architecture.md) — implementation contract.
 - [`docs/operations/deployment.md`](../operations/deployment.md) — Grafana embedding options.
-- [`docs/exec-plans/active/0023-operator-admin.md`](../exec-plans/active/0023-operator-admin.md) — exec plan tracking the build.
+- [`docs/exec-plans/completed/0023-operator-admin.md`](../exec-plans/completed/0023-operator-admin.md) — exec plan tracking the build.

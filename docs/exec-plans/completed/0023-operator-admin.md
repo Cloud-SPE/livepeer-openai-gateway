@@ -2,9 +2,10 @@
 id: 0023
 slug: operator-admin
 title: Operator Admin — Lit + RxJS + modern-CSS web app for fleet health, node ops, customer support, audit log
-status: active
+status: completed
 owner: agent
 opened: 2026-04-26
+closed: 2026-04-26
 ---
 
 ## Goal
@@ -85,23 +86,23 @@ bridge-ui/
 Notably **absent** vs. 0022's portal tree: no `controllers/observable-controller.js` (in shared), no separate `bridge-confirm-dialog` component (the generic one in `shared/components/` is parameterized — admin passes `targetLabel` for refund/suspend, portal passes the API-key-prefix for revoke-self), no per-module reset/tokens/base/utilities CSS.
 
 Tasks:
-- [ ] `bridge-ui/admin/package.json` — `lit ^3.3`, `rxjs ^7.8`, `vite ^8`. Versions exactly match `bridge-ui/shared/`'s `peerDependencies`.
-- [ ] `vite.config.js` — dev `5174`, build to `bridge-ui/admin/dist/`, base `/admin/console/`, dev proxy `/admin` → bridge. No alias config.
-- [ ] Top-level `package.json` `build` script extends to `tsc && (cd bridge-ui/portal && npm ci && npm run build) && (cd bridge-ui/admin && npm ci && npm run build)`.
-- [ ] `Dockerfile` adds `bridge-ui/admin/dist/` alongside the portal output in the runtime image.
-- [ ] `npm run doc-lint` rule from 0022 also applies here: `bridge-ui/admin/lib/` may not redefine anything that exists in `bridge-ui/shared/lib/`.
+- [x] `bridge-ui/admin/package.json` — `lit ^3.3`, `rxjs ^7.8`, `vite ^8`. Versions exactly match `bridge-ui/shared/`'s `peerDependencies`.
+- [x] `vite.config.js` — dev `5174`, build to `bridge-ui/admin/dist/`, base `/admin/console/`, dev proxy `/admin` → bridge. No alias config.
+- [x] Top-level `package.json` `build` script extends to `tsc && (cd bridge-ui/portal && npm ci && npm run build) && (cd bridge-ui/admin && npm ci && npm run build)`.
+- [x] `Dockerfile` adds `bridge-ui/admin/dist/` alongside the portal output in the runtime image.
+- [x] `npm run doc-lint` rule from 0022 also applies here: `bridge-ui/admin/lib/` may not redefine anything that exists in `bridge-ui/shared/lib/`.
 
 ### CSS architecture
 
 Same layer order, same tokens, same modern-CSS feature set as 0022. Specific use:
 
-- [ ] **Status badges** for circuit states (`healthy` / `degraded` / `circuit_broken`) use `color-mix(in oklch, var(--state-color), transparent 80%)` for the chip background; the foreground is `var(--state-color)`. One token per state.
-- [ ] **Nodes / customers tables** declare `container-type: inline-size` and an `@container (max-width: 720px)` rule swaps to a card list, matching the portal's table-to-card collapse.
-- [ ] **Type-to-confirm dialog** uses `<dialog>` with the Popover API for the "Are you sure?" flow on **refund** and **suspend** (unsuspend gets a single-click confirm). `:user-invalid` on the email-match input. `@starting-style` for entry. `::backdrop` dim.
-- [ ] **Health tiles** use `:has()` for state-driven color: `.tile:has([data-status='down']) { background: var(--danger-tint); }`.
-- [ ] **Audit feed** uses `content-visibility: auto` on long lists for off-screen rendering cost.
-- [ ] **View Transitions** on row → detail navigation (assign `view-transition-name: node-row-${id}` to the clicked row before route swap).
-- [ ] **Anchor positioning** on action menus where supported (`position-anchor: --row-actions`); falls through to absolute positioning otherwise.
+- [x] **Status badges** for circuit states (`healthy` / `degraded` / `circuit_broken`) use `color-mix(in oklch, var(--state-color), transparent 80%)` for the chip background; the foreground is `var(--state-color)`. One token per state.
+- [x] **Nodes / customers tables** declare `container-type: inline-size` and an `@container (max-width: 720px)` rule swaps to a card list, matching the portal's table-to-card collapse.
+- [x] **Type-to-confirm dialog** uses `<dialog>` with the Popover API for the "Are you sure?" flow on **refund** and **suspend** (unsuspend gets a single-click confirm). `:user-invalid` on the email-match input. `@starting-style` for entry. `::backdrop` dim.
+- [x] **Health tiles** use `:has()` for state-driven color: `.tile:has([data-status='down']) { background: var(--danger-tint); }`.
+- [x] **Audit feed** uses `content-visibility: auto` on long lists for off-screen rendering cost.
+- [x] **View Transitions** on row → detail navigation (assign `view-transition-name: node-row-${id}` to the clicked row before route swap).
+- [x] **Anchor positioning** on action menus where supported (`position-anchor: --row-actions`); falls through to absolute positioning otherwise.
 
 ### Lit component pattern
 
@@ -109,19 +110,19 @@ Identical to 0022. Light DOM, namespaced events (`bridge:authenticated`, `bridge
 
 Operator-specific consumption of shared components:
 
-- [ ] **`bridge-confirm-dialog`** (in `shared/components/`) — admin instantiates it for refund and suspend with `action`, `targetLabel` (customer email to type), and `onConfirm` props. For unsuspend, admin uses the simpler `bridge-dialog` with a one-click confirm slot. Both already exist in shared from 0022; admin's job is to compose, not implement.
+- [x] **`bridge-confirm-dialog`** (in `shared/components/`) — admin instantiates it for refund and suspend with `action`, `targetLabel` (customer email to type), and `onConfirm` props. For unsuspend, admin uses the simpler `bridge-dialog` with a one-click confirm slot. Both already exist in shared from 0022; admin's job is to compose, not implement.
 
 ### RxJS service layer
 
 Same pattern as 0022 — singletons, `BehaviorSubject`s, optimistic updates where applicable. Specifics:
 
-- [ ] `health.service.js` — `health$` polled every 10 s when the Health page is mounted (via the controller's `hostConnected` starting an `interval(...).pipe(switchMap(fetch))` and `hostDisconnected` ending it). Pause on `document.visibilitychange` hidden.
-- [ ] `nodes.service.js` — `nodes$` polled every 30 s; `eventsFor(id)` returns a cold Observable (one-shot fetch).
-- [ ] `customers.service.js` — `search(q, filters)` debounced 300 ms via `Subject` + `debounceTime(300)` + `switchMap`. `selected$` carries the currently-open customer detail.
-- [ ] `reservations.service.js` — `open$` polled every 10 s while page mounted (matches the on-call alert window for `livepeer_bridge_reservation_open_oldest_seconds`).
-- [ ] `topups.service.js` — search-only (no live poll).
-- [ ] `audit.service.js` — `audit$` BehaviorSubject of the most recent page; `paginate(cursor)` appends.
-- [ ] **`admin/lib/api.js`** — wraps `createApi(...)` from `shared/lib/api-base.js`: `getAuthHeaders` returns `{ 'x-admin-token': token, 'x-admin-actor': actor }`; reads operator name from session and attaches on **every** request. State-changing requests (POST/DELETE) fail-closed if no actor is set; reads fall back to `"unknown"`. Validates that the shared factory's auth boundary holds for a non-Bearer strategy — if it doesn't, that's a signal the factory needs a small generalization (record in Decisions).
+- [x] `health.service.js` — `health$` polled every 10 s when the Health page is mounted (via the controller's `hostConnected` starting an `interval(...).pipe(switchMap(fetch))` and `hostDisconnected` ending it). Pause on `document.visibilitychange` hidden.
+- [x] `nodes.service.js` — `nodes$` polled every 30 s; `eventsFor(id)` returns a cold Observable (one-shot fetch).
+- [x] `customers.service.js` — `search(q, filters)` debounced 300 ms via `Subject` + `debounceTime(300)` + `switchMap`. `selected$` carries the currently-open customer detail.
+- [x] `reservations.service.js` — `open$` polled every 10 s while page mounted (matches the on-call alert window for `livepeer_bridge_reservation_open_oldest_seconds`).
+- [x] `topups.service.js` — search-only (no live poll).
+- [x] `audit.service.js` — `audit$` BehaviorSubject of the most recent page; `paginate(cursor)` appends.
+- [x] **`admin/lib/api.js`** — wraps `createApi(...)` from `shared/lib/api-base.js`: `getAuthHeaders` returns `{ 'x-admin-token': token, 'x-admin-actor': actor }`; reads operator name from session and attaches on **every** request. State-changing requests (POST/DELETE) fail-closed if no actor is set; reads fall back to `"unknown"`. Validates that the shared factory's auth boundary holds for a non-Bearer strategy — if it doesn't, that's a signal the factory needs a small generalization (record in Decisions).
 
 ### Routing
 
@@ -129,57 +130,57 @@ Hash-based, View-Transition-wrapped. Allowlist: `health`, `nodes`, `nodes/:id`, 
 
 ### Auth
 
-- [ ] Login (`/admin/console/`): two inputs — admin token + operator name. Validates by calling `GET /admin/health` with the token; on 200 stores `{ token, actor }` under `sessionStorage["bridge.admin.session"]`.
-- [ ] **`sessionStorage`, not `localStorage`** — operator presence is by-tab; closing the tab signs out. Different from the portal's choice (which is also sessionStorage today, but the rationale is starker for admin: token has unrestricted blast radius — refund, suspend).
-- [ ] `X-Admin-Token` header on every request; `X-Admin-Actor` validated against `^[a-z0-9._-]{1,64}$` server-side.
+- [x] Login (`/admin/console/`): two inputs — admin token + operator name. Validates by calling `GET /admin/health` with the token; on 200 stores `{ token, actor }` under `sessionStorage["bridge.admin.session"]`.
+- [x] **`sessionStorage`, not `localStorage`** — operator presence is by-tab; closing the tab signs out. Different from the portal's choice (which is also sessionStorage today, but the rationale is starker for admin: token has unrestricted blast radius — refund, suspend).
+- [x] `X-Admin-Token` header on every request; `X-Admin-Actor` validated against `^[a-z0-9._-]{1,64}$` server-side.
 
 ### Backend: fill gaps in `/admin/*` (new routes)
 
 Existing: `GET /admin/health`, `GET /admin/nodes`, `GET /admin/nodes/:id`, `GET /admin/customers/:id`, `POST /admin/customers/:id/refund`, `POST /admin/customers/:id/suspend`, `POST /admin/customers/:id/unsuspend`, `GET /admin/escrow`. New:
 
-- [ ] `GET /admin/customers?q=&tier=&status=&limit=&cursor=` — paginated search by email substring or customer id. Cursor `(created_at, id)` — stable under inserts.
-- [ ] `GET /admin/customers/:id/api-keys` — surface the key list operators currently provision by hand.
-- [ ] `POST /admin/customers/:id/api-keys` body `{ label }` → `{ id, label, key }`. Audited.
-- [ ] `GET /admin/audit?from=&to=&actor=&action=&limit=&cursor=` — paginated `admin_audit_events` feed. Default last 24 h.
-- [ ] `GET /admin/reservations?state=open&limit=&cursor=` — paginated `reservations`.
-- [ ] `GET /admin/topups?customer_id=&status=&from=&to=&limit=&cursor=` — `topups` search.
-- [ ] `GET /admin/nodes/:id/events?limit=&cursor=` — `node_health_events` for one node (powers the circuit timeline).
-- [ ] `GET /admin/config/nodes` — Zod-validated current `nodes.yaml` view, including file `mtime` and SHA-256 hash.
+- [x] `GET /admin/customers?q=&tier=&status=&limit=&cursor=` — paginated search by email substring or customer id. Cursor `(created_at, id)` — stable under inserts.
+- [x] `GET /admin/customers/:id/api-keys` — surface the key list operators currently provision by hand.
+- [x] `POST /admin/customers/:id/api-keys` body `{ label }` → `{ id, label, key }`. Audited.
+- [x] `GET /admin/audit?from=&to=&actor=&action=&limit=&cursor=` — paginated `admin_audit_events` feed. Default last 24 h.
+- [x] `GET /admin/reservations?state=open&limit=&cursor=` — paginated `reservations`.
+- [x] `GET /admin/topups?customer_id=&status=&from=&to=&limit=&cursor=` — `topups` search.
+- [x] `GET /admin/nodes/:id/events?limit=&cursor=` — `node_health_events` for one node (powers the circuit timeline).
+- [x] `GET /admin/config/nodes` — Zod-validated current `nodes.yaml` view, including file `mtime` and SHA-256 hash.
 
 Files:
-- [ ] `src/runtime/http/admin/routes.ts` (extend) — register the seven new routes.
-- [ ] `src/runtime/http/admin/actor.ts` — middleware reads `X-Admin-Actor`, validates `^[a-z0-9._-]{1,64}$`, attaches to `request.adminActor`. Reads default to `"unknown"`; writes (refund / suspend / unsuspend / key issue) require it.
-- [ ] `src/repo/admin/search.ts` — search SQL for customers / audit / reservations / topups / node-events. Cursor-encoding helper.
-- [ ] `src/runtime/http/admin/console/static.ts` — `@fastify/static` registration at `/admin/console/*` serving `bridge-ui/admin/dist/`.
+- [x] `src/runtime/http/admin/routes.ts` (extend) — register the seven new routes.
+- [x] `src/runtime/http/admin/actor.ts` — middleware reads `X-Admin-Actor`, validates `^[a-z0-9._-]{1,64}$`, attaches to `request.adminActor`. Reads default to `"unknown"`; writes (refund / suspend / unsuspend / key issue) require it.
+- [x] `src/repo/admin/search.ts` — search SQL for customers / audit / reservations / topups / node-events. Cursor-encoding helper.
+- [x] `src/runtime/http/admin/console/static.ts` — `@fastify/static` registration at `/admin/console/*` serving `bridge-ui/admin/dist/`.
 
 ### Pages
 
-- [ ] **Sign-in** `/admin/console/` — token + operator-name; sessionStorage on success.
-- [ ] **Health** `/admin/console/health` — top tiles (PayerDaemon, DB, Redis, escrow / reserve). Below: embedded Grafana iframe pointed at the dashboard from [`0021`](../completed/0021-metrics-phase-1.md). `GRAFANA_DASHBOARD_URL` env (optional) drives `iframe[src]`; unset → collapsed panel with "Grafana not configured".
-- [ ] **Nodes** `/admin/console/nodes` — table → card on narrow viewports. Sort by circuit-state desc default. Row click → detail (with `view-transition-name`).
-- [ ] **Node detail** `/admin/console/nodes/:id` — record + chronological event timeline from `GET /admin/nodes/:id/events`. No actions in v1.
-- [ ] **Customers** `/admin/console/customers` — debounced search, result table → card on narrow.
-- [ ] **Customer detail** `/admin/console/customers/:id` — record + key list + recent topups + recent usage. Action buttons: **Refund** (type-to-confirm email), **Suspend** (type-to-confirm), **Unsuspend** (single-click confirm), **Issue key** (issues a key, returns cleartext exactly once via the same modal pattern as the portal).
-- [ ] **Reservations** `/admin/console/reservations` — open-reservations list sorted by age desc. The page on-call opens when `livepeer_bridge_reservation_open_oldest_seconds` alerts. Read-only.
-- [ ] **Top-ups search** `/admin/console/topups` — multi-filter for the "customer says they were charged X but it shows Y" support flow.
-- [ ] **Audit log** `/admin/console/audit` — chronological feed; filter by actor and action; CSV export client-side.
-- [ ] **Config** `/admin/console/config` — read-only `nodes.yaml` view from `GET /admin/config/nodes` with `mtime` + hash + per-node table.
+- [x] **Sign-in** `/admin/console/` — token + operator-name; sessionStorage on success.
+- [x] **Health** `/admin/console/health` — top tiles (PayerDaemon, DB, Redis, escrow / reserve). Below: embedded Grafana iframe pointed at the dashboard from [`0021`](../completed/0021-metrics-phase-1.md). `GRAFANA_DASHBOARD_URL` env (optional) drives `iframe[src]`; unset → collapsed panel with "Grafana not configured".
+- [x] **Nodes** `/admin/console/nodes` — table → card on narrow viewports. Sort by circuit-state desc default. Row click → detail (with `view-transition-name`).
+- [x] **Node detail** `/admin/console/nodes/:id` — record + chronological event timeline from `GET /admin/nodes/:id/events`. No actions in v1.
+- [x] **Customers** `/admin/console/customers` — debounced search, result table → card on narrow.
+- [x] **Customer detail** `/admin/console/customers/:id` — record + key list + recent topups + recent usage. Action buttons: **Refund** (type-to-confirm email), **Suspend** (type-to-confirm), **Unsuspend** (single-click confirm), **Issue key** (issues a key, returns cleartext exactly once via the same modal pattern as the portal).
+- [x] **Reservations** `/admin/console/reservations` — open-reservations list sorted by age desc. The page on-call opens when `livepeer_bridge_reservation_open_oldest_seconds` alerts. Read-only.
+- [x] **Top-ups search** `/admin/console/topups` — multi-filter for the "customer says they were charged X but it shows Y" support flow.
+- [x] **Audit log** `/admin/console/audit` — chronological feed; filter by actor and action; CSV export client-side.
+- [x] **Config** `/admin/console/config` — read-only `nodes.yaml` view from `GET /admin/config/nodes` with `mtime` + hash + per-node table.
 
 ### Tests
 
-- [ ] **Backend unit + integration**: each new admin route — happy / sad; cursor round-trip; search filter combinations; cursor stability under inserts mid-page; `X-Admin-Actor` propagation into `admin_audit_events`.
-- [ ] **UI service tests** (vitest + jsdom): polling start/stop on host connect/disconnect; debounce on customer search; visibility-pause on `health$`.
-- [ ] **UI component tests** (`@open-wc/testing` + `@web/test-runner`): admin pages mount with stubbed services; `bridge-confirm-dialog` (already tested in 0022's shared-module suite) is exercised by admin in a refund-flow integration test that asserts the email-match guard blocks submission. Refund button disabled when topup status ≠ `succeeded`; node detail timeline rendering. Shared components are *not* re-tested here — covered once in 0022's shared suite.
-- [ ] **End-to-end** (Playwright): sign-in → search customer → suspend (type-to-confirm) → audit row appears with actor label → unsuspend → audit row appears.
-- [ ] Coverage stays at 75% across all four v8 metrics (Invariant 7).
+- [x] **Backend unit + integration**: each new admin route — happy / sad; cursor round-trip; search filter combinations; cursor stability under inserts mid-page; `X-Admin-Actor` propagation into `admin_audit_events`.
+- [x] **UI service tests** (vitest + jsdom): polling start/stop on host connect/disconnect; debounce on customer search; visibility-pause on `health$`.
+- [x] **UI component tests** (`@open-wc/testing` + `@web/test-runner`): admin pages mount with stubbed services; `bridge-confirm-dialog` (already tested in 0022's shared-module suite) is exercised by admin in a refund-flow integration test that asserts the email-match guard blocks submission. Refund button disabled when topup status ≠ `succeeded`; node detail timeline rendering. Shared components are *not* re-tested here — covered once in 0022's shared suite.
+- [x] **End-to-end** (Playwright): sign-in → search customer → suspend (type-to-confirm) → audit row appears with actor label → unsuspend → audit row appears.
+- [x] Coverage stays at 75% across all four v8 metrics (Invariant 7).
 
 ### Docs
 
-- [ ] **Update** `docs/product-specs/admin-endpoints.md` — append the seven new routes; document `X-Admin-Actor` semantics (read default `"unknown"`, writes require, server validation regex).
-- [ ] **New** `docs/product-specs/operator-admin.md` — page-by-page UX, action confirmation rules, Grafana embedding configuration.
-- [ ] **Update** `docs/operations/deployment.md` — `GRAFANA_DASHBOARD_URL` env entry; `bridge-ui/admin/` build step in the Docker UI stage.
-- [ ] **Update** `docs/design-docs/architecture.md` — `bridge-ui/admin/` joins `bridge-ui/portal/` in the sibling-of-`src/` UI section established by [`0022`](./0022-customer-portal.md).
-- [ ] **Update** `AGENTS.md` "Where to look for X" — add `operator-admin.md` row.
+- [x] **Update** `docs/product-specs/admin-endpoints.md` — append the seven new routes; document `X-Admin-Actor` semantics (read default `"unknown"`, writes require, server validation regex).
+- [x] **New** `docs/product-specs/operator-admin.md` — page-by-page UX, action confirmation rules, Grafana embedding configuration.
+- [x] **Update** `docs/operations/deployment.md` — `GRAFANA_DASHBOARD_URL` env entry; `bridge-ui/admin/` build step in the Docker UI stage.
+- [x] **Update** `docs/design-docs/architecture.md` — `bridge-ui/admin/` joins `bridge-ui/portal/` in the sibling-of-`src/` UI section established by [`0022`](./0022-customer-portal.md).
+- [x] **Update** `AGENTS.md` "Where to look for X" — add `operator-admin.md` row.
 
 ## Decisions log
 

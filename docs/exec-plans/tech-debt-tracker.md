@@ -238,3 +238,48 @@ Append-only list of known debt. Strike through when resolved; include the PR or 
 - Description: `src/service/tokenAudit/index.ts::emitDrift` currently emits BOTH the legacy unprefixed `MetricsSink` names (`tokens_drift_percent`, `tokens_local_count`, `tokens_reported_count` via `metrics.histogram` / `metrics.gauge`) AND the new prefixed `Recorder` calls (`observeTokenDriftPercent`, `addTokenCountLocal`, `addTokenCountReported`, which surface as `livepeer_bridge_token_*` in Prometheus). Both surfaces are intentional during Pass B's reconciliation window — Grafana panels still keyed off the legacy names need a migration grace period before the unprefixed emissions go away. Tracked separately so the cleanup commit is greppable.
 - Remediation: Phase 2 of the metrics rollout. (1) Delete `emitOne(deps.metrics, ...)` and the `MetricsSink` dependency from `tokenAudit`. (2) Drop `LegacySink` + `MetricsSink` from `src/providers/metrics/*` and the `counter`/`gauge`/`histogram` shims on the recorder impls. (3) Update Grafana panels to the prefixed names. (4) Remove this entry.
 - Resolved: _(open)_
+
+### admin-audit-event-retention
+
+- Opened: 2026-04-26
+- Severity: low
+- Area: repo / admin
+- Description: `admin_audit_event` grows unbounded. With the operator console (0023) actively exposing the table via `GET /admin/audit`, the row count will accumulate proportional to operator activity. At soft-launch volumes (a handful of operators × tens of actions/day) the table stays small for years; at scale, query latency on the audit feed and the cost of full scans for actor/action filters grow without a partition strategy.
+- Remediation: monthly partitioning (`PARTITION BY RANGE (occurred_at)`) plus an archive/drop policy for partitions older than N months. Defer until row count crosses ~1M or the audit-feed query latency shows up in alerts.
+- Resolved: _(open)_
+
+### admin-customer-search-trigram-index
+
+- Opened: 2026-04-26
+- Severity: low
+- Area: repo / admin
+- Description: `customersRepo.search` powers `GET /admin/customers?q=...` (and the operator console's customer search). Implementation is `ILIKE '%q%'` against `customers.email`, which forces a full scan; OK to ~100k customers, problematic past that. Documented inline in the query function as well.
+- Remediation: install `pg_trgm` extension, add a GIN trigram index on `customers.email`, switch the query to `email %% q` with the threshold tuned. Revisit when `customers` row count crosses 50k or when operators report search latency.
+- Resolved: _(open)_
+
+### bridge-portal-console-session-token
+
+- Opened: 2026-04-26
+- Severity: low
+- Area: bridge-ui / auth
+- Description: The customer portal (0022) auths by having the user paste their bridge API key, which is then stored in `sessionStorage` and sent as `Authorization: Bearer` on every request. Pragmatic for v1 (no new auth protocol, no email-link sender, no session table) but the credential held in storage IS the live API key (full account scope). The portal's strict CSP mitigates the XSS angle. Long-term, a short-lived console session token issued after a one-time API-key validation gives narrower exposure.
+- Remediation: backend issues a `POST /v1/portal/session` endpoint that takes an API key and returns a 24h JWT scoped to the customer. Portal stores the JWT in sessionStorage, refreshes on activity. Don't pursue until the v1 model causes a real incident or compliance ask.
+- Resolved: _(open)_
+
+### bridge-ui-shared-zod-codegen
+
+- Opened: 2026-04-26
+- Severity: low
+- Area: bridge-ui / types
+- Description: The portal and admin UIs ship hand-mirrored runtime validators (`bridge-ui/portal/lib/schemas.js`, `bridge-ui/admin/lib/schemas.js`) that mirror server-side Zod schemas in `src/types/` + `src/runtime/http/*/routes.ts` field-by-field. The `npm run doc-lint` rule catches consumer/lib redefinition of shared/lib filenames, but does not diff schema *fields* — drift between server Zod and client validators is silent until a type-mismatch surfaces in a request. Codegen UI validators from the server schemas would close that gap.
+- Remediation: pick a codegen path (zod-to-json-schema → zod-from-json-schema in JS, or a custom emitter that walks the Zod object tree). Wire into `npm run build:ui` so client validators regenerate on each build. Defer until the first drift incident or when the route count grows past ~20.
+- Resolved: _(open)_
+
+### pre-existing-doc-lint-violations
+
+- Opened: 2026-04-26
+- Severity: low
+- Area: docs / lint
+- Description: `npm run doc-lint` currently reports 11 pre-existing violations — none introduced by 0022/0023, but they predate the doc-gardener extension and never got cleaned up. Breakdown: 4 completed plans (0018, 0019, 0020, 0021) missing the `closed: YYYY-MM-DD` frontmatter field that plan-lifecycle requires; 5 `design-doc-links-into-plans` violations in `docs/design-docs/metrics.md` (docs may not link into `exec-plans/`); 2 cross-repo broken links in 0021 to `livepeer-payment-library` and `openai-worker-node` exec-plans (the convention is to link as if sibling repos colocate, but doc-lint can't reach them). The extension added in 4dfba27 inherits these violations; a clean `doc-lint` run would require fixing them.
+- Remediation: (1) backfill `closed:` dates in the four completed plans (look up commit dates in `git log`); (2) rewrite metrics.md's plan-references to text-only or to design-doc cross-refs; (3) for the cross-repo links in 0021, either drop the markdown link syntax (keep as text) or extend doc-gardener to skip cross-repo paths. One small commit; do during the next doc cleanup pass.
+- Resolved: _(open)_

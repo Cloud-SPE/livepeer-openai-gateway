@@ -2,9 +2,10 @@
 id: 0022
 slug: customer-portal
 title: Customer Portal — Lit + RxJS + modern-CSS web app for self-service account / keys / top-ups / usage
-status: active
+status: completed
 owner: agent
 opened: 2026-04-26
+closed: 2026-04-26
 ---
 
 ## Goal
@@ -107,16 +108,16 @@ bridge-ui/
 - Auth-header strategy details — Bearer key vs admin token + actor.
 
 Tasks:
-- [ ] `bridge-ui/shared/package.json` — `peerDependencies`: `lit ^3.3`, `rxjs ^7.8`. No `dependencies`. No `scripts`.
-- [ ] `bridge-ui/shared/README.md` — what belongs / does not belong (mirror the lists above), peer-version expectations, "imported via relative paths, not as an npm package."
-- [ ] All `bridge-ui/shared/css/*.css`, `controllers/`, `lib/`, `components/` files listed above.
-- [ ] `bridge-ui/portal/package.json` with `lit ^3.3`, `rxjs ^7.8`, `vite ^8`. Versions match shared's `peerDependencies`.
-- [ ] `bridge-ui/portal/vite.config.js` — dev server `5173`, build to `bridge-ui/portal/dist/`, base `/portal/`, dev proxy `/v1` → `http://localhost:<BRIDGE_PORT>`. No alias config — Vite resolves `../shared/` natively.
-- [ ] `bridge-ui/portal/index.html` mounts `<portal-app>` and links `portal.css`.
-- [ ] Top-level `package.json` `build` script: `tsc && (cd bridge-ui/portal && npm ci && npm run build)`.
-- [ ] `Dockerfile` adds a UI build stage; copies `bridge-ui/portal/dist/` into the runtime image at `/app/bridge-ui/portal/dist/`. `bridge-ui/shared/` participates in the build context but is not copied separately (its files end up tree-shaken into `portal/dist/`).
-- [ ] `.dockerignore` carves the `dist/` exception.
-- [ ] `npm run doc-lint` — extend to enforce that no module under `bridge-ui/<consumer>/lib/` re-implements anything that exists in `bridge-ui/shared/lib/`. Initial impl: a list of forbidden filenames in consumer/lib/ that must instead come from shared/.
+- [x] `bridge-ui/shared/package.json` — `peerDependencies`: `lit ^3.3`, `rxjs ^7.8`. No `dependencies`. No `scripts`.
+- [x] `bridge-ui/shared/README.md` — what belongs / does not belong (mirror the lists above), peer-version expectations, "imported via relative paths, not as an npm package."
+- [x] All `bridge-ui/shared/css/*.css`, `controllers/`, `lib/`, `components/` files listed above.
+- [x] `bridge-ui/portal/package.json` with `lit ^3.3`, `rxjs ^7.8`, `vite ^8`. Versions match shared's `peerDependencies`.
+- [x] `bridge-ui/portal/vite.config.js` — dev server `5173`, build to `bridge-ui/portal/dist/`, base `/portal/`, dev proxy `/v1` → `http://localhost:<BRIDGE_PORT>`. No alias config — Vite resolves `../shared/` natively.
+- [x] `bridge-ui/portal/index.html` mounts `<portal-app>` and links `portal.css`.
+- [x] Top-level `package.json` `build` script: `tsc && (cd bridge-ui/portal && npm ci && npm run build)`.
+- [x] `Dockerfile` adds a UI build stage; copies `bridge-ui/portal/dist/` into the runtime image at `/app/bridge-ui/portal/dist/`. `bridge-ui/shared/` participates in the build context but is not copied separately (its files end up tree-shaken into `portal/dist/`).
+- [x] `.dockerignore` carves the `dist/` exception.
+- [x] `npm run doc-lint` — extend to enforce that no module under `bridge-ui/<consumer>/lib/` re-implements anything that exists in `bridge-ui/shared/lib/`. Initial impl: a list of forbidden filenames in consumer/lib/ that must instead come from shared/.
 
 ### CSS architecture (modern 2026)
 
@@ -131,17 +132,17 @@ Layer order is the project standard, declared in `bridge-ui/portal/portal.css` a
 /* @layer layout and @layer components defined below, in this file */
 ```
 
-- [ ] `shared/css/reset.css` — minimal modern reset (box-sizing, margin/padding zero on the usual list, `text-wrap: pretty` global, `scrollbar-gutter: stable` on `html`).
-- [ ] `shared/css/tokens.css` — `:root { color-scheme: light dark; }` plus the design-token catalogue:
+- [x] `shared/css/reset.css` — minimal modern reset (box-sizing, margin/padding zero on the usual list, `text-wrap: pretty` global, `scrollbar-gutter: stable` on `html`).
+- [x] `shared/css/tokens.css` — `:root { color-scheme: light dark; }` plus the design-token catalogue:
   - Color: OKLCH primary / accent / surface / text / danger / warning / success, each defined via `light-dark(<light>, <dark>)`. Example: `--surface-1: light-dark(oklch(98% 0.005 250), oklch(18% 0.01 250));`.
   - State derivations via `color-mix()`: `--accent-hover: color-mix(in oklch, var(--accent), white 12%);` etc.
   - `@property --accent-glow { syntax: '<color>'; inherits: false; initial-value: transparent; }` for animatable focus rings.
   - Spacing scale `--space-1` through `--space-12` (rem-based, fluid where appropriate).
   - Typography: `--font-sans` (system), `--font-mono` (system mono); sizes via `clamp()` for h1–h3.
   - Radii, shadows, durations, easings.
-- [ ] `shared/css/base.css` — element defaults: `body`, headings (`text-wrap: balance`), `p` (`text-wrap: pretty`), form controls (`field-sizing: content` on textareas), `dialog::backdrop`, `:user-invalid` outline.
-- [ ] `@layer layout` (per-module, in `portal.css`) — app shell grid (header / nav / main), main outlet `view-transition-name: portal-main`.
-- [ ] `@layer components` (per-module, in `portal.css`) — per-component blocks using **native nesting**. Generic component styling (`bridge-button`, `bridge-dialog`, `bridge-table`, etc.) lives in the components themselves under `bridge-ui/shared/components/*.js` as tagged-template strings; per-page styling stays in `portal.css`. Example skeleton for a page block:
+- [x] `shared/css/base.css` — element defaults: `body`, headings (`text-wrap: balance`), `p` (`text-wrap: pretty`), form controls (`field-sizing: content` on textareas), `dialog::backdrop`, `:user-invalid` outline.
+- [x] `@layer layout` (per-module, in `portal.css`) — app shell grid (header / nav / main), main outlet `view-transition-name: portal-main`.
+- [x] `@layer components` (per-module, in `portal.css`) — per-component blocks using **native nesting**. Generic component styling (`bridge-button`, `bridge-dialog`, `bridge-table`, etc.) lives in the components themselves under `bridge-ui/shared/components/*.js` as tagged-template strings; per-page styling stays in `portal.css`. Example skeleton for a page block:
   ```css
   @layer components {
     portal-dashboard {
@@ -157,33 +158,33 @@ Layer order is the project standard, declared in `bridge-ui/portal/portal.css` a
     }
   }
   ```
-- [ ] `shared/css/utilities.css` — single-purpose helpers (`.sr-only`, `.flex-center`, `.truncate`, etc.).
+- [x] `shared/css/utilities.css` — single-purpose helpers (`.sr-only`, `.flex-center`, `.truncate`, etc.).
 
 **Light DOM caveat for shared components**: even though shared/components live in light DOM, their generic styles ship as tagged-template `static styles = css\`...\`` blocks that Lit applies via constructable stylesheets. With `createRenderRoot() { return this; }` Lit ignores `static styles`, so shared components instead inject their CSS into `document.adoptedStyleSheets` once on first construction (idempotent, keyed by tag name). Documented in `shared/components/README.md` and the design doc.
-- [ ] **Entry animations**: `@starting-style` on dialogs, menus, toasts. Example:
+- [x] **Entry animations**: `@starting-style` on dialogs, menus, toasts. Example:
   ```css
   dialog[open] { opacity: 1; translate: 0 0; transition: opacity .15s, translate .15s; }
   @starting-style { dialog[open] { opacity: 0; translate: 0 -8px; } }
   ```
-- [ ] **View Transitions** wrap the route swap (manually triggered — hash routing is JS-driven). `portal-app._setView` calls `document.startViewTransition(() => { this.view = next; })` when supported, else falls through.
-- [ ] **Popover API** for contextual menus and the "I've saved my new key" confirmation: `popover` attribute + `:popover-open` styling, with `::backdrop` dim.
+- [x] **View Transitions** wrap the route swap (manually triggered — hash routing is JS-driven). `portal-app._setView` calls `document.startViewTransition(() => { this.view = next; })` when supported, else falls through.
+- [x] **Popover API** for contextual menus and the "I've saved my new key" confirmation: `popover` attribute + `:popover-open` styling, with `::backdrop` dim.
 
 ### Lit component pattern
 
-- [ ] All components extend `LitElement` from `lit` (^3.3).
-- [ ] `createRenderRoot() { return this; }` — light DOM, matches reference; cascade layers and `@scope` blocks apply.
-- [ ] Reactive state is local: form fields, ephemeral UI flags (`loading`, `error`, `dialogOpen`). Domain state (account, keys list, usage, topups) is read from RxJS services via `ObservableController` — components do not own it.
-- [ ] Cross-cutting signals via window CustomEvents, namespaced `bridge:` (the reference uses `bc:`):
+- [x] All components extend `LitElement` from `lit` (^3.3).
+- [x] `createRenderRoot() { return this; }` — light DOM, matches reference; cascade layers and `@scope` blocks apply.
+- [x] Reactive state is local: form fields, ephemeral UI flags (`loading`, `error`, `dialogOpen`). Domain state (account, keys list, usage, topups) is read from RxJS services via `ObservableController` — components do not own it.
+- [x] Cross-cutting signals via window CustomEvents, namespaced `bridge:` (the reference uses `bc:`):
   - `bridge:authenticated` — emitted after login success.
   - `bridge:unauthorized` — emitted by `api.js` on 401; root component swaps to login.
   - `bridge:routechange` — emitted on `hashchange` and reflected into a top-level `route$` subject.
-- [ ] Lifecycle: `connectedCallback()` for setup (controller wiring + window listeners); `disconnectedCallback()` cleans up. The `ObservableController` handles its own subscribe/unsubscribe via `hostConnected`/`hostDisconnected`.
+- [x] Lifecycle: `connectedCallback()` for setup (controller wiring + window listeners); `disconnectedCallback()` cleans up. The `ObservableController` handles its own subscribe/unsubscribe via `hostConnected`/`hostDisconnected`.
 
 ### RxJS service layer
 
 Pattern: each service exports a singleton object owning one or more `BehaviorSubject`s plus async commands that push into them. Components never call `fetch` directly — they call service methods and subscribe to service streams. The `ObservableController` lives in `bridge-ui/shared/controllers/`; services live in the consumer module since they're domain-specific.
 
-- [ ] `lib/services/account.service.js`
+- [x] `lib/services/account.service.js`
   ```js
   // representative shape
   import { BehaviorSubject } from 'rxjs';
@@ -195,10 +196,10 @@ Pattern: each service exports a singleton object owning one or more `BehaviorSub
     signOut() { _account.next(null); },
   };
   ```
-- [ ] `lib/services/keys.service.js` — `keys$`, `create(label)` (optimistic insert with `pending: true`, replace on response or rollback on error), `revoke(id)` (optimistic mark, rollback on 412).
-- [ ] `lib/services/usage.service.js` — `query({ from, to, group_by })` returns a fresh cold `Observable` per call (no shared subject — usage is on-demand).
-- [ ] `lib/services/topups.service.js` — `topups$` + `pollUntilSettled(sessionId, timeoutMs)` returning an Observable that `interval(2000).pipe(switchMap(refetch), takeWhile(notSettled, true), takeUntil(timer(timeoutMs)))`.
-- [ ] `bridge-ui/shared/controllers/observable-controller.js` — Lit `ReactiveController`:
+- [x] `lib/services/keys.service.js` — `keys$`, `create(label)` (optimistic insert with `pending: true`, replace on response or rollback on error), `revoke(id)` (optimistic mark, rollback on 412).
+- [x] `lib/services/usage.service.js` — `query({ from, to, group_by })` returns a fresh cold `Observable` per call (no shared subject — usage is on-demand).
+- [x] `lib/services/topups.service.js` — `topups$` + `pollUntilSettled(sessionId, timeoutMs)` returning an Observable that `interval(2000).pipe(switchMap(refetch), takeWhile(notSettled, true), takeUntil(timer(timeoutMs)))`.
+- [x] `bridge-ui/shared/controllers/observable-controller.js` — Lit `ReactiveController`:
   ```js
   // representative shape — lives in shared/, imported by portal and admin
   export class ObservableController {
@@ -212,7 +213,7 @@ Pattern: each service exports a singleton object owning one or more `BehaviorSub
     hostDisconnected() { this._sub?.unsubscribe(); }
   }
   ```
-- [ ] `bridge-ui/shared/lib/api-base.js` — fetch wrapper **factory**, not a singleton:
+- [x] `bridge-ui/shared/lib/api-base.js` — fetch wrapper **factory**, not a singleton:
   ```js
   // representative shape
   export function createApi({ baseUrl, getAuthHeaders, onUnauthorized, parseResponse }) {
@@ -228,60 +229,60 @@ Pattern: each service exports a singleton object owning one or more `BehaviorSub
     };
   }
   ```
-- [ ] `bridge-ui/portal/lib/api.js` — wraps `createApi(...)` with portal-specific config: `baseUrl: ''` (same origin), `getAuthHeaders: () => ({ authorization: 'Bearer ' + getSession() })`, `onUnauthorized: () => { clearSession(); window.dispatchEvent(new CustomEvent('bridge:unauthorized')); }`, `parseResponse` dispatches by path through `portal/lib/schemas.js` validators.
+- [x] `bridge-ui/portal/lib/api.js` — wraps `createApi(...)` with portal-specific config: `baseUrl: ''` (same origin), `getAuthHeaders: () => ({ authorization: 'Bearer ' + getSession() })`, `onUnauthorized: () => { clearSession(); window.dispatchEvent(new CustomEvent('bridge:unauthorized')); }`, `parseResponse` dispatches by path through `portal/lib/schemas.js` validators.
 
 ### Routing
 
-- [ ] Hash-based (`location.hash`), no library — match reference.
-- [ ] `portal-app` listens to `hashchange`, validates against an allowlist (`dashboard`, `keys`, `usage`, `billing`, `billing/return`, `settings`), default `dashboard`.
-- [ ] Route swap wrapped in `document.startViewTransition` when supported; falls through otherwise.
-- [ ] Auth gate: if `!hasSession()` render `<portal-login>`; else render the chosen view inside the app shell.
+- [x] Hash-based (`location.hash`), no library — match reference.
+- [x] `portal-app` listens to `hashchange`, validates against an allowlist (`dashboard`, `keys`, `usage`, `billing`, `billing/return`, `settings`), default `dashboard`.
+- [x] Route swap wrapped in `document.startViewTransition` when supported; falls through otherwise.
+- [x] Auth gate: if `!hasSession()` render `<portal-login>`; else render the chosen view inside the app shell.
 
 ### Auth
 
-- [ ] Login: paste API key → `lib/api.js` calls `GET /v1/account` with the pasted key as Bearer; on 200 the key is the session — store under `sessionStorage["bridge.portal.session"]` and dispatch `bridge:authenticated`.
-- [ ] All subsequent fetches read the session and set the header automatically.
-- [ ] Sign out: clear sessionStorage, `accountService.signOut()`, `bridge:unauthorized`.
-- [ ] Cannot revoke the key being used to make the request — server returns 412; UI surfaces "you're using this key right now".
+- [x] Login: paste API key → `lib/api.js` calls `GET /v1/account` with the pasted key as Bearer; on 200 the key is the session — store under `sessionStorage["bridge.portal.session"]` and dispatch `bridge:authenticated`.
+- [x] All subsequent fetches read the session and set the header automatically.
+- [x] Sign out: clear sessionStorage, `accountService.signOut()`, `bridge:unauthorized`.
+- [x] Cannot revoke the key being used to make the request — server returns 412; UI surfaces "you're using this key right now".
 
 ### Backend: `/v1/account/*` (new)
 
 All routes require `Authorization: Bearer <api-key>` (existing customer-auth middleware). Zod-validated. **USD-only**, never wei.
 
-- [ ] `GET /v1/account` → `{ id, email, tier, status, balance_usd, free_tokens_remaining, free_tokens_reset_at, created_at }`.
-- [ ] `GET /v1/account/api-keys` → `{ keys: [{ id, label, created_at, last_used_at, revoked_at }] }`. Hash never returned.
-- [ ] `POST /v1/account/api-keys` body `{ label: string<=64 }` → `{ id, label, key, created_at }`. **`key` returned exactly once** (cleartext); hash stored. Prefix `lpb_live_`.
-- [ ] `DELETE /v1/account/api-keys/:id` → 204; idempotent on already-revoked; **412 if revoking the request's own key**.
-- [ ] `GET /v1/account/usage?from=&to=&group_by=day|model|capability` — rollups over `usage_records`. Default last 30 days.
-- [ ] `GET /v1/account/topups?limit=50&cursor=` — paginated `topups` rows for this customer.
-- [ ] `POST /v1/billing/topup` exists. Portal calls with `success_url=/portal/billing/return?session_id={CHECKOUT_SESSION_ID}`, `cancel_url=/portal/billing`.
-- [ ] `GET /v1/account/limits` → `{ tier, max_concurrent, requests_per_minute, max_tokens_per_request, monthly_token_quota }` (rate-card view).
+- [x] `GET /v1/account` → `{ id, email, tier, status, balance_usd, free_tokens_remaining, free_tokens_reset_at, created_at }`.
+- [x] `GET /v1/account/api-keys` → `{ keys: [{ id, label, created_at, last_used_at, revoked_at }] }`. Hash never returned.
+- [x] `POST /v1/account/api-keys` body `{ label: string<=64 }` → `{ id, label, key, created_at }`. **`key` returned exactly once** (cleartext); hash stored. Prefix `lpb_live_`.
+- [x] `DELETE /v1/account/api-keys/:id` → 204; idempotent on already-revoked; **412 if revoking the request's own key**.
+- [x] `GET /v1/account/usage?from=&to=&group_by=day|model|capability` — rollups over `usage_records`. Default last 30 days.
+- [x] `GET /v1/account/topups?limit=50&cursor=` — paginated `topups` rows for this customer.
+- [x] `POST /v1/billing/topup` exists. Portal calls with `success_url=/portal/billing/return?session_id={CHECKOUT_SESSION_ID}`, `cancel_url=/portal/billing`.
+- [x] `GET /v1/account/limits` → `{ tier, max_concurrent, requests_per_minute, max_tokens_per_request, monthly_token_quota }` (rate-card view).
 
 Files:
-- [ ] `src/runtime/http/account/routes.ts` — Fastify plugin.
-- [ ] `src/runtime/http/account/usage.test.ts` — rollup grouping, date-range edges.
-- [ ] `src/repo/customers.ts` — extend with `findApiKeysByCustomer`, `insertApiKey`, `revokeApiKey`.
-- [ ] `src/service/auth/keys.ts` — generation: `lpb_live_` + 32 random bytes (base32 of crypto.randomBytes), HMAC-SHA-256(`API_KEY_PEPPER`) for storage.
-- [ ] `src/repo/usageRollups.ts` — one SQL per `group_by`. TestPg-backed.
-- [ ] `src/runtime/http/portal/static.ts` — `@fastify/static` registration at `/portal/*` serving `bridge-ui/portal/dist/` with hash-route SPA fallback (only `index.html` needed).
+- [x] `src/runtime/http/account/routes.ts` — Fastify plugin.
+- [x] `src/runtime/http/account/usage.test.ts` — rollup grouping, date-range edges.
+- [x] `src/repo/customers.ts` — extend with `findApiKeysByCustomer`, `insertApiKey`, `revokeApiKey`.
+- [x] `src/service/auth/keys.ts` — generation: `lpb_live_` + 32 random bytes (base32 of crypto.randomBytes), HMAC-SHA-256(`API_KEY_PEPPER`) for storage.
+- [x] `src/repo/usageRollups.ts` — one SQL per `group_by`. TestPg-backed.
+- [x] `src/runtime/http/portal/static.ts` — `@fastify/static` registration at `/portal/*` serving `bridge-ui/portal/dist/` with hash-route SPA fallback (only `index.html` needed).
 
 ### Tests
 
-- [ ] **Backend unit + integration**: each new route happy/sad; cross-customer isolation; key-creation roundtrip via TestPg; rollup correctness against seeded `usage_records` (mixed success / partial / failed across multiple models).
-- [ ] **Shared module tests** (`@open-wc/testing` + `@web/test-runner`): `ObservableController` subscribe/unsubscribe on host connect/disconnect; `createApi` 401 → `onUnauthorized` callback fires + throws; validator combinators reject malformed input; each generic web component (`bridge-button` loading state, `bridge-confirm-dialog` blocks until typed match, `bridge-table` collapses to cards under container query).
-- [ ] **UI service tests** (vitest + jsdom): each service's BehaviorSubject contract; optimistic add → confirm; optimistic add → rollback on error; `pollUntilSettled` time-based behavior with fake timers.
-- [ ] **UI component tests** (`@open-wc/testing` via `@web/test-runner` — **no React Testing Library**): each page mounts against stubbed services, asserts visible text, ARIA, and dialog focus traps.
-- [ ] **End-to-end** (Playwright): sign-in → create-key (assert cleartext shown once) → sign-out → sign-in-with-new-key → revoke-original. Runs against compose stack.
-- [ ] **CSS smoke**: a Playwright assertion that computed `color-scheme` flips with OS preference and `light-dark()` resolves to the dark token in dark mode.
-- [ ] Coverage stays at 75% across all four v8 metrics (Invariant 7 in [`AGENTS.md`](../../../AGENTS.md)). UI counts toward the floor.
+- [x] **Backend unit + integration**: each new route happy/sad; cross-customer isolation; key-creation roundtrip via TestPg; rollup correctness against seeded `usage_records` (mixed success / partial / failed across multiple models).
+- [x] **Shared module tests** (`@open-wc/testing` + `@web/test-runner`): `ObservableController` subscribe/unsubscribe on host connect/disconnect; `createApi` 401 → `onUnauthorized` callback fires + throws; validator combinators reject malformed input; each generic web component (`bridge-button` loading state, `bridge-confirm-dialog` blocks until typed match, `bridge-table` collapses to cards under container query).
+- [x] **UI service tests** (vitest + jsdom): each service's BehaviorSubject contract; optimistic add → confirm; optimistic add → rollback on error; `pollUntilSettled` time-based behavior with fake timers.
+- [x] **UI component tests** (`@open-wc/testing` via `@web/test-runner` — **no React Testing Library**): each page mounts against stubbed services, asserts visible text, ARIA, and dialog focus traps.
+- [x] **End-to-end** (Playwright): sign-in → create-key (assert cleartext shown once) → sign-out → sign-in-with-new-key → revoke-original. Runs against compose stack.
+- [x] **CSS smoke**: a Playwright assertion that computed `color-scheme` flips with OS preference and `light-dark()` resolves to the dark token in dark mode.
+- [x] Coverage stays at 75% across all four v8 metrics (Invariant 7 in [`AGENTS.md`](../../../AGENTS.md)). UI counts toward the floor.
 
 ### Docs
 
-- [ ] **New design doc** `docs/design-docs/ui-architecture.md` — captures: Lit + RxJS + modern CSS; `bridge-ui/` sibling layout with `shared/` + per-consumer module split (what belongs in shared, what does not); light DOM rationale + adoptedStyleSheets caveat for shared component CSS; cascade layer order with `@import url(...) layer(...)` pulls from shared; OKLCH + `light-dark()` theming; `ObservableController` pattern; namespaced `bridge:` events; hash routing + View Transitions; sessionStorage credential; per-module `package.json` + shared as a peerDependencies-only directory module; supported-browsers floor. Both consoles reference this; design-docs may not reference plans (per [PLANS.md](../../../PLANS.md)).
-- [ ] **New product spec** `docs/product-specs/customer-portal.md` — page-by-page UX, rate-card display rules, dispute / refund visibility, USD formatting rules.
-- [ ] **Update** `docs/design-docs/architecture.md` — replace the `ui/ admin UI (v2+)` row with a pointer to `bridge-ui/` sibling layout. Note layer rule still holds *within* `src/`; `bridge-ui/` is a separate static-asset deliverable that talks to the bridge over HTTP only.
-- [ ] **Update** `AGENTS.md` "Knowledge base layout" and "Where to look for X" — add the new `bridge-ui/` and design / product entries.
-- [ ] **Update** `docs/operations/deployment.md` — `bridge-ui/portal/` build step, `@fastify/static` mount, Docker UI stage, Grafana not required for portal.
+- [x] **New design doc** `docs/design-docs/ui-architecture.md` — captures: Lit + RxJS + modern CSS; `bridge-ui/` sibling layout with `shared/` + per-consumer module split (what belongs in shared, what does not); light DOM rationale + adoptedStyleSheets caveat for shared component CSS; cascade layer order with `@import url(...) layer(...)` pulls from shared; OKLCH + `light-dark()` theming; `ObservableController` pattern; namespaced `bridge:` events; hash routing + View Transitions; sessionStorage credential; per-module `package.json` + shared as a peerDependencies-only directory module; supported-browsers floor. Both consoles reference this; design-docs may not reference plans (per [PLANS.md](../../../PLANS.md)).
+- [x] **New product spec** `docs/product-specs/customer-portal.md` — page-by-page UX, rate-card display rules, dispute / refund visibility, USD formatting rules.
+- [x] **Update** `docs/design-docs/architecture.md` — replace the `ui/ admin UI (v2+)` row with a pointer to `bridge-ui/` sibling layout. Note layer rule still holds *within* `src/`; `bridge-ui/` is a separate static-asset deliverable that talks to the bridge over HTTP only.
+- [x] **Update** `AGENTS.md` "Knowledge base layout" and "Where to look for X" — add the new `bridge-ui/` and design / product entries.
+- [x] **Update** `docs/operations/deployment.md` — `bridge-ui/portal/` build step, `@fastify/static` mount, Docker UI stage, Grafana not required for portal.
 
 ## Decisions log
 

@@ -91,4 +91,4 @@ The app shell mounts `<bridge-toast-stack>` once. Components emit `bridge:toast`
 
 - [`docs/design-docs/ui-architecture.md`](../design-docs/ui-architecture.md) — implementation contract.
 - [`docs/product-specs/topup-prepaid.md`](./topup-prepaid.md) — Stripe Checkout flow + webhook semantics.
-- [`docs/exec-plans/active/0022-customer-portal.md`](../exec-plans/active/0022-customer-portal.md) — exec plan tracking the build.
+- [`docs/exec-plans/completed/0022-customer-portal.md`](../exec-plans/completed/0022-customer-portal.md) — exec plan tracking the build.
