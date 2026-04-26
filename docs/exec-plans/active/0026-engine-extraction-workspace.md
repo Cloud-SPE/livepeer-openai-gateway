@@ -178,7 +178,12 @@ Drop the existing `migrations/0000-0006.sql` from the root. Rewrite from scratch
 CREATE SCHEMA engine;
 SET search_path TO engine;
 
-CREATE TABLE engine.node_health_events (...);  -- per-process circuit-breaker timeline; node identity comes from the registry-daemon, not a local table
+CREATE TABLE engine.node_health_events (
+  ...,
+  occurred_at TIMESTAMPTZ NOT NULL
+) PARTITION BY RANGE (occurred_at);  -- month-partitioned from day one; closes node_health_event-retention tech-debt without a separate cron
+-- Initial partitions for the current and next month created in this same migration;
+-- a tiny scheduled job (or pg_partman, operator-choice) creates future partitions ahead of time.
 CREATE TABLE engine.usage_records (
   id          UUID PRIMARY KEY,
   work_id     TEXT NOT NULL UNIQUE,
@@ -189,6 +194,8 @@ CREATE TABLE engine.usage_records (
 );
 CREATE TABLE engine.payment_audit (...);  -- new; carved from existing usage_records.node_cost_wei
 ```
+
+Partitioning `node_health_events` by month at table-creation time resolves the open `node_health_event` retention debt entry: dropping a partition is O(1) and operators can wire any retention policy (90d, 1y, forever) without schema changes. No retention cron required for v1; operators add one when their volume warrants it.
 
 `packages/livepeer-openai-gateway/migrations/0000_init.sql`:
 
