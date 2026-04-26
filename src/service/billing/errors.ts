@@ -54,3 +54,19 @@ export class TierMismatchError extends BillingError {
     this.name = 'TierMismatchError';
   }
 }
+
+/**
+ * Thrown by the prepaid+quota Wallet when the AuthResolver returns a
+ * caller whose tier string isn't recognized by this wallet. Distinct from
+ * TierMismatchError (which fires inside the DB transaction when the
+ * customer row's tier doesn't match the function's expectation).
+ */
+export class UnknownCallerTierError extends BillingError {
+  constructor(
+    public readonly callerId: string,
+    public readonly tier: string,
+  ) {
+    super('internal', `unknown caller tier for ${callerId}: ${tier}`);
+    this.name = 'UnknownCallerTierError';
+  }
+}

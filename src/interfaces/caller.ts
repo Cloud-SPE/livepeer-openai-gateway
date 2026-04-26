@@ -18,8 +18,13 @@ export interface Caller {
  * Cost description handed to a Wallet at reserve-time. Carries both cents
  * and wei so any wallet impl can pick its preferred unit (USD-prepaid reads
  * `cents`, crypto reads `wei`, free-tier reads `estimatedTokens`).
+ *
+ * `workId` is a bridge-internal idempotency key the engine assigns per
+ * request. Wallet impls use it however they like — as a reservations-table
+ * join key, an idempotency lookup, an audit-log identifier, or ignored.
  */
 export interface CostQuote {
+  workId: string;
   cents: bigint;
   wei: bigint;
   estimatedTokens: number;
