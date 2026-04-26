@@ -19,19 +19,30 @@ The TypeScript server lives under `src/`. Browser UIs (customer portal, operator
 └─────────────────────────────────────────────────────────┘
                         ↕ HTTP (no source imports)
 ┌─────────────────────────────────────────────────────────┐
-│  runtime/           HTTP, webhook, admin + portal endpoints  │  ← may import service, repo, providers, config, types, interfaces
-│    ├─ http/chat/completions.ts                          │
+│  runtime/           HTTP, webhook, admin + portal endpoints  │  ← may import dispatch, service, repo, providers, config, types, interfaces
+│    ├─ http/chat/completions.ts  (Fastify wrapper → dispatch/chatCompletion)
 │    ├─ http/account/                                     │
 │    ├─ http/portal/        @fastify/static for /portal/* │
 │    ├─ stripeWebhook/                                    │
 │    ├─ admin/                                            │
 │    └─ admin/console/      @fastify/static for /admin/console/*
 ├─────────────────────────────────────────────────────────┤
+│  dashboard/         engine's optional read-only operator UI │  ← may import service, providers, interfaces
+│                     mounted via registerOperatorDashboard at /admin/ops
+├─────────────────────────────────────────────────────────┤
+│  dispatch/          framework-free request orchestration (per exec-plan 0025)
+│    ├─ chatCompletion.ts       ← takes Wallet+Caller+ServiceRegistryClient+CircuitBreaker+QuoteCache
+│    ├─ streamingChatCompletion.ts
+│    ├─ embeddings.ts                                     │
+│    ├─ images.ts                                         │
+│    ├─ speech.ts                                         │
+│    └─ transcriptions.ts                                 │
+├─────────────────────────────────────────────────────────┤
 │  service/           business logic                      │  ← may import repo, providers, config, types, interfaces
 │    ├─ auth/                                             │
-│    ├─ billing/                                          │
-│    ├─ routing/                                          │
-│    ├─ nodes/                                            │
+│    ├─ billing/        (incl. inMemoryWallet for tests)  │
+│    ├─ routing/        (router, retry, circuitBreaker class, quoteCache, scheduler, quoteRefresher)
+│    ├─ nodes/          (legacy NodeBook + nodes.yaml — being retired in stage 3)
 │    ├─ pricing/                                          │
 │    ├─ tokenAudit/                                       │
 │    ├─ rateLimit/                                        │
@@ -45,6 +56,7 @@ The TypeScript server lives under `src/`. Browser UIs (customer portal, operator
 └─────────────────────────────────────────────────────────┘
 
   providers/          cross-cutting interfaces + defaults (engine-internal)
+                       incl. serviceRegistry/grpc.ts (ResolverClient → daemon)
   interfaces/         operator-overridable adapter contracts (per exec-plan 0024)
 ```
 

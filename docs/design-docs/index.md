@@ -34,6 +34,7 @@ Non-negotiables that shape every decision in this repo.
 - [token-audit.md](token-audit.md) — `accepted` — LocalTokenizer phases (observe → audit → enforce), drift metric, integration points
 - [metrics.md](metrics.md) — `accepted` — Prometheus metrics catalog (Phase 1 wires `prom-client` Recorder + `/metrics` endpoint; mirrors service-registry's verified pattern; cross-repo reconciliation panels enabled by consistent labels; advances `operator-economics-metrics-tooling`)
 - [ui-architecture.md](ui-architecture.md) — `accepted` — `bridge-ui/` Lit + RxJS + modern-CSS UI modules, `shared/` directory module pattern, light DOM, hash routing, sessionStorage credentials
+- [operator-dashboard.md](operator-dashboard.md) — `accepted` — engine's optional read-only operator dashboard (`@cloud-spe/bridge-core/dashboard`), vanilla TS, basic-auth, distinct from the shell's admin SPA
 - `escrow-operations.md` — _planned_ — reserve sizing, top-up, alerts
 - `reconciliation.md` — _planned_ — three-ledger relationship (customer USD, daemon EV, on-chain)
 
