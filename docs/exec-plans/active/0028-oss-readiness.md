@@ -230,9 +230,9 @@ Authored as part of stage 4 (referenced from there). This plan only ensures the 
 
 ### 9. Sample adapter docs
 
-`docs/adapters.md` in the public repo. Long-form guide:
+`docs/adapters.md` in the public repo. Long-form guide for the **five operator-overridable adapters** (Wallet, AuthResolver, RateLimiter, Logger, AdminAuthResolver). Explicitly clarifies that `ServiceRegistryClient` is *not* an operator-overridable adapter — the engine commits to the `livepeer-modules-project/service-registry-daemon` as the canonical discovery source.
 
-- Why adapters? (one-paragraph framing)
+- Why adapters? (one-paragraph framing — what's swap-out, what's not)
 - `Wallet` interface — full TS signature, semantics of `null` reservation, partial-commit semantics, refund-on-failure.
 - `AuthResolver` — full TS signature, tier-string convention, examples (bearer-token, mTLS, API key in header).
 - `RateLimiter` — interface + Redis sliding-window default impl docs.
@@ -241,6 +241,7 @@ Authored as part of stage 4 (referenced from there). This plan only ensures the 
 - Pattern: building a postpaid B2B Wallet (returns `null` from `reserve`, records actuals on `commit`).
 - Pattern: building a crypto Wallet (reads `wei` from `CostQuote`).
 - Pattern: building a free-quota Wallet (reads `actualTokens` from `UsageReport`).
+- **Non-adapter**: `ServiceRegistryClient` — engine-internal provider interface backed by a gRPC client to the registry-daemon. Documented for transparency and testability (operators mock it in their own tests), but not intended for swap-out. Operators with proprietary discovery systems should run a registry-daemon shim or fork.
 - Reference: `examples/minimal-shell/` and `examples/wallets/{postpaid,prepaid-usd,free-quota}/`.
 
 ### 10. `examples/wallets/`

@@ -12,13 +12,14 @@ opened: 2026-04-26
 Stage 3 of a 4-stage extraction. With interfaces ([`0024`](./0024-engine-extraction-interfaces.md)) and dispatchers ([`0025`](./0025-engine-extraction-dispatchers.md)) in place, this stage performs the actual file moves: convert the repo to npm workspaces, create `packages/bridge-core/` (engine) and `packages/livepeer-openai-gateway/` (shell), split the Postgres schema into `engine.*` and `app.*` namespaces, rewrite the migration history clean (nothing is deployed; we drop `migrations/0000-0006.sql` and start fresh per package), split metric-name prefixes, set up per-package ESLint configs, and rename this repo from `openai-livepeer-bridge` to `livepeer-openai-gateway`.
 
 After this stage:
-- `packages/bridge-core/` is a self-contained engine package with its own `package.json`, `tsconfig.json`, `vitest.config.ts`, ESLint config, migrations, tests, and dashboard.
+- `packages/bridge-core/` is a self-contained engine package with its own `package.json`, `tsconfig.json`, `vitest.config.ts`, ESLint config, migrations, tests, dashboard, and proto-generated stubs for both daemons (payment + service-registry).
 - `packages/livepeer-openai-gateway/` is the shell package consuming `bridge-core` via workspace symlink.
 - `bridge-ui/` (the entire `shared/`, `portal/`, `admin/` tree) lives under the shell package — it's all shell-owned, both consumers are shell.
 - The engine's Fastify peer-dep declaration is real (Fastify is no longer a direct dep of the engine).
 - DB has two schemas. Engine writes `engine.usage_records` with `caller_id` (string). Shell writes `app.customers`, `app.api_keys`, `app.topups`, `app.reservations`, `app.stripe_webhook_events`, `app.admin_audit_events`. No cross-schema FKs.
 - Each package runs its own migrations independently at startup.
 - Metric names are prefixed: engine emits `livepeer_bridge_*`; shell emits `cloudspe_*` (placeholder; rename if a different shell product name is chosen).
+- The deployment topology requires **both** sidecar daemons: `livepeer-payment-daemon` (sender mode, sender-side gRPC) and `livepeer-service-registry-daemon` (resolver gRPC). Both compose files (`compose.yaml`, `compose.prod.yaml`) include both as services.
 - This repo's `package.json`, `Dockerfile`, `compose*.yaml`, `README.md`, internal links, and CI all reflect the new name `livepeer-openai-gateway`.
 
 The engine package can be `npm pack`-ed and installed elsewhere as a tarball, validating the public surface before stage 4 actually publishes it.
@@ -69,9 +70,9 @@ packages/bridge-core/
 │   ├── interfaces/             # from stage 1
 │   ├── types/                  # OpenAI schemas, capability, payment, node — moved from src/types/ (excluding customer.ts)
 │   ├── config/                 # nodes, payerDaemon, pricing, tokenizer, rateLimit, metrics — moved (excluding auth, stripe, admin)
-│   ├── repo/                   # db.ts, schema.ts (engine tables only), nodeHealth.ts, usageRecords.ts, usageRollups.ts, migrate.ts
+│   ├── repo/                   # db.ts, schema.ts (engine tables only), nodeHealth.ts, usageRecords.ts, usageRollups.ts, migrate.ts (note: nodeHealth records the per-process circuit-breaker timeline, NOT the registry-daemon's view)
 │   ├── providers/              # database, http, metrics, nodeClient, payerDaemon, redis, tokenizer, logger (NO stripe)
-│   ├── service/                # nodes, payments, routing, pricing, tokenAudit, rateLimit, admin/engine.ts, admin/basicAuthResolver.ts, billing/inMemoryWallet.ts (reference impl only)
+│   ├── service/                # payments, routing (router, circuitBreaker, quoteCache, quoteRefresher, scheduler), pricing, tokenAudit, rateLimit, admin/engine.ts, admin/basicAuthResolver.ts, billing/inMemoryWallet.ts (reference impl only)
 │   ├── dispatch/               # from stage 2
 │   ├── dashboard/              # from stage 2 — engine's optional read-only OSS dashboard
 │   └── adapters/
@@ -177,8 +178,7 @@ Drop the existing `migrations/0000-0006.sql` from the root. Rewrite from scratch
 CREATE SCHEMA engine;
 SET search_path TO engine;
 
-CREATE TABLE engine.nodes (...);
-CREATE TABLE engine.node_health_events (...);
+CREATE TABLE engine.node_health_events (...);  -- per-process circuit-breaker timeline; node identity comes from the registry-daemon, not a local table
 CREATE TABLE engine.usage_records (
   id          UUID PRIMARY KEY,
   work_id     TEXT NOT NULL UNIQUE,
@@ -242,27 +242,56 @@ This repo: `openai-livepeer-bridge` → `livepeer-openai-gateway`.
 
 GitHub repo rename is an external action (user-driven via web UI or `gh` CLI); flag in steps as a manual ops step.
 
-### 8. `bridge-ui/` placement
+### 8. Compose topology — both daemons as sidecars
+
+Both `compose.yaml` and `compose.prod.yaml` gain a `service-registry-daemon` service alongside the existing `payment-daemon` service. Bridge depends_on both. The bridge container mounts the unix sockets from both daemons (or, for prod TCP, points at network addresses).
+
+Sketch (compose.yaml additions):
+
+```yaml
+services:
+  service-registry-daemon:
+    image: ghcr.io/livepeer-cloud-spe/service-registry-daemon:<pinned-version>
+    volumes:
+      - ./var/run/livepeer:/var/run/livepeer  # exposes service-registry.sock
+      - ./service-registry-config.yaml:/etc/livepeer/service-registry.yaml:ro
+    # ... env, healthcheck
+
+  payment-daemon:
+    # existing definition
+
+  bridge:
+    depends_on: [postgres, redis, payment-daemon, service-registry-daemon]
+    environment:
+      SERVICE_REGISTRY_SOCKET: /var/run/livepeer/service-registry.sock
+      PAYER_DAEMON_SOCKET: /var/run/livepeer/payment-daemon.sock
+    volumes:
+      - ./var/run/livepeer:/var/run/livepeer
+```
+
+The `service-registry-config.yaml` example file is added at repo root, demonstrating the daemon's configured node pool. This *replaces* the old `nodes.example.yaml` (which retired in stage 2).
+
+### 9. `bridge-ui/` placement
 
 `bridge-ui/` becomes a workspace member at the root level OR moves under `packages/livepeer-openai-gateway/bridge-ui/`. Recommendation: keep at root as a workspace member — preserves the existing relative-path import convention from `0023-operator-admin.md` (admin imports `../shared/...`) and avoids a deep nesting churn. The shell package's `runtime/http/{portal,adminConsole}/static.ts` imports the built `dist/` directories via configurable paths.
 
 Doc-lint rule that enforces `bridge-ui/<consumer>/lib` doesn't redefine `shared/lib` stays at root, scoped to the bridge-ui workspace.
 
-### 9. Tests
+### 10. Tests
 
 - Each package's `vitest run --coverage` independently meets ≥ 75% on all v8 metrics.
 - Engine package tests use `InMemoryWallet`; no shell-side dependencies.
 - Shell package tests use the real `prepaidQuotaWallet` against TestPg.
-- Cross-package integration test in shell: end-to-end `/v1/chat/completions` with a real engine package import + InMemoryWallet stand-in, asserting the engine package's surface is sufficient.
+- Cross-package integration test in shell: end-to-end `/v1/chat/completions` with a real engine package import + InMemoryWallet stand-in + mock `ServiceRegistryClient`, asserting the engine package's surface is sufficient.
 - Existing Playwright e2e (in `bridge-ui/portal/tests` etc.) keep running against the shell package's combined Fastify app.
 
-### 10. Doc updates
+### 11. Doc updates
 
 - Sweep `docs/` for moved file paths. Architecture diagrams now show two stacks side-by-side.
-- `docs/operations/deployment.md` — note that build now runs `npm run build --workspaces` and produces two artifacts.
-- New `packages/bridge-core/README.md` — engine package quickstart (placeholder; full README is stage 4).
+- `docs/operations/deployment.md` — note that build now runs `npm run build --workspaces` and produces two artifacts; document the new compose topology with both daemons; add a runbook section for "starting the registry-daemon."
+- New `packages/bridge-core/README.md` — engine package quickstart (placeholder; full README is stage 4). Calls out both daemon dependencies up front.
 - New `packages/livepeer-openai-gateway/README.md` — shell package quickstart.
-- Root `README.md` — explain the workspace layout.
+- Root `README.md` — explain the workspace layout and the dual-daemon deployment topology.
 
 ## Steps
 
@@ -277,6 +306,7 @@ Doc-lint rule that enforces `bridge-ui/<consumer>/lib` doesn't redefine `shared/
 - [ ] Switch metric prefixes: engine `livepeer_bridge_*`, shell `cloudspe_*` (placeholder)
 - [ ] Per-package ESLint configs; engine layer rule scoped; shell allows engine imports
 - [ ] Rename repo identifiers: package.json names, Dockerfile, compose, README, AGENTS.md, .github workflows, internal markdown links
+- [ ] Update `compose.yaml` + `compose.prod.yaml` to add `service-registry-daemon` as a sidecar; bridge depends_on it; mount socket; add `service-registry-config.yaml` example file at repo root (replaces retired `nodes.example.yaml`)
 - [ ] Manual ops step: rename GitHub repo `openai-livepeer-bridge` → `livepeer-openai-gateway`
 - [ ] Verify both packages build, test ≥ 75% each, lint, doc-lint pass; verify Playwright e2e still green
 - [ ] Smoke `npm pack packages/bridge-core` produces a valid tarball

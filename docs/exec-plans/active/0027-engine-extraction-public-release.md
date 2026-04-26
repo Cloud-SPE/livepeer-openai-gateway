@@ -95,7 +95,7 @@ livepeer-bridge-core/
 
 ### 3. `examples/minimal-shell/`
 
-A runnable bare-bones operator that proves the engine is usable without any of the shell's machinery.
+A runnable bare-bones operator that proves the engine is usable without any of the shell's machinery. **Requires two daemons** alongside the example: `livepeer-payment-daemon` (sender mode) and `livepeer-service-registry-daemon`. The example ships a `compose.yaml` that brings up both alongside the minimal-shell process.
 
 ```ts
 // examples/minimal-shell/start.ts
@@ -103,40 +103,48 @@ import Fastify from 'fastify';
 import {
   InMemoryWallet,
   createNoopAuthResolver,
-  NodeBook,
-  createNodesLoader,
+  createCircuitBreaker,
+  createQuoteCache,
   createQuoteRefresher,
   createFetchNodeClient,
   createGrpcPayerDaemonClient,
+  createGrpcServiceRegistryClient,
   createPaymentsService,
   createSessionCache,
   realScheduler,
   NoopRecorder,
   loadPayerDaemonConfig,
+  loadServiceRegistryConfig,
   loadPricingConfig,
 } from '@cloud-spe/bridge-core';
 import { registerChatCompletionsRoute } from '@cloud-spe/bridge-core/fastify';
 
 const wallet = new InMemoryWallet();
 const authResolver = createNoopAuthResolver({ defaultTier: 'free' });
-const nodeBook = new NodeBook();
 const nodeClient = createFetchNodeClient();
 const payerDaemonConfig = loadPayerDaemonConfig();
 const payerDaemon = createGrpcPayerDaemonClient({ config: payerDaemonConfig, scheduler: realScheduler() });
 const sessionCache = createSessionCache({ payerDaemon });
 const paymentsService = createPaymentsService({ payerDaemon, sessions: sessionCache });
+const serviceRegistry = createGrpcServiceRegistryClient({ config: loadServiceRegistryConfig(), scheduler: realScheduler() });
+const circuitBreaker = createCircuitBreaker();
+const quoteCache = createQuoteCache();
 const pricing = loadPricingConfig();
 
-createNodesLoader({ nodeBook, configPath: './nodes.example.yaml' }).load();
-createQuoteRefresher({ nodeBook, nodeClient, scheduler: realScheduler(), bridgeEthAddress: payerDaemonConfig.bridgeEthAddress, recorder: new NoopRecorder() }).start();
+createQuoteRefresher({ serviceRegistry, nodeClient, quoteCache, scheduler: realScheduler(), bridgeEthAddress: payerDaemonConfig.bridgeEthAddress, recorder: new NoopRecorder() }).start();
 
 const app = Fastify();
-registerChatCompletionsRoute(app, { wallet, authResolver, nodeBook, nodeClient, paymentsService, pricing });
+registerChatCompletionsRoute(app, { wallet, authResolver, serviceRegistry, circuitBreaker, quoteCache, nodeClient, paymentsService, pricing });
 await app.listen({ port: 8080 });
 console.log('Minimal shell running on :8080');
 ```
 
-`examples/minimal-shell/README.md`: clone, `npm install`, set `PAYER_DAEMON_*` envs, point `nodes.example.yaml` at a worker, `node start.js`, `curl http://localhost:8080/v1/chat/completions ...`. End-to-end in under 30 seconds (modulo daemon spinup).
+`examples/minimal-shell/compose.yaml` brings up:
+- `service-registry-daemon` (config: `./service-registry-config.yaml`) on socket `/var/run/livepeer/service-registry.sock`
+- `payment-daemon` (sender mode, config: `./payment-daemon-config.yaml`) on socket `/var/run/livepeer/payment-daemon.sock`
+- `minimal-shell` (this example) bind-mounting both sockets
+
+`examples/minimal-shell/README.md`: clone, `npm install`, fill in the two daemon config files (worker pool list for the registry, escrow/keystore for the payer), `docker compose up`, `curl http://localhost:8080/v1/chat/completions ...`. End-to-end in 1–2 minutes (daemon spinup is the long part).
 
 ### 4. CI workflows
 
@@ -224,9 +232,14 @@ This repo's policy: pin to `^0.1.0` style range; bump explicitly. No auto-update
 - Quickstart (`npm install @cloud-spe/bridge-core` → minimal-shell example).
 - Adapter overview (Wallet, AuthResolver, RateLimiter, Logger, AdminAuthResolver).
 - Architecture diagram (engine vs. operator-supplied adapters).
+- **Ecosystem integration section** (must appear prominently):
+  - **Required sidecar daemons**: `livepeer-payment-daemon` (sender mode) for ticket creation; `livepeer-service-registry-daemon` for node discovery and selection. Both are gRPC over unix sockets by default.
+  - Repo links: `livepeer-cloud-spe/livepeer-modules-project/payment-daemon`, `livepeer-cloud-spe/livepeer-modules-project/service-registry-daemon`.
+  - Note: the engine does NOT support a static-YAML fallback; the registry-daemon is required for production and for the minimal-shell example.
+  - `livepeer-cloud-spe/livepeer-modules-project/protocol-daemon` is **orthogonal** — orchestrator-side concern, not needed by bridge operators unless they also run an orchestrator.
 - Link to `examples/minimal-shell/`, `docs/adapters.md`, `docs/architecture.md`.
 - Link to `Cloud-SPE/livepeer-openai-gateway` as a reference shell implementation (this repo).
-- Link to `livepeer-payment-library` (the daemon).
+- Reference to `livepeer-cloud-spe/livepeer-modules-conventions` for cross-ecosystem metric naming and port allocation conventions.
 - License: MIT.
 
 The full ecosystem-readiness pieces (CONTRIBUTING, SECURITY, etc.) come from [`0028-oss-readiness.md`](./0028-oss-readiness.md), running in parallel.
@@ -259,7 +272,7 @@ The historical record of HOW the engine was extracted lives in this repo's `docs
 - [ ] Local: clone the empty repo, copy `packages/bridge-core/*` content over, prune workspace-specific config (root package.json reference)
 - [ ] Add MIT `LICENSE`, placeholder OSS-readiness files (real content from [`0028`](./0028-oss-readiness.md))
 - [ ] Carve engine-side design-docs into the public repo's `docs/`
-- [ ] Build `examples/minimal-shell/` (start script, package.json, nodes.example.yaml, README walkthrough)
+- [ ] Build `examples/minimal-shell/` (start script, package.json, `compose.yaml` bringing up payment-daemon + service-registry-daemon as sidecars, `service-registry-config.yaml`, `payment-daemon-config.yaml`, README walkthrough)
 - [ ] Write public `README.md` (elevator pitch, quickstart, adapters, architecture diagram, ecosystem links)
 - [ ] Add `.github/workflows/ci.yml` + `publish.yml`
 - [ ] Manual: configure `NPM_TOKEN` secret in the public repo

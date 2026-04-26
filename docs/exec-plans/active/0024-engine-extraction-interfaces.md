@@ -9,15 +9,19 @@ opened: 2026-04-26
 
 ## Goal
 
-Stage 1 of a 4-stage extraction that splits this codebase into an OSS engine (`@cloud-spe/bridge-core`, MIT, npm-published, public repo `Cloud-SPE/livepeer-bridge-core`) and a proprietary shell (this repo, renaming to `livepeer-openai-gateway`). Stage 1 establishes the five adapter contracts the engine will eventually expose, refactors existing code to implement them in-place (no file moves, no schema changes, no workspace conversion), and threads a generic `Caller {id, tier, metadata?}` in front of the current `CustomerRow`-typed flow. By the end of this stage the codebase still ships as a single binary with no behavior change, but the engine/shell seam is explicit in code and validated by passing tests.
+Stage 1 of a 4-stage extraction that splits this codebase into an OSS engine (`@cloud-spe/bridge-core`, MIT, npm-published, public repo `Cloud-SPE/livepeer-bridge-core`) and a proprietary shell (this repo, renaming to `livepeer-openai-gateway`). Stage 1 establishes the five operator-overridable adapter contracts the engine will expose, refactors existing code to implement them in-place (no file moves, no schema changes, no workspace conversion), threads a generic `Caller {id, tier, metadata?}` in front of the current `CustomerRow`-typed flow, and additionally defines a `ServiceRegistryClient` provider interface that wraps today's `NodeBook` so the rest of the codebase calls a registry-shaped API. The actual gRPC client to `livepeer-modules-project/service-registry-daemon` and the retirement of `NodeBook`/`nodes.yaml` come in stage 2 — this stage only stands up the interface so the swap is mechanical there. By the end of this stage the codebase still ships as a single binary with no behavior change, but the engine/shell seam is explicit in code and validated by passing tests.
 
-The five interfaces, locked-in:
+The five operator-overridable adapter interfaces, locked-in:
 
 - `Wallet` — `reserve(callerId, CostQuote) → ReservationHandle | null`; `commit(handle, UsageReport) → void`; `refund(handle) → void` (best-effort, errors swallowed). The existing `service/billing/reservations.ts` (prepaid + quota branches) is wrapped behind a single `Wallet` impl. `null` from `reserve` means "no reservation needed" (postpaid pattern).
 - `AuthResolver` — `resolve(req) → Caller | null` (null → 401). Today's `service/auth/authenticate.ts` becomes the default impl. `Caller.tier` is an operator-defined string the engine plumbs through but does not own.
 - `RateLimiter` — already optional in route deps. Generalize the key from `customerId` to `callerId`.
 - `Logger` — minimal `info/warn/error`. Default impl uses `console.{warn,error}`. Threaded through `main.ts` and the engine-bound providers that currently `console.warn(...)` directly.
 - `AdminAuthResolver` — hook for the operator dashboard auth (default impl wraps existing `X-Admin-Token` + `X-Admin-Actor` middleware). Stage 2 mounts the engine dashboard behind it; this stage just defines the contract.
+
+Plus one engine-internal provider interface (NOT operator-overridable; the engine commits to `livepeer-modules-project/service-registry-daemon` as the canonical discovery source):
+
+- `ServiceRegistryClient` — `select(query) → NodeRef[]`; `listKnown(capability?) → NodeRef[]`. Lives at `src/providers/serviceRegistry.ts`. Today's `NodeBook` is wrapped to implement this interface in stage 1. Stage 2 replaces the NodeBook-backed impl with a real gRPC client to the daemon and retires `nodes.yaml`. Selection moves daemon-side; circuit-breaker stays bridge-local (per-process exclusion set retried against `select` until exhausted).
 
 Zero behavior change. All current tests pass unchanged or with surface-level edits.
 
@@ -33,6 +37,9 @@ Zero behavior change. All current tests pass unchanged or with surface-level edi
 - No removal of the legacy `MetricsSink` interface (already tracked under metrics phase 2).
 - No replacement of every `console.warn` call — only the ones in code paths that will move to the engine in stage 3.
 - No splitting of the AdminService yet (stage 2).
+- No registry-daemon gRPC client implementation (stage 2). `NodeBook` stays in place wrapped behind `ServiceRegistryClient`; `nodes.yaml` stays.
+- No retirement of `service/nodes/` (stage 2).
+- No reshape of `service/routing/router.ts` to use daemon-side selection (stage 2).
 
 ## Approach
 
@@ -150,40 +157,76 @@ Wraps the `X-Admin-Token` (timing-safe) + `X-Admin-Actor` (regex `^[a-z0-9._-]{1
 
 Existing `adminAuth` Fastify middleware stays — it now calls `adminAuthResolver.resolve(req)` and writes the audit event. Audit write stays in the middleware (shell concern; relocates in stage 3).
 
-### 7. Wire adapters in main.ts
+### 7. ServiceRegistryClient interface + NodeBook wrap
+
+`src/providers/serviceRegistry.ts` (new): provider type, modelled on the existing `src/providers/payerDaemon.ts`.
+
+```ts
+export interface NodeRef {
+  id: string;
+  url: string;
+  capabilities: Capability[];
+  weight?: number;
+  metadata?: unknown;
+}
+
+export interface SelectQuery {
+  capability: Capability;
+  model?: string;
+  tier?: string;
+  excludeIds?: string[];
+}
+
+export interface ServiceRegistryClient {
+  select(query: SelectQuery): Promise<NodeRef[]>;
+  listKnown(capability?: Capability): Promise<NodeRef[]>;
+}
+```
+
+`src/service/nodes/nodebookRegistry.ts` (new): `createNodeBookRegistry({nodeBook}) → ServiceRegistryClient`.
+
+- `select(query)`: today's `nodeBook.findByCapabilityAndTier(query.capability, query.tier)` filtered by `query.excludeIds`. No weighted-random sort here; the caller (`pickNode`) still does selection in stage 1.
+- `listKnown(capability?)`: returns NodeRefs derived from `nodeBook.allNodes()` (filtered by capability if provided).
+
+Existing call sites (`src/service/routing/router.ts:pickNode`, `src/service/nodes/quoteRefresher.ts`) keep using `NodeBook` directly in stage 1 — they switch to the `ServiceRegistryClient` interface in stage 2 when the gRPC client lands. This stage just stands the interface up so the swap is mechanical there.
+
+### 8. Wire adapters in main.ts
 
 ```ts
 const logger = createConsoleLogger();
 const authResolver = createAuthResolver({ authService });
 const wallet = createPrepaidQuotaWallet({ db });
 const adminAuthResolver = createAdminAuthResolver({ config: adminConfig });
+const serviceRegistry = createNodeBookRegistry({ nodeBook });
 ```
 
 Pass these alongside the lower-level dependencies into route registrations. Route handlers continue to call lower-level functions internally — the adapter pass-through is wired but not yet exclusive (that's stage 2).
 
-### 8. Tests
+### 9. Tests
 
 - `src/interfaces/*.test.ts` — type-shape and trivial-behavior tests.
 - `src/service/billing/wallet.test.ts` — TestPg-backed prepaid/quota branch dispatch.
 - `src/service/auth/authResolver.test.ts` — Caller construction, bearer-token edge cases.
 - `src/service/admin/authResolver.test.ts` — token + actor validation.
+- `src/service/nodes/nodebookRegistry.test.ts` — `select` filters, `excludeIds` honored, `listKnown` shape.
 - Existing route tests (`src/runtime/http/{chat,embeddings,images,audio,account,admin}/*.test.ts`) — assert `req.caller` is a `Caller`; cast through `metadata` for shell-specific assertions.
 - Coverage stays ≥ 75% across all v8 metrics. Ratchet up where the new interface tests push it.
 
-### 9. Doc updates
+### 10. Doc updates
 
-- `docs/design-docs/architecture.md` — note that adapter interfaces have been added at `src/interfaces/` and document each shape. Layer rule unchanged.
+- `docs/design-docs/architecture.md` — note that adapter interfaces have been added at `src/interfaces/` and document each shape; note that `ServiceRegistryClient` is an engine-internal provider interface (not operator-overridable) staged for stage-2 swap to a `livepeer-modules-project/service-registry-daemon` gRPC client. Layer rule unchanged.
 - `docs/design-docs/index.md` — link any new architecture stub.
 
 ## Steps
 
-- [ ] Create `src/interfaces/` with the six files (caller types + five interfaces) + barrel
+- [ ] Create `src/interfaces/` with the six files (caller types + five operator-overridable interfaces) + barrel
 - [ ] Implement `createPrepaidQuotaWallet` wrapping existing `service/billing/reservations.ts` branches
 - [ ] Implement `createAuthResolver` wrapping `service/auth`; update Fastify `req.caller` augmentation to `Caller`
 - [ ] Implement `createConsoleLogger`; thread through engine-bound `console.*` callers in `main.ts` + `providers/payerDaemon` + `service/nodes/quoteRefresher`
 - [ ] Move `RateLimiter` interface; rename `customerId` param → `callerId`
 - [ ] Implement `createAdminAuthResolver` wrapping `runtime/http/middleware/adminAuth.ts`
-- [ ] Wire all five adapters in `main.ts`
+- [ ] Define `ServiceRegistryClient` provider interface at `src/providers/serviceRegistry.ts`; implement `createNodeBookRegistry` wrapping today's NodeBook
+- [ ] Wire all five adapters + `serviceRegistry` in `main.ts`
 - [ ] Add interface and impl unit tests; update existing route tests for the new `Caller` shape
 - [ ] Update `docs/design-docs/architecture.md` and the design-docs index
 - [ ] Verify `npm run lint`, `npm run typecheck`, `npm test` (≥ 75% coverage), `npm run doc-lint` all pass
