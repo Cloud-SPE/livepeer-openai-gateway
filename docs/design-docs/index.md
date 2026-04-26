@@ -33,6 +33,7 @@ Non-negotiables that shape every decision in this repo.
 - [stripe-integration.md](stripe-integration.md) — `accepted` — Checkout top-ups, webhook flow, idempotency, tier upgrade
 - [token-audit.md](token-audit.md) — `accepted` — LocalTokenizer phases (observe → audit → enforce), drift metric, integration points
 - [metrics.md](metrics.md) — `accepted` — Prometheus metrics catalog (Phase 1 wires `prom-client` Recorder + `/metrics` endpoint; mirrors service-registry's verified pattern; cross-repo reconciliation panels enabled by consistent labels; advances `operator-economics-metrics-tooling`)
+- [ui-architecture.md](ui-architecture.md) — `accepted` — `bridge-ui/` Lit + RxJS + modern-CSS UI modules, `shared/` directory module pattern, light DOM, hash routing, sessionStorage credentials
 - `escrow-operations.md` — _planned_ — reserve sizing, top-up, alerts
 - `reconciliation.md` — _planned_ — three-ledger relationship (customer USD, daemon EV, on-chain)
 
