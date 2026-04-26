@@ -15,7 +15,7 @@ import { createPrepaidQuotaWallet } from '../../../service/billing/wallet.js';
 import { createNodesLoader } from '../../../service/nodes/loader.js';
 import { createQuoteRefresher } from '../../../service/nodes/quoteRefresher.js';
 import { NodeBook } from '../../../service/nodes/nodebook.js';
-import { ManualScheduler } from '../../../service/nodes/scheduler.js';
+import { ManualScheduler } from '../../../service/routing/scheduler.js';
 import { createFetchNodeClient } from '../../../providers/nodeClient/fetch.js';
 import {
   TEST_BRIDGE_ETH,

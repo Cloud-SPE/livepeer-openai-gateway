@@ -50,7 +50,7 @@ import { createNodesLoader } from './service/nodes/loader.js';
 import { NodeBook } from './service/nodes/nodebook.js';
 import { createNodeBookRegistry } from './service/nodes/nodebookRegistry.js';
 import { createQuoteRefresher } from './service/nodes/quoteRefresher.js';
-import { realScheduler } from './service/nodes/scheduler.js';
+import { realScheduler } from './service/routing/scheduler.js';
 import { createRateLimiter } from './service/rateLimit/index.js';
 import { createTokenAuditService } from './service/tokenAudit/index.js';
 

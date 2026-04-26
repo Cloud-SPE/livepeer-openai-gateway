@@ -5,7 +5,7 @@ import path from 'node:path';
 import { Server, ServerCredentials, status as GrpcStatus } from '@grpc/grpc-js';
 import { createGrpcPayerDaemonClient } from './grpc.js';
 import { PayerDaemonUnavailableError } from './errors.js';
-import { ManualScheduler } from '../../service/nodes/scheduler.js';
+import { ManualScheduler } from '../../service/routing/scheduler.js';
 import { PayerDaemonService } from './gen/livepeer/payments/v1/payer_daemon.js';
 import { bigintToBigEndianBytes } from './convert.js';
 

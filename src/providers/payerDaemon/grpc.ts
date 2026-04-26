@@ -8,7 +8,7 @@ import type {
   StartSessionInput,
   StartSessionOutput,
 } from '../payerDaemon.js';
-import type { Scheduler, ScheduledTask } from '../../service/nodes/scheduler.js';
+import type { Scheduler, ScheduledTask } from '../../service/routing/scheduler.js';
 import { PayerDaemonClient as GeneratedClient } from './gen/livepeer/payments/v1/payer_daemon.js';
 import { bigEndianBytesToBigint, domainTicketParamsToWire } from './convert.js';
 import { mapGrpcError, PayerDaemonUnavailableError } from './errors.js';

@@ -19,7 +19,7 @@ import {
   type CircuitStatus,
 } from './circuitBreaker.js';
 import type { NodeBook } from './nodebook.js';
-import type { Scheduler, ScheduledTask } from './scheduler.js';
+import type { Scheduler, ScheduledTask } from '../routing/scheduler.js';
 
 /** Map circuit-breaker status onto the metric label state. */
 function statusToMetricState(status: CircuitStatus): NodeState {

@@ -7,7 +7,7 @@ import type {
 } from '../serviceRegistry.js';
 import type { NodeCapability } from '../../types/node.js';
 import { CAPABILITY_STRINGS, capabilityString } from '../../types/capability.js';
-import type { Scheduler, ScheduledTask } from '../../service/nodes/scheduler.js';
+import type { Scheduler, ScheduledTask } from '../../service/routing/scheduler.js';
 import { ResolverClient as GeneratedResolverClient } from './gen/livepeer/registry/v1/resolver.js';
 import type {
   ListKnownRequest,
