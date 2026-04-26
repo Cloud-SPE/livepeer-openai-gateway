@@ -137,16 +137,70 @@ A 200 with the model list confirms the key is live. A 401 means either the hash 
 - `API_KEY_PEPPER` rotation invalidates every key in the table; treat it like a database-level secret.
 - The `tier` enum is currently `free | prepaid | admin`; admin tier is unmetered and bypasses rate limiting (defined in `service/auth/`).
 
+## Building the production image
+
+Dev (`compose.yaml`) builds inline via `build: { context: . }` — `docker compose up --build` does the right thing for local iteration. Prod (`compose.prod.yaml`) is the opposite — it consumes a pre-built `${BRIDGE_IMAGE}` and refuses to build itself, so operators ship the image themselves.
+
+Three npm scripts wrap the `docker build / tag / push` cycle so the recipe is in-repo and consistent across operators:
+
+```bash
+npm run docker:build       # → openai-livepeer-bridge:local
+npm run docker:tag         # → tztcloud/livepeer-openai-gateway:v0.8.10
+npm run docker:push        # pushes the tag above
+```
+
+Or in one shot:
+
+```bash
+npm run docker:release     # build + tag + push, in order
+```
+
+### Overriding the version
+
+Two equivalent ways to override the default `v0.8.10`:
+
+```bash
+# Positional arg (repeats — pass to both tag and push)
+npm run docker:tag -- v0.8.11
+npm run docker:push -- v0.8.11
+
+# Or via env (no -- needed; sticks for the whole shell)
+BRIDGE_VERSION=v0.8.11 npm run docker:tag
+BRIDGE_VERSION=v0.8.11 npm run docker:push
+```
+
+### Overriding the registry
+
+Default repo path is `tztcloud/livepeer-openai-gateway` (matches `compose.prod.yaml`'s `BRIDGE_IMAGE` default). Override per-operator:
+
+```bash
+BRIDGE_IMAGE_REPO=ghcr.io/example/livepeer-bridge npm run docker:tag
+BRIDGE_IMAGE_REPO=ghcr.io/example/livepeer-bridge npm run docker:push
+```
+
+The push assumes you're already authenticated to the registry (`docker login` for Docker Hub, or `docker login ghcr.io` for GitHub Container Registry). Authentication is operator-side; the scripts don't manage credentials.
+
+### CI hookup
+
+Manual recipe today, CI workflow later. A future GitHub Actions workflow can wrap the same npm scripts on tag push:
+
+```yaml
+# .github/workflows/release.yml — sketch, not committed
+- run: npm ci
+- run: npm test
+- run: npm run docker:build
+- uses: docker/login-action@v3
+  with: { ... }
+- run: BRIDGE_VERSION=${GITHUB_REF_NAME} npm run docker:release
+```
+
+Tracked as [`tech-debt`](../exec-plans/tech-debt-tracker.md) — local recipe is in place; the workflow is the remaining gap.
+
 ## Prod walkthrough
 
 Additional prerequisites:
 
-- A tagged, pushed bridge image (the compose override does not build). Until CI publishing lands:
-  ```bash
-  docker build -t tztcloud/livepeer-openai-gateway:v0.8.10 .
-  docker push tztcloud/livepeer-openai-gateway:v0.8.10
-  ```
-- Set `BRIDGE_IMAGE` in `.env` to that tag.
+- A tagged, pushed bridge image — see "Building the production image" above. Set `BRIDGE_IMAGE` in `.env` to whatever you tagged (`tztcloud/livepeer-openai-gateway:v0.8.10` by default).
 - Rotate every `REQUIRED-*` placeholder in `.env` to a live value (especially `API_KEY_PEPPER`, `ADMIN_TOKEN`, Stripe live keys).
 
 Boot:
