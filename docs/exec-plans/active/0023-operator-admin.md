@@ -185,7 +185,7 @@ Files:
 
 ### 2026-04-26 — Import from `bridge-ui/shared/`, do not copy
 
-Reverses an earlier draft of this plan that proposed copy-verbatim with rule-of-three extraction at a hypothetical third consumer. Project standard ([`feedback_shared_modules_upfront.md`](../../../../../.claude/projects/-home-mazup-git-repos-livepeer-cloud-spe-openai-livepeer-bridge/memory/feedback_shared_modules_upfront.md)): when 2+ consumers are co-designed, stand up the shared module from day one. 0022 stood it up; this plan validates it by being a second, structurally-different consumer (admin token + `X-Admin-Actor` strategy vs. portal's Bearer-key strategy). Anything portal got first that admin now also needs that *isn't* in shared is a signal to move it — call those out as discovered while implementing.
+Reverses an earlier draft of this plan that proposed copy-verbatim with rule-of-three extraction at a hypothetical third consumer. Project standard: when 2+ consumers are co-designed, stand up the shared module from day one. 0022 stood it up; this plan validates it by being a second, structurally-different consumer (admin token + `X-Admin-Actor` strategy vs. portal's Bearer-key strategy). Anything portal got first that admin now also needs that *isn't* in shared is a signal to move it — call those out as discovered while implementing.
 
 ### 2026-04-26 — Operator admin served by the customer Fastify instance, not the metrics listener or its own port
 

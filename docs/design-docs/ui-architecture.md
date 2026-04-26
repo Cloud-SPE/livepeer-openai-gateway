@@ -99,7 +99,7 @@ Lit's `static styles` is silently ignored when a component returns `this` from `
 
 ### Modern CSS feature inventory
 
-Used routinely: cascade layers, native nesting, `@scope`, `@container`, `light-dark()`, `color-mix()`, `clamp()`, `text-wrap: balance/pretty`, `field-sizing: content`, `:user-invalid`, `:has()`, View Transitions, Popover API, `<dialog>` + `::backdrop`, `@starting-style`, `@property`, `content-visibility`, `scrollbar-gutter: stable`. Reference: [`example-modern-css-2026.md`](../../../accountability-agent-platform/example-modern-css-2026.md).
+Used routinely: cascade layers, native nesting, `@scope`, `@container`, `light-dark()`, `color-mix()`, `clamp()`, `text-wrap: balance/pretty`, `field-sizing: content`, `:user-invalid`, `:has()`, View Transitions, Popover API, `<dialog>` + `::backdrop`, `@starting-style`, `@property`, `content-visibility`, `scrollbar-gutter: stable`. Reference: the project's CSS standard, `example-modern-css-2026.md` in the sibling `accountability-agent-platform/` repo.
 
 ## Lit component pattern
 

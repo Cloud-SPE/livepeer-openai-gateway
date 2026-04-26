@@ -10,6 +10,8 @@
 //   - Internal `.md` cross-links under `docs/` resolve to an existing file.
 //   - Design-docs do not link into `exec-plans/` (plans are transient; docs
 //     are durable — conventions section of `design-docs/index.md`).
+//   - bridge-ui/<consumer>/lib/ does not redefine a filename present in
+//     bridge-ui/shared/lib/ (consumers must wrap, not duplicate).
 //
 // Exit 0 on clean, 1 on any violation. One diagnostic per violation.
 
@@ -166,6 +168,54 @@ async function validateCrossLinks(file, text) {
   }
 }
 
+// bridge-ui/shared/lib/ defines cross-UI primitives. Consumers (portal,
+// admin) must wrap, not redefine, those filenames. A file with the same
+// basename in <consumer>/lib/ is a strong signal that someone forgot the
+// shared module exists. Enforce it here so the convention sticks without
+// adding a JS-side ESLint rule (bridge-ui/ is plain JS; lint there is
+// vitest/web-test-runner's job — see eslint.config.js).
+async function validateBridgeUiSharedRedefinition() {
+  const root = resolve(process.cwd(), 'bridge-ui');
+  const sharedLib = join(root, 'shared/lib');
+  let sharedNames;
+  try {
+    sharedNames = (await readdir(sharedLib)).filter((n) => n.endsWith('.js'));
+  } catch {
+    return; // bridge-ui not present in this checkout — nothing to enforce.
+  }
+
+  let consumerDirs;
+  try {
+    consumerDirs = await readdir(root, { withFileTypes: true });
+  } catch {
+    return;
+  }
+
+  for (const consumer of consumerDirs) {
+    if (!consumer.isDirectory()) continue;
+    if (consumer.name === 'shared' || consumer.name === 'node_modules') continue;
+    const consumerLib = join(root, consumer.name, 'lib');
+    let consumerEntries;
+    try {
+      consumerEntries = await readdir(consumerLib);
+    } catch {
+      continue;
+    }
+    for (const name of consumerEntries) {
+      if (sharedNames.includes(name)) {
+        const offending = join(consumerLib, name);
+        report(
+          offending,
+          1,
+          'bridge-ui-shared-redefinition',
+          `bridge-ui/${consumer.name}/lib/${name} duplicates bridge-ui/shared/lib/${name}; ` +
+            `import or wrap the shared one instead.`,
+        );
+      }
+    }
+  }
+}
+
 async function main() {
   for await (const file of walkMarkdown(DOCS_DIR)) {
     const text = await readFile(file, 'utf8');
@@ -193,6 +243,8 @@ async function main() {
 
     await validateCrossLinks(file, text);
   }
+
+  await validateBridgeUiSharedRedefinition();
 
   if (diagnostics > 0) {
     console.error(`\ndoc-gardener: ${diagnostics} violation(s). Exiting 1.`);

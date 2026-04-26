@@ -1,7 +1,7 @@
 ---
 title: Deployment — full-stack docker compose
 status: accepted
-last-reviewed: 2026-04-25
+last-reviewed: 2026-04-26
 ---
 
 # Deployment
@@ -261,6 +261,72 @@ Cardinality cap: `METRICS_MAX_SERIES_PER_METRIC` (default 10000) bounds the
 distinct label tuples any single metric may track. New tuples past the cap
 are dropped silently and a one-shot warning is logged per metric. Set to 0
 to disable. Tune up before tuning off.
+
+## UI modules (customer portal + operator admin)
+
+The bridge ships two browser apps from `bridge-ui/`:
+
+- `bridge-ui/portal/` → mounted at `/portal/*` (customer self-service: balance, API keys, top-up, usage, settings).
+- `bridge-ui/admin/` → mounted at `/admin/console/*` (operator: health, nodes, customers, refund/suspend/issue-key, audit, reservations, top-ups, nodes.yaml view).
+
+Both are static SPAs served by `@fastify/static` from inside the same Fastify instance that hosts `/v1/*` and `/admin/*` JSON. `existsSync(<dist>)` guards each registration — if a UI's `dist/` is missing the bridge logs a warn and skips the mount; HTTP routes still serve.
+
+### Build
+
+The top-level `npm run build` chains:
+
+1. `tsc -p tsconfig.json` (server)
+2. `cd bridge-ui && npm ci && npm run build:all` (workspace `npm ci` hoists `lit` + `rxjs` into `bridge-ui/node_modules`; `build:all` runs Vite for portal then admin)
+
+Output: `dist/` (server) + `bridge-ui/portal/dist/` + `bridge-ui/admin/dist/`.
+
+### Docker
+
+The `Dockerfile` has a dedicated `ui` build stage that runs the workspace `npm ci` + `build:all` once, then the runtime stage copies both `dist/` outputs:
+
+```dockerfile
+COPY --from=ui /ui/portal/dist ./bridge-ui/portal/dist
+COPY --from=ui /ui/admin/dist ./bridge-ui/admin/dist
+```
+
+devDeps (`vite`, `@web/test-runner`, `@open-wc/testing`, `playwright`, etc.) stay in the build stage and never reach the runtime image.
+
+### Local development
+
+Two Vite dev servers proxy to the bridge:
+
+```bash
+# In one shell — start the bridge
+docker compose up
+
+# In a second shell — portal dev server (default :5173)
+npm run dev:ui:portal      # → http://localhost:5173/portal/
+
+# In a third shell — admin dev server (default :5174)
+npm run dev:ui:admin       # → http://localhost:5174/admin/console/
+```
+
+`vite.config.js` for each module proxies its API path prefix to `BRIDGE_DEV_TARGET` (default `http://localhost:8080`).
+
+### Operator admin — Grafana embedding
+
+The Health page renders an iframe at `window.GRAFANA_DASHBOARD_URL` when set; otherwise the panel collapses to "Grafana not configured." The bridge does not inject this value — operators define it on the served `index.html` via a small bootstrap script, a build-time env, or a reverse-proxy `Set-Cookie`.
+
+Three deployment options for the iframe to actually load:
+
+| Option                          | Cost                                 | Trade                                                      |
+| ------------------------------- | ------------------------------------ | ---------------------------------------------------------- |
+| Grafana anonymous role          | Lowest (config flag)                 | Anyone with the URL sees the dashboard                     |
+| Shared auth-proxy               | Existing infra (oauth2-proxy, etc.)  | Single sign-on across both surfaces                        |
+| Signed iframe URLs from bridge  | Backend route + Grafana renderer key | Per-operator, time-bound; most flexible                    |
+
+`allow_embedding = true` in Grafana's `[security]` block is required for any of these.
+
+### Operator handle (`X-Admin-Actor`)
+
+The admin sign-in form captures a free-text operator handle (matching `^[a-z0-9._-]{1,64}$`) and attaches it as `X-Admin-Actor` on every admin request. The bridge writes that handle into `admin_audit_event.actor` so the audit log shows `alice` / `bob` instead of an opaque token-hash. Missing or malformed handles fall back to the token-hash (unchanged from pre-0023 behavior).
+
+This is **attribution, not authentication**. There is still one shared `ADMIN_TOKEN`. Per-operator tokens + RBAC are Phase 2.
 
 ## What's not yet automated
 

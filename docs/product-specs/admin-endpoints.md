@@ -1,23 +1,32 @@
 ---
 title: Admin / ops endpoints
 status: accepted
-last-reviewed: 2026-04-24
+last-reviewed: 2026-04-26
 ---
 
 # Admin endpoints
 
-Operator-only surface for inspecting bridge state and performing manual interventions. Not exposed to customers. Not a UI — returns JSON.
+Operator-only surface for inspecting bridge state and performing manual interventions. Returns JSON; the operator console at `/admin/console/*` is a separate browser app that *consumes* this surface (see [`operator-admin.md`](./operator-admin.md)).
 
 ## Authentication
 
-|              |                                                                         |
-| ------------ | ----------------------------------------------------------------------- |
-| Header       | `X-Admin-Token: <ADMIN_TOKEN>`                                          |
-| Compare      | `timingSafeEqual` on `sha256(token)` bytes                              |
-| IP allowlist | `ADMIN_IP_ALLOWLIST` env (comma-separated exact IPs; empty = allow all) |
-| Audit trail  | Every request (success or failure) writes a row to `admin_audit_event`  |
+|                  |                                                                                          |
+| ---------------- | ---------------------------------------------------------------------------------------- |
+| Header           | `X-Admin-Token: <ADMIN_TOKEN>`                                                           |
+| Compare          | `timingSafeEqual` on `sha256(token)` bytes                                               |
+| IP allowlist     | `ADMIN_IP_ALLOWLIST` env (comma-separated exact IPs; empty = allow all)                  |
+| Operator handle  | `X-Admin-Actor: <handle>` — optional, validated `^[a-z0-9._-]{1,64}$`                   |
+| Audit trail      | Every request (success or failure) writes a row to `admin_audit_event`                  |
 
-The token is **never** logged in plaintext. The audit `actor` field is the first 16 hex chars of `sha256(token)`, so a leaked audit log doesn't leak the token.
+The token is **never** logged in plaintext.
+
+### `X-Admin-Actor` header
+
+The audit `actor` column has historically held the first 16 hex chars of `sha256(token)` — fine for "who did this" when there's one operator, opaque when there are many. The optional `X-Admin-Actor` header replaces that with a human handle (`alice`, `bob.k`) when present and well-formed; otherwise the token-hash fallback applies.
+
+This is **attribution, not authentication.** There is still one shared `ADMIN_TOKEN`; anyone with it can claim any handle. Per-operator tokens + RBAC are Phase 2. The validation regex `^[a-z0-9._-]{1,64}$` is bounded free-text — keeps the column searchable and prevents injection without inviting unbounded growth.
+
+The operator console captures the handle at sign-in and attaches it on every request.
 
 ## Endpoints
 
@@ -88,6 +97,75 @@ Bridge-side view of escrow via `PayerDaemon.getDepositInfo`. Returns deposit + r
 { "depositWei": "1000000", "reserveWei": "500000", "withdrawRound": "0", "source": "payer_daemon" }
 ```
 
+## Search / list endpoints (operator console drill-downs)
+
+Eight cursor-paginated endpoints back the operator console's table views. All accept `limit` (capped per route) and `cursor` (opaque base64url-encoded ISO timestamp). Response includes `next_cursor` (string when more rows are available, `null` when the page is the tail). Pagination order is descending by primary timestamp except for `/admin/reservations` which is ascending (oldest-first — operators investigating stuck reservations want the longest-open at the top).
+
+### `GET /admin/customers?q=&tier=&status=&limit=&cursor=`
+
+Search by `q` (email substring or exact UUID), `tier` (`free|prepaid`), `status` (`active|suspended|closed`). Default `limit` 50, max 200. Returns thin rows; full detail via `GET /admin/customers/:id`.
+
+```json
+{
+  "customers": [
+    { "id": "...", "email": "...", "tier": "prepaid", "status": "active",
+      "balance_usd_cents": "1234", "created_at": "..." }
+  ],
+  "next_cursor": null
+}
+```
+
+### `GET /admin/customers/:id/api-keys`
+
+List one customer's keys. **Hash never returned.** 404 for unknown customer.
+
+### `POST /admin/customers/:id/api-keys`
+
+Body `{ "label": "<= 64 chars" }` → `{ id, label, key, created_at }`. **`key` returned exactly once** (cleartext); store stores the `sha256_hmac(plaintext, API_KEY_PEPPER)` only. Prefix follows the existing convention (`sk-test-...` / `sk-live-...` per `API_KEY_ENV_PREFIX`).
+
+### `GET /admin/audit?from=&to=&actor=&action=&limit=&cursor=`
+
+Paginated `admin_audit_event` feed. `from`/`to` are ISO timestamps (malformed dates are silently dropped). `actor` is exact match. `action` is substring (ILIKE).
+
+### `GET /admin/reservations?state=open&limit=&cursor=`
+
+Open / committed / refunded reservations, ascending by `created_at`. Each row includes `age_seconds` for direct on-call use (the page on-call hits when `livepeer_bridge_reservation_open_oldest_seconds` alerts).
+
+```json
+{ "reservations": [
+  { "id": "...", "customer_id": "...", "work_id": "...", "kind": "prepaid",
+    "amount_usd_cents": "100", "amount_tokens": null, "state": "open",
+    "created_at": "...", "age_seconds": 125 }
+], "next_cursor": null }
+```
+
+Read-only. A stuck reservation is a symptom; the fix is upstream (PayerDaemon, node health). A "manually close reservation" button would either bypass Invariant 5 (atomic ledger debits) or invent a parallel reconciliation path — neither is in scope.
+
+### `GET /admin/topups?customer_id=&status=&from=&to=&limit=&cursor=`
+
+Cross-customer top-up search for the "customer says they were charged X but it shows Y" support flow. `customer_id` is a UUID; `status` is one of `pending|succeeded|failed|refunded`.
+
+### `GET /admin/nodes/:id/events?limit=&cursor=`
+
+`node_health_event` timeline for one node. Newest first. Powers the circuit-breaker history view on the node detail page.
+
+### `GET /admin/config/nodes`
+
+Read-only view of the loaded `nodes.yaml`:
+
+```json
+{
+  "path": "/etc/bridge/nodes.yaml",
+  "sha256": "<64 hex>",
+  "mtime": "...",
+  "size_bytes": 512,
+  "contents": "<raw yaml>",
+  "loaded_nodes": [{ "id": "...", "url": "...", ... }]
+}
+```
+
+The `sha256` lets operators verify that what's loaded matches what's checked in. Editing `nodes.yaml` from the UI is **out of scope in v1** — operators edit the file and `kubectl apply` / `docker compose up -d`; the QuoteRefresher hot-reloads. 500 with `code: config_unreadable` if the file is missing.
+
 ## Audit log
 
 Every admin request (success or failure) writes a row to `admin_audit_event`:
@@ -95,7 +173,7 @@ Every admin request (success or failure) writes a row to `admin_audit_event`:
 | Column        | Notes                                                                                   |
 | ------------- | --------------------------------------------------------------------------------------- |
 | `id`          | UUID                                                                                    |
-| `actor`       | First 16 hex chars of `sha256(ADMIN_TOKEN)`; `"unknown"` for missing/bad-token requests |
+| `actor`       | `X-Admin-Actor` handle when present + valid; otherwise first 16 hex chars of `sha256(ADMIN_TOKEN)`; `"unknown"` for missing/bad-token requests |
 | `action`      | `<METHOD> <path>`                                                                       |
 | `target_id`   | Route param `:id` when present                                                          |
 | `payload`     | JSON-stringified request body (or null)                                                 |

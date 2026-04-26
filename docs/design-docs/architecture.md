@@ -1,22 +1,31 @@
 ---
 title: Architecture
 status: accepted
-last-reviewed: 2026-04-25
+last-reviewed: 2026-04-26
 ---
 
 # Architecture
 
 ## Layer stack
 
+The TypeScript server lives under `src/`. Browser UIs (customer portal, operator admin) live in a sibling `bridge-ui/` directory and talk to the bridge over HTTP only — they import nothing from `src/`. See [`ui-architecture.md`](./ui-architecture.md) for the UI stack.
+
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  ui/                admin UI (v2+)                      │  ← may import anything below
-├─────────────────────────────────────────────────────────┤
-│  runtime/           HTTP, webhook, admin endpoints      │  ← may import service, repo, providers, config, types
+│  bridge-ui/         browser apps (sibling, not under src/)
+│    ├─ shared/         cross-UI primitives
+│    ├─ portal/         customer self-service SPA
+│    └─ admin/          operator console SPA
+└─────────────────────────────────────────────────────────┘
+                        ↕ HTTP (no source imports)
+┌─────────────────────────────────────────────────────────┐
+│  runtime/           HTTP, webhook, admin + portal endpoints  │  ← may import service, repo, providers, config, types
 │    ├─ http/chat/completions.ts                          │
-│    ├─ signup/                                           │
+│    ├─ http/account/                                     │
+│    ├─ http/portal/        @fastify/static for /portal/* │
 │    ├─ stripeWebhook/                                    │
-│    └─ admin/                                            │
+│    ├─ admin/                                            │
+│    └─ admin/console/      @fastify/static for /admin/console/*
 ├─────────────────────────────────────────────────────────┤
 │  service/           business logic                      │  ← may import repo, providers, config, types
 │    ├─ auth/                                             │
@@ -67,9 +76,12 @@ Enforced by the custom ESLint rules in `lint/` (`layer-check`, `no-cross-cutting
 | `src/runtime/http/chat/streaming.ts`   | OpenAI-compatible `/v1/chat/completions` (SSE streaming)                                                                                                |
 | `src/runtime/http/embeddings/`         | OpenAI-compatible `/v1/embeddings`                                                                                                                      |
 | `src/runtime/http/images/`             | OpenAI-compatible `/v1/images/generations`                                                                                                              |
-| `src/runtime/http/billing/`            | `/v1/billing/balance` + `/v1/billing/topup` for the customer-facing dashboard                                                                           |
+| `src/runtime/http/billing/`            | `/v1/billing/topup` for the customer-facing portal                                                                                                      |
+| `src/runtime/http/account/`            | `/v1/account/*` — profile, API-keys CRUD, usage rollups, top-up history (powers the customer portal)                                                    |
+| `src/runtime/http/portal/`             | `@fastify/static` mount serving `bridge-ui/portal/dist/` at `/portal/*`                                                                                 |
 | `src/runtime/http/stripe/`             | Stripe webhook (`payment_intent.succeeded`, disputes)                                                                                                   |
-| `src/runtime/http/admin/`              | Health, NodeBook inspection, customer ops (manual refund, etc.)                                                                                         |
+| `src/runtime/http/admin/`              | Health, NodeBook inspection, customer ops, search/feed routes (powers the operator console)                                                             |
+| `src/runtime/http/admin/console/`      | `@fastify/static` mount serving `bridge-ui/admin/dist/` at `/admin/console/*`                                                                          |
 | `src/runtime/http/middleware/`         | Auth + rate-limit middleware shared by every paid route                                                                                                 |
 | `src/runtime/http/healthz.ts`          | Liveness probe                                                                                                                                          |
 | `src/runtime/http/errors.ts`           | Typed error → OpenAI-style response envelope mapping                                                                                                    |
@@ -104,5 +116,4 @@ Providers are wired in `src/runtime/` entry points and injected into `service/` 
 
 - Horizontal scaling for the OpenAI endpoint. Single-process initially; scale strategy comes with load data.
 - Open node discovery (beyond the config-driven allowlist). Deferred to v2.
-- Admin UI. `ui/` layer reserved but empty.
 - Enterprise/Postpaid tier. Deferred to v2+.

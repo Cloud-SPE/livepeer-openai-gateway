@@ -14,7 +14,7 @@ Stand up the customer-facing self-service portal at `bridge-ui/portal/`, **plus*
 Two deliberate departures from the reference UI, both per project standards:
 
 1. **Add RxJS streams.** The reference uses Lit reactive properties + `window.CustomEvent` only — fine for its surface. The bridge portal has live balance + in-flight top-up + usage rollups + key list with optimistic add-and-confirm + free-tier quota countdown, all needing synchronization across header, dashboard, billing, and keys pages simultaneously. RxJS `BehaviorSubject` per domain (`account$`, `keys$`, `usage$`, `topups$`) gives a single source of truth and a Lit `ReactiveController` glues subscription to component lifecycle.
-2. **Modern CSS 2026** per [`example-modern-css-2026.md`](../../../../accountability-agent-platform/example-modern-css-2026.md): `@layer reset, tokens, base, layout, components, utilities`; native nesting; `light-dark()` with `color-scheme: light dark`; OKLCH palette; `color-mix()` for state variants; `@property` for animatable color tokens; `@container` for table-to-card collapse on narrow viewports; `@scope` for component-local rules in light DOM; `@starting-style` for dialog/menu entry; View Transitions across route changes; `clamp()` fluid type; `text-wrap: balance/pretty`; `field-sizing: content`; `:user-invalid` form validation; `:has()` for parent-state styling.
+2. **Modern CSS 2026** per the project's CSS standard (`example-modern-css-2026.md` in the sibling `accountability-agent-platform/` repo): `@layer reset, tokens, base, layout, components, utilities`; native nesting; `light-dark()` with `color-scheme: light dark`; OKLCH palette; `color-mix()` for state variants; `@property` for animatable color tokens; `@container` for table-to-card collapse on narrow viewports; `@scope` for component-local rules in light DOM; `@starting-style` for dialog/menu entry; View Transitions across route changes; `clamp()` fluid type; `text-wrap: balance/pretty`; `field-sizing: content`; `:user-invalid` form validation; `:has()` for parent-state styling.
 
 Backend adds a new `/v1/account/*` JSON surface — Zod-validated, **USD-only** (Invariant 1, customer never sees wei). UI ships as static assets built from `bridge-ui/portal/`, served by the customer Fastify instance at `/portal/*` via `@fastify/static`.
 
@@ -273,7 +273,7 @@ Files:
 - [ ] **UI component tests** (`@open-wc/testing` via `@web/test-runner` — **no React Testing Library**): each page mounts against stubbed services, asserts visible text, ARIA, and dialog focus traps.
 - [ ] **End-to-end** (Playwright): sign-in → create-key (assert cleartext shown once) → sign-out → sign-in-with-new-key → revoke-original. Runs against compose stack.
 - [ ] **CSS smoke**: a Playwright assertion that computed `color-scheme` flips with OS preference and `light-dark()` resolves to the dark token in dark mode.
-- [ ] Coverage stays at 75% across all four v8 metrics (Invariant 7 / [`feedback_coverage_threshold.md`](../../../../../.claude/projects/-home-mazup-git-repos-livepeer-cloud-spe-openai-livepeer-bridge/memory/feedback_coverage_threshold.md)). UI counts toward the floor.
+- [ ] Coverage stays at 75% across all four v8 metrics (Invariant 7 in [`AGENTS.md`](../../../AGENTS.md)). UI counts toward the floor.
 
 ### Docs
 
@@ -287,11 +287,11 @@ Files:
 
 ### 2026-04-26 — Lit + RxJS + modern CSS, no React / Tailwind / CSS-in-JS
 
-Project directive. Pattern lifted from [`livepeer-cloud-openai-ui/portal`](../../../../livepeer-cloud-openai-ui/portal/) (Lit, light DOM, hash routing, design tokens, `@layer`-organized CSS, sessionStorage, namespaced CustomEvents); RxJS layered on top because the bridge state surface is bigger than the reference's. Modern CSS per [`example-modern-css-2026.md`](../../../../accountability-agent-platform/example-modern-css-2026.md).
+Project directive. Pattern lifted from `livepeer-cloud-openai-ui/portal` (Lit, light DOM, hash routing, design tokens, `@layer`-organized CSS, sessionStorage, namespaced CustomEvents); RxJS layered on top because the bridge state surface is bigger than the reference's. Modern CSS per the project's CSS standard (`example-modern-css-2026.md` in the sibling `accountability-agent-platform/` repo).
 
 ### 2026-04-26 — Stand up `bridge-ui/shared/` from day one, not on rule-of-three
 
-Two consumers (portal + admin) are being designed in the same planning session. The rule-of-three protects against premature abstraction *discovered* too early; here the abstraction isn't premature because both consumers are already on the design table. Copy-then-extract would waste 0023's implementation time and risks the two copies drifting before extraction. `shared/` is a directory of source files (no own `node_modules` / build), peerDependencies declared, imported via relative paths. Easy to grow, easy to delete what doesn't earn its keep. (Repo feedback: [`feedback_shared_modules_upfront.md`](../../../../../.claude/projects/-home-mazup-git-repos-livepeer-cloud-spe-openai-livepeer-bridge/memory/feedback_shared_modules_upfront.md).)
+Two consumers (portal + admin) are being designed in the same planning session. The rule-of-three protects against premature abstraction *discovered* too early; here the abstraction isn't premature because both consumers are already on the design table. Copy-then-extract would waste 0023's implementation time and risks the two copies drifting before extraction. `shared/` is a directory of source files (no own `node_modules` / build), peerDependencies declared, imported via relative paths. Easy to grow, easy to delete what doesn't earn its keep.
 
 ### 2026-04-26 — Sibling `bridge-ui/`, not `src/ui/`
 
