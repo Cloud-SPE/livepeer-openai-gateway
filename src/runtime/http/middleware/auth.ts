@@ -1,33 +1,38 @@
 import type { FastifyReply, FastifyRequest, preHandlerAsyncHookHandler } from 'fastify';
-import type { AuthenticatedCaller, AuthService } from '../../../service/auth/authenticate.js';
-import { AuthError } from '../../../service/auth/errors.js';
+import type { AuthResolver, Caller } from '../../../interfaces/index.js';
 import type { ErrorEnvelope } from '../../../types/error.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
-    caller?: AuthenticatedCaller;
+    caller?: Caller;
   }
 }
 
-export function authPreHandler(authService: AuthService): preHandlerAsyncHookHandler {
+/**
+ * Engine pre-handler: calls the AuthResolver, attaches `req.caller` on
+ * success, sends 401 with `code: 'authentication_failed'` on null. Other
+ * errors propagate (Fastify's default handler maps them to 500).
+ *
+ * Shell-side route handlers narrow `caller.metadata` to access fields the
+ * generic Caller doesn't carry (customer row, api-key row).
+ */
+export function authPreHandler(authResolver: AuthResolver): preHandlerAsyncHookHandler {
   return async (req: FastifyRequest, reply: FastifyReply): Promise<void> => {
-    try {
-      const header = req.headers.authorization;
-      const caller = await authService.authenticate(header);
-      req.caller = caller;
-    } catch (err) {
-      if (err instanceof AuthError) {
-        const envelope: ErrorEnvelope = {
-          error: {
-            code: err.code,
-            message: err.message,
-            type: err.name,
-          },
-        };
-        await reply.code(401).send(envelope);
-        return;
-      }
-      throw err;
+    const caller = await authResolver.resolve({
+      headers: req.headers as Record<string, string | undefined>,
+      ip: req.ip,
+    });
+    if (!caller) {
+      const envelope: ErrorEnvelope = {
+        error: {
+          code: 'authentication_failed',
+          message: 'authentication required',
+          type: 'AuthError',
+        },
+      };
+      await reply.code(401).send(envelope);
+      return;
     }
+    req.caller = caller;
   };
 }

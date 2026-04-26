@@ -13,7 +13,8 @@ import {
   reserve,
   type PrepaidReserveResult,
 } from '../../../service/billing/reservations.js';
-import type { AuthService } from '../../../service/auth/authenticate.js';
+import type { AuthenticatedCaller } from '../../../service/auth/authenticate.js';
+import type { AuthResolver } from '../../../interfaces/index.js';
 import type { RateLimiter } from '../../../service/rateLimit/index.js';
 import { authPreHandler } from '../middleware/auth.js';
 import { rateLimitPreHandler } from '../middleware/rateLimit.js';
@@ -33,7 +34,7 @@ export interface EmbeddingsDeps {
   nodeBook: NodeBook;
   nodeClient: NodeClient;
   paymentsService: PaymentsService;
-  authService: AuthService;
+  authResolver: AuthResolver;
   rateLimiter?: RateLimiter;
   pricing: PricingConfig;
   nodeCallTimeoutMs?: number;
@@ -42,8 +43,8 @@ export interface EmbeddingsDeps {
 
 export function registerEmbeddingsRoute(app: FastifyInstance, deps: EmbeddingsDeps): void {
   const preHandler = deps.rateLimiter
-    ? [authPreHandler(deps.authService), rateLimitPreHandler(deps.rateLimiter)]
-    : authPreHandler(deps.authService);
+    ? [authPreHandler(deps.authResolver), rateLimitPreHandler(deps.rateLimiter)]
+    : authPreHandler(deps.authResolver);
   app.post('/v1/embeddings', { preHandler }, (req, reply) =>
     handleEmbeddings(req, reply, deps),
   );
@@ -60,6 +61,7 @@ async function handleEmbeddings(
     await reply.code(status).send(envelope);
     return;
   }
+  const inner = caller.metadata as AuthenticatedCaller;
 
   const parsed = EmbeddingsRequestSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -69,7 +71,7 @@ async function handleEmbeddings(
   }
   const body = parsed.data;
 
-  const customerTier = caller.customer.tier;
+  const customerTier = inner.customer.tier;
   if (customerTier === 'free') {
     await reply.code(402).send({
       error: {
@@ -82,7 +84,7 @@ async function handleEmbeddings(
   }
 
   const inputs = normalizeEmbeddingsInput(body.input);
-  const workId = `${caller.customer.id}:${randomUUID()}`;
+  const workId = `${inner.customer.id}:${randomUUID()}`;
 
   let estimate;
   try {
@@ -98,7 +100,7 @@ async function handleEmbeddings(
 
   try {
     reservation = await reserve(deps.db, {
-      customerId: caller.customer.id,
+      customerId: inner.customer.id,
       workId,
       estCostCents: estimate.estCents,
     });
@@ -171,7 +173,7 @@ async function handleEmbeddings(
     committed = true;
 
     await usageRecordsRepo.insertUsageRecord(deps.db, {
-      customerId: caller.customer.id,
+      customerId: inner.customer.id,
       workId,
       kind: 'embeddings',
       model: body.model,

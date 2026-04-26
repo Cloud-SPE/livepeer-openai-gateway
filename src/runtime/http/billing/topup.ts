@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import type { AuthService } from '../../../service/auth/authenticate.js';
+import type { AuthResolver } from '../../../interfaces/index.js';
 import type { StripeClient } from '../../../providers/stripe.js';
 import type { StripeConfig } from '../../../config/stripe.js';
 import { authPreHandler } from '../middleware/auth.js';
@@ -11,13 +11,13 @@ const TopupRequestSchema = z.object({
 });
 
 export interface TopupRouteDeps {
-  authService: AuthService;
+  authResolver: AuthResolver;
   stripe: StripeClient;
   config: StripeConfig;
 }
 
 export function registerTopupRoute(app: FastifyInstance, deps: TopupRouteDeps): void {
-  app.post('/v1/billing/topup', { preHandler: authPreHandler(deps.authService) }, (req, reply) =>
+  app.post('/v1/billing/topup', { preHandler: authPreHandler(deps.authResolver) }, (req, reply) =>
     handleTopup(req, reply, deps),
   );
 }
@@ -55,7 +55,7 @@ async function handleTopup(
 
   try {
     const session = await deps.stripe.createCheckoutSession({
-      customerId: caller.customer.id,
+      customerId: caller.id,
       amountUsdCents: amount,
       successUrl: deps.config.successUrl,
       cancelUrl: deps.config.cancelUrl,

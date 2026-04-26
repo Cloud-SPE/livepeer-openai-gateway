@@ -63,7 +63,7 @@ export function metricsHook(recorder: Recorder): MetricsHooks {
 
       const capability = req.metrics?.capability ?? LABEL_UNSET;
       const model = req.metrics?.model ?? LABEL_UNSET;
-      const tier = req.caller?.customer.tier ?? LABEL_UNSET;
+      const tier = req.caller?.tier ?? LABEL_UNSET;
       const outcome = bucketStatus(reply.statusCode);
 
       recorder.incRequest(capability, model, tier, outcome);

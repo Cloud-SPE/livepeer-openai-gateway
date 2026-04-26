@@ -32,6 +32,7 @@ import {
 import { toHttpError, UpstreamNodeError } from '../errors.js';
 import { rateForTier } from '../../../config/pricing.js';
 import type { TokenAuditService } from '../../../service/tokenAudit/index.js';
+import type { AuthenticatedCaller } from '../../../service/auth/authenticate.js';
 
 const MAX_RETRY_ATTEMPTS = 3;
 
@@ -57,7 +58,8 @@ export async function handleStreamingChatCompletion(
   deps: StreamingDeps,
 ): Promise<void> {
   const caller = req.caller!;
-  const customerTier = caller.customer.tier;
+  const inner = caller.metadata as AuthenticatedCaller;
+  const customerTier = inner.customer.tier;
 
   try {
     resolveTierForModel(deps.pricing, body.model);
@@ -67,7 +69,7 @@ export async function handleStreamingChatCompletion(
     return;
   }
 
-  const workId = `${caller.customer.id}:${randomUUID()}`;
+  const workId = `${inner.customer.id}:${randomUUID()}`;
   const estimate = estimateReservation(body, customerTier, deps.pricing, deps.tokenAudit);
 
   let reservation: PrepaidReserveResult | QuotaReserveResult;
@@ -75,12 +77,12 @@ export async function handleStreamingChatCompletion(
     reservation =
       customerTier === 'prepaid'
         ? await reserve(deps.db, {
-            customerId: caller.customer.id,
+            customerId: inner.customer.id,
             workId,
             estCostCents: estimate.estCents,
           })
         : await reserveQuota(deps.db, {
-            customerId: caller.customer.id,
+            customerId: inner.customer.id,
             workId,
             estTokens: BigInt(estimate.promptEstimateTokens + estimate.maxCompletionTokens),
           });
@@ -231,7 +233,7 @@ export async function handleStreamingChatCompletion(
     db: deps.db,
     customerTier,
     reservationId: reservation.reservationId,
-    customerId: caller.customer.id,
+    customerId: inner.customer.id,
     workId,
     nodeUrl: node.config.url,
     model: body.model,

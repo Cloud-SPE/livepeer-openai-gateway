@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { Db } from '../../../repo/db.js';
-import type { AuthService, AuthenticatedCaller } from '../../../service/auth/authenticate.js';
+import type { AuthenticatedCaller } from '../../../service/auth/authenticate.js';
+import type { AuthResolver } from '../../../interfaces/index.js';
 import type { AuthConfig } from '../../../config/auth.js';
 import type { RateLimitConfig } from '../../../config/rateLimit.js';
 import { resolvePolicy } from '../../../config/rateLimit.js';
@@ -15,7 +16,7 @@ import { toHttpError } from '../errors.js';
 
 export interface AccountRoutesDeps {
   db: Db;
-  authService: AuthService;
+  authResolver: AuthResolver;
   authConfig: AuthConfig;
   rateLimitConfig: RateLimitConfig;
 }
@@ -40,7 +41,7 @@ const KeyIdParamsSchema = z.object({
 });
 
 export function registerAccountRoutes(app: FastifyInstance, deps: AccountRoutesDeps): void {
-  const preHandler = authPreHandler(deps.authService);
+  const preHandler = authPreHandler(deps.authResolver);
 
   app.get('/v1/account', { preHandler }, (req, reply) => respondAccount(req, reply));
   app.get('/v1/account/limits', { preHandler }, (req, reply) => respondLimits(req, reply, deps));
@@ -58,7 +59,7 @@ export function registerAccountRoutes(app: FastifyInstance, deps: AccountRoutesD
 function requireCaller(req: FastifyRequest): AuthenticatedCaller {
   const caller = req.caller;
   if (!caller) throw new Error('caller missing on authenticated request');
-  return caller;
+  return caller.metadata as AuthenticatedCaller;
 }
 
 async function respondAccount(req: FastifyRequest, reply: FastifyReply): Promise<void> {

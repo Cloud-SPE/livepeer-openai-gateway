@@ -17,7 +17,8 @@ import {
   type PrepaidReserveResult,
   type QuotaReserveResult,
 } from '../../../service/billing/reservations.js';
-import type { AuthService } from '../../../service/auth/authenticate.js';
+import type { AuthenticatedCaller } from '../../../service/auth/authenticate.js';
+import type { AuthResolver } from '../../../interfaces/index.js';
 import type { RateLimiter } from '../../../service/rateLimit/index.js';
 import { authPreHandler } from '../middleware/auth.js';
 import { rateLimitPreHandler } from '../middleware/rateLimit.js';
@@ -38,7 +39,7 @@ export interface ChatCompletionsDeps {
   nodeBook: NodeBook;
   nodeClient: NodeClient;
   paymentsService: PaymentsService;
-  authService: AuthService;
+  authResolver: AuthResolver;
   rateLimiter?: RateLimiter;
   tokenAudit?: TokenAuditService;
   recorder?: Recorder;
@@ -52,8 +53,8 @@ export function registerChatCompletionsRoute(
   deps: ChatCompletionsDeps,
 ): void {
   const preHandler = deps.rateLimiter
-    ? [authPreHandler(deps.authService), rateLimitPreHandler(deps.rateLimiter)]
-    : authPreHandler(deps.authService);
+    ? [authPreHandler(deps.authResolver), rateLimitPreHandler(deps.rateLimiter)]
+    : authPreHandler(deps.authResolver);
   app.post('/v1/chat/completions', { preHandler }, (req, reply) =>
     handleChatCompletion(req, reply, deps),
   );
@@ -70,6 +71,7 @@ async function handleChatCompletion(
     await reply.code(status).send(envelope);
     return;
   }
+  const inner = caller.metadata as AuthenticatedCaller;
 
   const parsed = ChatCompletionRequestSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -104,8 +106,8 @@ async function handleChatCompletion(
     return;
   }
 
-  const workId = `${caller.customer.id}:${randomUUID()}`;
-  const customerTier = caller.customer.tier;
+  const workId = `${inner.customer.id}:${randomUUID()}`;
+  const customerTier = inner.customer.tier;
   const estimate = estimateReservation(body, customerTier, deps.pricing, deps.tokenAudit);
 
   let reservation: PrepaidReserveResult | QuotaReserveResult | null = null;
@@ -115,12 +117,12 @@ async function handleChatCompletion(
     reservation =
       customerTier === 'prepaid'
         ? await reserve(deps.db, {
-            customerId: caller.customer.id,
+            customerId: inner.customer.id,
             workId,
             estCostCents: estimate.estCents,
           })
         : await reserveQuota(deps.db, {
-            customerId: caller.customer.id,
+            customerId: inner.customer.id,
             workId,
             estTokens: BigInt(estimate.promptEstimateTokens + estimate.maxCompletionTokens),
           });
@@ -181,7 +183,7 @@ async function handleChatCompletion(
       deps.tokenAudit?.countCompletionText(body.model, completionText) ?? null;
 
     await usageRecordsRepo.insertUsageRecord(deps.db, {
-      customerId: caller.customer.id,
+      customerId: inner.customer.id,
       workId,
       model: body.model,
       nodeUrl: node.config.url,

@@ -6,6 +6,7 @@ import * as apiKeysRepo from '../../../repo/apiKeys.js';
 import * as topupsRepo from '../../../repo/topups.js';
 import * as usageRecordsRepo from '../../../repo/usageRecords.js';
 import { createAuthService, issueKey } from '../../../service/auth/index.js';
+import { createAuthResolver } from '../../../service/auth/authResolver.js';
 import { defaultRateLimitConfig } from '../../../config/rateLimit.js';
 import { createFastifyServer } from '../../../providers/http/fastify.js';
 import { registerAccountRoutes } from './routes.js';
@@ -33,7 +34,7 @@ async function buildServer() {
   const server = await createFastifyServer({ logger: false });
   registerAccountRoutes(server.app, {
     db: pg.db,
-    authService,
+    authResolver: createAuthResolver({ authService }),
     authConfig: { pepper, envPrefix: 'test', cacheTtlMs: 60_000 },
     rateLimitConfig: defaultRateLimitConfig(),
   });

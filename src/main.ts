@@ -40,6 +40,7 @@ import { metricsHook } from './runtime/http/metricsHook.js';
 import { createMetricsServer } from './runtime/metrics/server.js';
 import { createAdminService } from './service/admin/index.js';
 import { createAuthService } from './service/auth/index.js';
+import { createAuthResolver } from './service/auth/authResolver.js';
 import { createMetricsSampler } from './service/metrics/sampler.js';
 import { createPaymentsService } from './service/payments/createPayment.js';
 import { createSessionCache } from './service/payments/sessions.js';
@@ -142,6 +143,7 @@ async function main(): Promise<void> {
 
   // Services.
   const authService = createAuthService({ db, config: authConfig });
+  const authResolver = createAuthResolver({ authService });
   const sessionCache = createSessionCache({ payerDaemon });
   const paymentsService = createPaymentsService({ payerDaemon, sessions: sessionCache });
   const rateLimiter = createRateLimiter({ redis, config: rateLimitConfig, recorder });
@@ -194,7 +196,7 @@ async function main(): Promise<void> {
     nodeBook,
     nodeClient,
     paymentsService,
-    authService,
+    authResolver,
     rateLimiter,
     tokenAudit,
     recorder,
@@ -205,7 +207,7 @@ async function main(): Promise<void> {
     nodeBook,
     nodeClient,
     paymentsService,
-    authService,
+    authResolver,
     rateLimiter,
     pricing: pricingConfig,
   });
@@ -214,7 +216,7 @@ async function main(): Promise<void> {
     nodeBook,
     nodeClient,
     paymentsService,
-    authService,
+    authResolver,
     rateLimiter,
     pricing: pricingConfig,
   });
@@ -223,7 +225,7 @@ async function main(): Promise<void> {
     nodeBook,
     nodeClient,
     paymentsService,
-    authService,
+    authResolver,
     rateLimiter,
     pricing: pricingConfig,
   });
@@ -232,15 +234,15 @@ async function main(): Promise<void> {
     nodeBook,
     nodeClient,
     paymentsService,
-    authService,
+    authResolver,
     rateLimiter,
     pricing: pricingConfig,
   });
-  registerTopupRoute(server.app, { authService, stripe, config: stripeConfig });
+  registerTopupRoute(server.app, { authResolver, stripe, config: stripeConfig });
   registerStripeWebhookRoute(server.app, { db, stripe, recorder });
   registerAccountRoutes(server.app, {
     db,
-    authService,
+    authResolver,
     authConfig,
     rateLimitConfig,
   });

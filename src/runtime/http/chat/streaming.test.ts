@@ -9,6 +9,7 @@ import { Server, ServerCredentials } from '@grpc/grpc-js';
 import { startTestPg, type TestPg } from '../../../service/billing/testPg.js';
 import * as customersRepo from '../../../repo/customers.js';
 import { createAuthService, issueKey } from '../../../service/auth/index.js';
+import { createAuthResolver } from '../../../service/auth/authResolver.js';
 import { createNodesLoader } from '../../../service/nodes/loader.js';
 import { createQuoteRefresher } from '../../../service/nodes/quoteRefresher.js';
 import { NodeBook } from '../../../service/nodes/nodebook.js';
@@ -253,7 +254,7 @@ nodes:
     nodeBook,
     nodeClient,
     paymentsService,
-    authService,
+    authResolver: createAuthResolver({ authService }),
     pricing: defaultPricingConfig(),
     nodeCallTimeoutMs: 10_000,
   });

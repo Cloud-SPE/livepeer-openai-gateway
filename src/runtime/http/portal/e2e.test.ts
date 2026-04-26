@@ -23,6 +23,7 @@ import { startTestPg, type TestPg } from '../../../service/billing/testPg.js';
 import * as customersRepo from '../../../repo/customers.js';
 import { issueKey } from '../../../service/auth/keys.js';
 import { createAuthService } from '../../../service/auth/index.js';
+import { createAuthResolver } from '../../../service/auth/authResolver.js';
 import { defaultRateLimitConfig } from '../../../config/rateLimit.js';
 import { createFastifyServer } from '../../../providers/http/fastify.js';
 import { registerAccountRoutes } from '../account/routes.js';
@@ -57,7 +58,7 @@ async function buildBridge() {
   const server = await createFastifyServer({ logger: false });
   registerAccountRoutes(server.app, {
     db: pg.db,
-    authService,
+    authResolver: createAuthResolver({ authService }),
     authConfig: { pepper, envPrefix: 'test', cacheTtlMs: 60_000 },
     rateLimitConfig: defaultRateLimitConfig(),
   });

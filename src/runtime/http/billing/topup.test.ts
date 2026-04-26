@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import { startTestPg, type TestPg } from '../../../service/billing/testPg.js';
 import * as customersRepo from '../../../repo/customers.js';
 import { createAuthService, issueKey } from '../../../service/auth/index.js';
+import { createAuthResolver } from '../../../service/auth/authResolver.js';
 import { createFastifyServer } from '../../../providers/http/fastify.js';
 import { registerTopupRoute } from './topup.js';
 import type { StripeClient } from '../../../providers/stripe.js';
@@ -48,7 +49,7 @@ async function buildServer() {
   const stripe = mockStripeClient();
   const server = await createFastifyServer({ logger: false });
   registerTopupRoute(server.app, {
-    authService,
+    authResolver: createAuthResolver({ authService }),
     stripe,
     config: {
       secretKey: 'sk_test',

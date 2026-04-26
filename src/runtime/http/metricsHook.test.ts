@@ -75,11 +75,8 @@ describe('metricsHook', () => {
     const req: Partial<FastifyRequest> = {
       metrics: { capability: 'openai:/v1/chat/completions', model: 'model-small' },
       caller: {
-        customer: {
-          id: 'cust_1',
-          tier: 'prepaid',
-        } as never,
-        apiKey: {} as never,
+        id: 'cust_1',
+        tier: 'prepaid',
       },
     };
 

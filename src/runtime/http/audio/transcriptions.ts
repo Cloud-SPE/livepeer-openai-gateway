@@ -15,7 +15,8 @@ import {
   reserve,
   type PrepaidReserveResult,
 } from '../../../service/billing/reservations.js';
-import type { AuthService } from '../../../service/auth/authenticate.js';
+import type { AuthenticatedCaller } from '../../../service/auth/authenticate.js';
+import type { AuthResolver } from '../../../interfaces/index.js';
 import type { RateLimiter } from '../../../service/rateLimit/index.js';
 import { authPreHandler } from '../middleware/auth.js';
 import { rateLimitPreHandler } from '../middleware/rateLimit.js';
@@ -35,7 +36,7 @@ export interface TranscriptionsDeps {
   nodeBook: NodeBook;
   nodeClient: NodeClient;
   paymentsService: PaymentsService;
-  authService: AuthService;
+  authResolver: AuthResolver;
   rateLimiter?: RateLimiter;
   pricing: PricingConfig;
   nodeCallTimeoutMs?: number;
@@ -61,8 +62,8 @@ export async function registerTranscriptionsRoute(
       },
     });
     const preHandler = deps.rateLimiter
-      ? [authPreHandler(deps.authService), rateLimitPreHandler(deps.rateLimiter)]
-      : authPreHandler(deps.authService);
+      ? [authPreHandler(deps.authResolver), rateLimitPreHandler(deps.rateLimiter)]
+      : authPreHandler(deps.authResolver);
     scope.post('/v1/audio/transcriptions', { preHandler }, (req, reply) =>
       handleTranscription(req, reply, deps),
     );
@@ -81,8 +82,9 @@ async function handleTranscription(
     await reply.code(status).send(envelope);
     return;
   }
+  const inner = caller.metadata as AuthenticatedCaller;
 
-  if (caller.customer.tier === 'free') {
+  if (inner.customer.tier === 'free') {
     await reply.code(402).send({
       error: {
         code: 'insufficient_quota',
@@ -183,7 +185,7 @@ async function handleTranscription(
     return;
   }
 
-  const workId = `${caller.customer.id}:${randomUUID()}`;
+  const workId = `${inner.customer.id}:${randomUUID()}`;
   let estimate;
   try {
     estimate = estimateTranscriptionsReservation(
@@ -202,7 +204,7 @@ async function handleTranscription(
 
   try {
     reservation = await reserve(deps.db, {
-      customerId: caller.customer.id,
+      customerId: inner.customer.id,
       workId,
       estCostCents: estimate.estCents,
     });
@@ -210,7 +212,7 @@ async function handleTranscription(
     const node = pickNode(
       { nodeBook: deps.nodeBook, ...(deps.rng ? { rng: deps.rng } : {}) },
       fields.data.model,
-      caller.customer.tier,
+      inner.customer.tier,
       'transcriptions',
     );
     const quote = node.quotes.get(capabilityString('transcriptions'));
@@ -278,7 +280,7 @@ async function handleTranscription(
     committed = true;
 
     await usageRecordsRepo.insertUsageRecord(deps.db, {
-      customerId: caller.customer.id,
+      customerId: inner.customer.id,
       workId,
       kind: 'transcriptions',
       model: fields.data.model,

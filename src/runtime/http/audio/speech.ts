@@ -14,7 +14,8 @@ import {
   reserve,
   type PrepaidReserveResult,
 } from '../../../service/billing/reservations.js';
-import type { AuthService } from '../../../service/auth/authenticate.js';
+import type { AuthenticatedCaller } from '../../../service/auth/authenticate.js';
+import type { AuthResolver } from '../../../interfaces/index.js';
 import type { RateLimiter } from '../../../service/rateLimit/index.js';
 import { authPreHandler } from '../middleware/auth.js';
 import { rateLimitPreHandler } from '../middleware/rateLimit.js';
@@ -31,7 +32,7 @@ export interface SpeechDeps {
   nodeBook: NodeBook;
   nodeClient: NodeClient;
   paymentsService: PaymentsService;
-  authService: AuthService;
+  authResolver: AuthResolver;
   rateLimiter?: RateLimiter;
   pricing: PricingConfig;
   nodeCallTimeoutMs?: number;
@@ -40,8 +41,8 @@ export interface SpeechDeps {
 
 export function registerSpeechRoute(app: FastifyInstance, deps: SpeechDeps): void {
   const preHandler = deps.rateLimiter
-    ? [authPreHandler(deps.authService), rateLimitPreHandler(deps.rateLimiter)]
-    : authPreHandler(deps.authService);
+    ? [authPreHandler(deps.authResolver), rateLimitPreHandler(deps.rateLimiter)]
+    : authPreHandler(deps.authResolver);
   app.post('/v1/audio/speech', { preHandler }, (req, reply) => handleSpeech(req, reply, deps));
 }
 
@@ -56,6 +57,7 @@ async function handleSpeech(
     await reply.code(status).send(envelope);
     return;
   }
+  const inner = caller.metadata as AuthenticatedCaller;
 
   const parsed = SpeechRequestSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -65,7 +67,7 @@ async function handleSpeech(
   }
   const body = parsed.data;
 
-  if (caller.customer.tier === 'free') {
+  if (inner.customer.tier === 'free') {
     await reply.code(402).send({
       error: {
         code: 'insufficient_quota',
@@ -79,7 +81,7 @@ async function handleSpeech(
   // Char count is exact at the boundary — Zod enforces the upper bound,
   // so the reservation equals the commit. No reconciliation needed.
   const charCount = [...body.input].length;
-  const workId = `${caller.customer.id}:${randomUUID()}`;
+  const workId = `${inner.customer.id}:${randomUUID()}`;
 
   let estimate;
   try {
@@ -95,7 +97,7 @@ async function handleSpeech(
 
   try {
     reservation = await reserve(deps.db, {
-      customerId: caller.customer.id,
+      customerId: inner.customer.id,
       workId,
       estCostCents: estimate.estCents,
     });
@@ -103,7 +105,7 @@ async function handleSpeech(
     const node = pickNode(
       { nodeBook: deps.nodeBook, ...(deps.rng ? { rng: deps.rng } : {}) },
       body.model,
-      caller.customer.tier,
+      inner.customer.tier,
       'speech',
     );
     const quote = node.quotes.get(capabilityString('speech'));
@@ -151,7 +153,7 @@ async function handleSpeech(
     committed = true;
 
     await usageRecordsRepo.insertUsageRecord(deps.db, {
-      customerId: caller.customer.id,
+      customerId: inner.customer.id,
       workId,
       kind: 'speech',
       model: body.model,

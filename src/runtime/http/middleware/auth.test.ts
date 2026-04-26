@@ -3,7 +3,9 @@ import { sql } from 'drizzle-orm';
 import { startTestPg, type TestPg } from '../../../service/billing/testPg.js';
 import * as customersRepo from '../../../repo/customers.js';
 import { createAuthService, issueKey } from '../../../service/auth/index.js';
+import { createAuthResolver } from '../../../service/auth/authResolver.js';
 import { createFastifyServer } from '../../../providers/http/fastify.js';
+import type { AuthenticatedCaller } from '../../../service/auth/authenticate.js';
 import { authPreHandler } from './auth.js';
 
 let pg: TestPg;
@@ -24,9 +26,11 @@ beforeEach(async () => {
 
 async function buildServer() {
   const auth = createAuthService({ db: pg.db, config });
+  const authResolver = createAuthResolver({ authService: auth });
   const server = await createFastifyServer({ logger: false });
-  server.app.get('/whoami', { preHandler: authPreHandler(auth) }, async (req) => {
-    return { customerId: req.caller?.customer.id ?? null };
+  server.app.get('/whoami', { preHandler: authPreHandler(authResolver) }, async (req) => {
+    const inner = req.caller?.metadata as AuthenticatedCaller | undefined;
+    return { customerId: inner?.customer.id ?? null };
   });
   await server.app.ready();
   return server;
