@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { RedisClient } from '../../providers/redis.js';
-import type { RateLimitConfig, RateLimitPolicy } from '../../config/rateLimit.js';
+import type { RateLimitConfig } from '../../config/rateLimit.js';
 import { resolvePolicy } from '../../config/rateLimit.js';
 import { NoopRecorder } from '../../providers/metrics/noop.js';
 import {
@@ -10,29 +10,17 @@ import {
   type RateLimitKind,
   type Recorder,
 } from '../../providers/metrics/recorder.js';
+import type {
+  RateLimitCheckResult,
+  RateLimitHeaders,
+  RateLimiter,
+} from '../../interfaces/index.js';
 import { RateLimitExceededError } from './errors.js';
 import { acquireSlot, releaseSlot } from './concurrency.js';
 import { checkWindow, type WindowResult } from './slidingWindow.js';
 
 export * from './errors.js';
-
-export interface RateLimitHeaders {
-  limitRequests: number;
-  remainingRequests: number;
-  resetSeconds: number;
-}
-
-export interface RateLimitCheckResult {
-  policy: RateLimitPolicy;
-  headers: RateLimitHeaders;
-  concurrencyKey: string;
-  failedOpen: boolean;
-}
-
-export interface RateLimiter {
-  check(customerId: string, policyName: string): Promise<RateLimitCheckResult>;
-  release(concurrencyKey: string, failedOpen: boolean): Promise<void>;
-}
+export type { RateLimitCheckResult, RateLimitHeaders, RateLimiter };
 
 export interface RateLimiterDeps {
   redis: RedisClient;
@@ -51,11 +39,11 @@ export function createRateLimiter(deps: RateLimiterDeps): RateLimiter {
   }
 
   return {
-    async check(customerId, policyName) {
+    async check(callerId, policyName) {
       const policy = resolvePolicy(deps.config, policyName);
-      const concurrencyKey = `rl:${customerId}:concurrent`;
-      const minuteKey = `rl:${customerId}:min`;
-      const dayKey = `rl:${customerId}:day`;
+      const concurrencyKey = `rl:${callerId}:concurrent`;
+      const minuteKey = `rl:${callerId}:min`;
+      const dayKey = `rl:${callerId}:day`;
       const member = `${now()}:${randomUUID()}`;
 
       let minute: WindowResult;
@@ -81,7 +69,7 @@ export function createRateLimiter(deps: RateLimiterDeps): RateLimiter {
       if (!minute.allowed) {
         emitReject(policy.name, RATE_LIMIT_RPM);
         throw new RateLimitExceededError(
-          customerId,
+          callerId,
           policy.name,
           'per_minute',
           policy.perMinute,
@@ -91,7 +79,7 @@ export function createRateLimiter(deps: RateLimiterDeps): RateLimiter {
       if (!day.allowed) {
         emitReject(policy.name, RATE_LIMIT_RPD);
         throw new RateLimitExceededError(
-          customerId,
+          callerId,
           policy.name,
           'per_day',
           policy.perDay,
@@ -104,7 +92,7 @@ export function createRateLimiter(deps: RateLimiterDeps): RateLimiter {
         if (!slot.acquired) {
           emitReject(policy.name, RATE_LIMIT_CONCURRENT);
           throw new RateLimitExceededError(
-            customerId,
+            callerId,
             policy.name,
             'concurrent',
             policy.concurrent,
