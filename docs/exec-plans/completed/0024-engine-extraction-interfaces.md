@@ -2,9 +2,10 @@
 id: 0024
 slug: engine-extraction-interfaces
 title: Engine extraction stage 1 — define Wallet/AuthResolver/RateLimiter/Logger/AdminAuthResolver adapter interfaces in-place; introduce generic Caller; thread caller_id through engine-bound code
-status: active
+status: completed
 owner: agent
 opened: 2026-04-26
+closed: 2026-04-26
 ---
 
 ## Goal
