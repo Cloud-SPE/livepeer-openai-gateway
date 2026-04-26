@@ -69,6 +69,7 @@ async function handleChatCompletion(
       nodeClient: deps.nodeClient,
       paymentsService: deps.paymentsService,
       pricing: deps.pricing,
+      wallet: deps.wallet,
       ...(deps.tokenAudit !== undefined ? { tokenAudit: deps.tokenAudit } : {}),
       ...(deps.recorder !== undefined ? { recorder: deps.recorder } : {}),
       ...(deps.nodeCallTimeoutMs !== undefined

@@ -10,6 +10,7 @@ import { startTestPg, type TestPg } from '../../../service/billing/testPg.js';
 import * as customersRepo from '../../../repo/customers.js';
 import { createAuthService, issueKey } from '../../../service/auth/index.js';
 import { createAuthResolver } from '../../../service/auth/authResolver.js';
+import { createPrepaidQuotaWallet } from '../../../service/billing/wallet.js';
 import { createNodesLoader } from '../../../service/nodes/loader.js';
 import { createQuoteRefresher } from '../../../service/nodes/quoteRefresher.js';
 import { NodeBook } from '../../../service/nodes/nodebook.js';
@@ -255,6 +256,7 @@ nodes:
     nodeClient,
     paymentsService,
     authResolver: createAuthResolver({ authService }),
+    wallet: createPrepaidQuotaWallet({ db: pg.db }),
     pricing: defaultPricingConfig(),
     nodeCallTimeoutMs: 10_000,
   });
