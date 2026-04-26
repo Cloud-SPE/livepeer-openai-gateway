@@ -16,7 +16,7 @@ import {
 import { createNodesLoader } from './loader.js';
 import { createQuoteRefresher } from './quoteRefresher.js';
 import { NodeBook } from './nodebook.js';
-import { ManualScheduler } from './scheduler.js';
+import { ManualScheduler } from '../routing/scheduler.js';
 import { EthAddressChangedError } from './errors.js';
 
 let pg: TestPg;

@@ -3,7 +3,9 @@ import type { Db } from '../../../repo/db.js';
 import type { PricingConfig } from '../../../config/pricing.js';
 import type { NodeClient } from '../../../providers/nodeClient.js';
 import type { PaymentsService } from '../../../service/payments/createPayment.js';
-import type { NodeBook } from '../../../service/nodes/nodebook.js';
+import type { ServiceRegistryClient } from '../../../providers/serviceRegistry.js';
+import type { CircuitBreaker } from '../../../service/routing/circuitBreaker.js';
+import type { QuoteCache } from '../../../service/routing/quoteCache.js';
 import type { ChatCompletionRequest } from '../../../types/openai.js';
 import type { Recorder } from '../../../providers/metrics/recorder.js';
 import { toHttpError } from '../errors.js';
@@ -13,7 +15,9 @@ import { dispatchStreamingChatCompletion } from '../../../dispatch/streamingChat
 
 export interface StreamingDeps {
   db: Db;
-  nodeBook: NodeBook;
+  serviceRegistry: ServiceRegistryClient;
+  circuitBreaker: CircuitBreaker;
+  quoteCache: QuoteCache;
   nodeClient: NodeClient;
   paymentsService: PaymentsService;
   pricing: PricingConfig;
@@ -36,6 +40,7 @@ export interface StreamingDeps {
  * `body` is already Zod-parsed by the caller (completions.ts's
  * `ChatCompletionRequestSchema.safeParse`); no parse needed here.
  */
+// eslint-disable-next-line livepeer-bridge/zod-at-boundary -- body already parsed by completions.ts wrapper
 export async function handleStreamingChatCompletion(
   req: FastifyRequest,
   reply: FastifyReply,
@@ -78,7 +83,9 @@ export async function handleStreamingChatCompletion(
       caller,
       body,
       db: deps.db,
-      nodeBook: deps.nodeBook,
+      serviceRegistry: deps.serviceRegistry,
+      circuitBreaker: deps.circuitBreaker,
+      quoteCache: deps.quoteCache,
       nodeClient: deps.nodeClient,
       paymentsService: deps.paymentsService,
       pricing: deps.pricing,

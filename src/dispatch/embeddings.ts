@@ -4,9 +4,11 @@ import * as usageRecordsRepo from '../repo/usageRecords.js';
 import type { PricingConfig } from '../config/pricing.js';
 import type { NodeClient } from '../providers/nodeClient.js';
 import type { PaymentsService } from '../service/payments/createPayment.js';
-import type { NodeBook } from '../service/nodes/nodebook.js';
+import type { ServiceRegistryClient } from '../providers/serviceRegistry.js';
+import type { CircuitBreaker } from '../service/routing/circuitBreaker.js';
+import type { QuoteCache } from '../service/routing/quoteCache.js';
 import { capabilityString } from '../types/capability.js';
-import { pickNode } from '../service/routing/router.js';
+import { selectNode } from '../service/routing/router.js';
 import {
   computeEmbeddingsActualCost,
   estimateEmbeddingsReservation,
@@ -32,7 +34,9 @@ export interface EmbeddingsDispatchDeps {
   caller: Caller;
   body: EmbeddingsRequest;
   db: Db;
-  nodeBook: NodeBook;
+  serviceRegistry: ServiceRegistryClient;
+  circuitBreaker: CircuitBreaker;
+  quoteCache: QuoteCache;
   nodeClient: NodeClient;
   paymentsService: PaymentsService;
   pricing: PricingConfig;
@@ -79,19 +83,21 @@ export async function dispatchEmbeddings(
   try {
     handle = await deps.wallet.reserve(deps.caller.id, reserveQuote);
 
-    const node = pickNode(
-      { nodeBook: deps.nodeBook, ...(deps.rng ? { rng: deps.rng } : {}) },
-      deps.body.model,
-      'prepaid',
-      'embeddings',
+    const node = await selectNode(
+      {
+        serviceRegistry: deps.serviceRegistry,
+        circuitBreaker: deps.circuitBreaker,
+        ...(deps.rng ? { rng: deps.rng } : {}),
+      },
+      { capability: 'embeddings', model: deps.body.model, tier: 'prepaid' },
     );
-    const quote = node.quotes.get(capabilityString('embeddings'));
+    const quote = deps.quoteCache.get(node.id, capabilityString('embeddings'));
     if (!quote) {
-      throw new UpstreamNodeError(node.config.id, null, 'quote not yet refreshed');
+      throw new UpstreamNodeError(node.id, null, 'quote not yet refreshed');
     }
 
     const payment = await deps.paymentsService.createPaymentForRequest({
-      nodeId: node.config.id,
+      nodeId: node.id,
       quote,
       workUnits: BigInt(estimate.promptEstimateTokens),
       capability: capabilityString('embeddings'),
@@ -100,23 +106,23 @@ export async function dispatchEmbeddings(
 
     const paymentHeaderB64 = Buffer.from(payment.paymentBytes).toString('base64');
     const call = await deps.nodeClient.createEmbeddings({
-      url: node.config.url,
+      url: node.url,
       body: deps.body,
       paymentHeaderB64,
       timeoutMs: deps.nodeCallTimeoutMs ?? 60_000,
     });
 
     if (call.status >= 400 || call.response === null) {
-      throw new UpstreamNodeError(node.config.id, call.status, call.rawBody.slice(0, 512));
+      throw new UpstreamNodeError(node.id, call.status, call.rawBody.slice(0, 512));
     }
 
     const response = call.response;
     if (!response.usage || typeof response.usage.prompt_tokens !== 'number') {
-      throw new MissingUsageError(node.config.id);
+      throw new MissingUsageError(node.id);
     }
     if (response.data.length !== inputs.length) {
       throw new UpstreamNodeError(
-        node.config.id,
+        node.id,
         200,
         `data.length (${response.data.length}) !== input.length (${inputs.length})`,
       );
@@ -125,7 +131,7 @@ export async function dispatchEmbeddings(
       for (const entry of response.data) {
         if (Array.isArray(entry.embedding) && entry.embedding.length !== deps.body.dimensions) {
           throw new UpstreamNodeError(
-            node.config.id,
+            node.id,
             200,
             `vector length ${entry.embedding.length} !== requested dimensions ${deps.body.dimensions}`,
           );
@@ -156,7 +162,7 @@ export async function dispatchEmbeddings(
       workId,
       kind: 'embeddings',
       model: deps.body.model,
-      nodeUrl: node.config.url,
+      nodeUrl: node.url,
       promptTokensReported: response.usage.prompt_tokens,
       costUsdCents: cost.actualCents,
       nodeCostWei: payment.expectedValueWei.toString(),

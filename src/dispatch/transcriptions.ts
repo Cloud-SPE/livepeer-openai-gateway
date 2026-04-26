@@ -5,9 +5,11 @@ import * as usageRecordsRepo from '../repo/usageRecords.js';
 import type { PricingConfig } from '../config/pricing.js';
 import type { NodeClient } from '../providers/nodeClient.js';
 import type { PaymentsService } from '../service/payments/createPayment.js';
-import type { NodeBook } from '../service/nodes/nodebook.js';
+import type { ServiceRegistryClient } from '../providers/serviceRegistry.js';
+import type { CircuitBreaker } from '../service/routing/circuitBreaker.js';
+import type { QuoteCache } from '../service/routing/quoteCache.js';
 import { capabilityString } from '../types/capability.js';
-import { pickNode } from '../service/routing/router.js';
+import { selectNode } from '../service/routing/router.js';
 import {
   computeTranscriptionsActualCost,
   estimateTranscriptionsReservation,
@@ -34,7 +36,9 @@ export interface TranscriptionsDispatchDeps {
   fileMime: string;
   fields: TranscriptionsFormFields;
   db: Db;
-  nodeBook: NodeBook;
+  serviceRegistry: ServiceRegistryClient;
+  circuitBreaker: CircuitBreaker;
+  quoteCache: QuoteCache;
   nodeClient: NodeClient;
   paymentsService: PaymentsService;
   pricing: PricingConfig;
@@ -93,19 +97,21 @@ export async function dispatchTranscriptions(
   try {
     handle = await deps.wallet.reserve(deps.caller.id, reserveQuote);
 
-    const node = pickNode(
-      { nodeBook: deps.nodeBook, ...(deps.rng ? { rng: deps.rng } : {}) },
-      deps.fields.model,
-      'prepaid',
-      'transcriptions',
+    const node = await selectNode(
+      {
+        serviceRegistry: deps.serviceRegistry,
+        circuitBreaker: deps.circuitBreaker,
+        ...(deps.rng ? { rng: deps.rng } : {}),
+      },
+      { capability: 'transcriptions', model: deps.fields.model, tier: 'prepaid' },
     );
-    const quote = node.quotes.get(capabilityString('transcriptions'));
+    const quote = deps.quoteCache.get(node.id, capabilityString('transcriptions'));
     if (!quote) {
-      throw new UpstreamNodeError(node.config.id, null, 'quote not yet refreshed');
+      throw new UpstreamNodeError(node.id, null, 'quote not yet refreshed');
     }
 
     const payment = await deps.paymentsService.createPaymentForRequest({
-      nodeId: node.config.id,
+      nodeId: node.id,
       quote,
       workUnits: BigInt(estimate.estimatedSeconds),
       capability: capabilityString('transcriptions'),
@@ -127,7 +133,7 @@ export async function dispatchTranscriptions(
     });
 
     const call = await deps.nodeClient.createTranscription({
-      url: node.config.url,
+      url: node.url,
       body: Readable.toWeb(Readable.from(outboundBody)) as unknown as ReadableStream<Uint8Array>,
       contentType: outboundContentType,
       paymentHeaderB64,
@@ -137,13 +143,13 @@ export async function dispatchTranscriptions(
 
     if (call.status >= 400) {
       throw new UpstreamNodeError(
-        node.config.id,
+        node.id,
         call.status,
         (call.rawErrorBody ?? '').slice(0, 512),
       );
     }
     if (call.reportedDurationSeconds === null) {
-      throw new MissingUsageError(node.config.id);
+      throw new MissingUsageError(node.id);
     }
 
     const cost = computeTranscriptionsActualCost(
@@ -168,7 +174,7 @@ export async function dispatchTranscriptions(
       workId,
       kind: 'transcriptions',
       model: deps.fields.model,
-      nodeUrl: node.config.url,
+      nodeUrl: node.url,
       durationSeconds: Math.ceil(call.reportedDurationSeconds),
       costUsdCents: cost.actualCents,
       nodeCostWei: payment.expectedValueWei.toString(),

@@ -1,5 +1,9 @@
-import type { NodeBook, NodeEntry } from '../nodes/nodebook.js';
 import type { CustomerTier } from '../../types/customer.js';
+import type { NodeCapability } from '../../types/node.js';
+import type {
+  NodeRef,
+  ServiceRegistryClient,
+} from '../../providers/serviceRegistry.js';
 import {
   RETRY_5XX,
   RETRY_CIRCUIT_OPEN,
@@ -9,7 +13,8 @@ import {
   type RetryAttempt,
   type RetryReason,
 } from '../../providers/metrics/recorder.js';
-import { pickNode } from './router.js';
+import type { CircuitBreaker } from './circuitBreaker.js';
+import { selectNode } from './router.js';
 
 export type RetryDisposition = 'retry_next_node' | 'retry_same_node' | 'no_retry';
 
@@ -50,9 +55,11 @@ export interface AttemptFailure {
 export type AttemptResult<T> = AttemptOutcome<T> | AttemptFailure;
 
 export interface RunWithRetryDeps {
-  nodeBook: NodeBook;
+  serviceRegistry: ServiceRegistryClient;
+  circuitBreaker: CircuitBreaker;
   model: string;
   tier: CustomerTier;
+  capability: NodeCapability;
   maxAttempts: number;
   rng?: () => number;
   /** Optional recorder. Each retry attempt past the first emits incNodeRetry. */
@@ -61,7 +68,7 @@ export interface RunWithRetryDeps {
 
 export interface AttemptContext {
   attempt: number;
-  node: NodeEntry;
+  node: NodeRef;
   previousNodeIds: string[];
 }
 
@@ -73,10 +80,13 @@ export async function runWithRetry<T>(
   let lastFailure: AttemptFailure | null = null;
 
   for (let attempt = 1; attempt <= deps.maxAttempts; attempt++) {
-    const node = pickNode(
-      { nodeBook: deps.nodeBook, ...(deps.rng ? { rng: deps.rng } : {}) },
-      deps.model,
-      deps.tier,
+    const node = await selectNode(
+      {
+        serviceRegistry: deps.serviceRegistry,
+        circuitBreaker: deps.circuitBreaker,
+        ...(deps.rng ? { rng: deps.rng } : {}),
+      },
+      { capability: deps.capability, model: deps.model, tier: deps.tier },
     );
     const result = await fn({ attempt, node, previousNodeIds });
     if (result.ok) return result;
@@ -85,11 +95,10 @@ export async function runWithRetry<T>(
     if (result.disposition === 'no_retry') return result;
     if (attempt === deps.maxAttempts) return result;
     if (result.disposition === 'retry_next_node') {
-      previousNodeIds.push(node.config.id);
+      previousNodeIds.push(node.id);
+      // Tell the circuit breaker so the next selectNode excludes this node.
+      deps.circuitBreaker.onFailure(node.id, new Date());
     }
-    // We are about to retry. Emit the metric labeled by the attempt-just-
-    // failed (1..maxAttempts-1). The reason is best-effort classified from
-    // the surfaced error.
     if (deps.recorder) {
       const reason = classifyRetryReason(result.error, null);
       deps.recorder.incNodeRetry(reason, attemptLabel(attempt));

@@ -4,9 +4,11 @@ import * as usageRecordsRepo from '../repo/usageRecords.js';
 import type { PricingConfig } from '../config/pricing.js';
 import type { NodeClient } from '../providers/nodeClient.js';
 import type { PaymentsService } from '../service/payments/createPayment.js';
-import type { NodeBook } from '../service/nodes/nodebook.js';
+import type { ServiceRegistryClient } from '../providers/serviceRegistry.js';
 import { capabilityString } from '../types/capability.js';
-import { pickNode } from '../service/routing/router.js';
+import { selectNode } from '../service/routing/router.js';
+import type { CircuitBreaker } from '../service/routing/circuitBreaker.js';
+import type { QuoteCache } from '../service/routing/quoteCache.js';
 import {
   computeActualCost,
   estimateReservation,
@@ -32,7 +34,9 @@ export interface ChatCompletionDispatchDeps {
   caller: Caller;
   body: ChatCompletionRequest;
   db: Db;
-  nodeBook: NodeBook;
+  serviceRegistry: ServiceRegistryClient;
+  circuitBreaker: CircuitBreaker;
+  quoteCache: QuoteCache;
   nodeClient: NodeClient;
   paymentsService: PaymentsService;
   pricing: PricingConfig;
@@ -87,18 +91,21 @@ export async function dispatchChatCompletion(
   try {
     handle = await deps.wallet.reserve(deps.caller.id, reserveQuote);
 
-    const node = pickNode(
-      { nodeBook: deps.nodeBook, ...(deps.rng ? { rng: deps.rng } : {}) },
-      deps.body.model,
-      callerTier,
+    const node = await selectNode(
+      {
+        serviceRegistry: deps.serviceRegistry,
+        circuitBreaker: deps.circuitBreaker,
+        ...(deps.rng ? { rng: deps.rng } : {}),
+      },
+      { capability: 'chat', model: deps.body.model, tier: callerTier },
     );
-    const quote = node.quotes.get(capabilityString('chat'));
+    const quote = deps.quoteCache.get(node.id, capabilityString('chat'));
     if (!quote) {
-      throw new UpstreamNodeError(node.config.id, null, 'quote not yet refreshed');
+      throw new UpstreamNodeError(node.id, null, 'quote not yet refreshed');
     }
 
     const payment = await deps.paymentsService.createPaymentForRequest({
-      nodeId: node.config.id,
+      nodeId: node.id,
       quote,
       workUnits: BigInt(estimate.maxCompletionTokens),
       capability: capabilityString('chat'),
@@ -107,19 +114,19 @@ export async function dispatchChatCompletion(
 
     const paymentHeaderB64 = Buffer.from(payment.paymentBytes).toString('base64');
     const call = await deps.nodeClient.createChatCompletion({
-      url: node.config.url,
+      url: node.url,
       body: deps.body,
       paymentHeaderB64,
       timeoutMs: deps.nodeCallTimeoutMs ?? 60_000,
     });
 
     if (call.status >= 400 || call.response === null) {
-      throw new UpstreamNodeError(node.config.id, call.status, call.rawBody.slice(0, 512));
+      throw new UpstreamNodeError(node.id, call.status, call.rawBody.slice(0, 512));
     }
 
     const response = call.response;
     if (!response.usage) {
-      throw new MissingUsageError(node.config.id);
+      throw new MissingUsageError(node.id);
     }
 
     const cost = computeActualCost(response.usage, callerTier, deps.body.model, deps.pricing);
@@ -145,7 +152,7 @@ export async function dispatchChatCompletion(
       customerId: deps.caller.id,
       workId,
       model: deps.body.model,
-      nodeUrl: node.config.url,
+      nodeUrl: node.url,
       promptTokensReported: response.usage.prompt_tokens,
       completionTokensReported: response.usage.completion_tokens,
       ...(localPrompt !== null ? { promptTokensLocal: localPrompt } : {}),
@@ -158,7 +165,7 @@ export async function dispatchChatCompletion(
     if (deps.tokenAudit && localPrompt !== null && localCompletion !== null) {
       deps.tokenAudit.emitDrift({
         model: deps.body.model,
-        nodeId: node.config.id,
+        nodeId: node.id,
         localPromptTokens: localPrompt,
         reportedPromptTokens: response.usage.prompt_tokens,
         localCompletionTokens: localCompletion,

@@ -15,6 +15,9 @@ import { createPrepaidQuotaWallet } from '../../../service/billing/wallet.js';
 import { createNodesLoader } from '../../../service/nodes/loader.js';
 import { createQuoteRefresher } from '../../../service/nodes/quoteRefresher.js';
 import { NodeBook } from '../../../service/nodes/nodebook.js';
+import { createNodeBookRegistry } from '../../../service/nodes/nodebookRegistry.js';
+import { CircuitBreaker } from '../../../service/routing/circuitBreaker.js';
+import { QuoteCache } from '../../../service/routing/quoteCache.js';
 import { ManualScheduler } from '../../../service/routing/scheduler.js';
 import { createFetchNodeClient } from '../../../providers/nodeClient/fetch.js';
 import {
@@ -221,6 +224,16 @@ nodes:
   });
   await refresher.tickNode('node-e2e');
 
+  // Bridge the legacy NodeBook quote setup into the new registry-shaped
+  // contract: dispatchers read quotes from QuoteCache, select nodes via
+  // ServiceRegistryClient, and exclude via CircuitBreaker. Stage 2 task 18.7.
+  const serviceRegistry = createNodeBookRegistry({ nodeBook });
+  const circuitBreaker = new CircuitBreaker({ failureThreshold: 3, coolDownSeconds: 60 });
+  const quoteCache = new QuoteCache();
+  for (const entry of nodeBook.list()) {
+    quoteCache.replaceNode(entry.config.id, entry.quotes);
+  }
+
   const payerDaemon = createGrpcPayerDaemonClient({
     config: {
       socketPath: daemon.socketPath,
@@ -240,7 +253,9 @@ nodes:
   const server = await createFastifyServer({ logger: false });
   registerChatCompletionsRoute(server.app, {
     db: pg.db,
-    nodeBook,
+    serviceRegistry,
+    circuitBreaker,
+    quoteCache,
     nodeClient,
     paymentsService,
     authResolver: createAuthResolver({ authService }),

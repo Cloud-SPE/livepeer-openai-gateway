@@ -4,9 +4,11 @@ import * as usageRecordsRepo from '../repo/usageRecords.js';
 import type { PricingConfig } from '../config/pricing.js';
 import type { NodeClient } from '../providers/nodeClient.js';
 import type { PaymentsService } from '../service/payments/createPayment.js';
-import type { NodeBook } from '../service/nodes/nodebook.js';
+import type { ServiceRegistryClient } from '../providers/serviceRegistry.js';
+import type { CircuitBreaker } from '../service/routing/circuitBreaker.js';
+import type { QuoteCache } from '../service/routing/quoteCache.js';
 import { capabilityString } from '../types/capability.js';
-import { pickNode } from '../service/routing/router.js';
+import { selectNode } from '../service/routing/router.js';
 import {
   computeSpeechActualCost,
   estimateSpeechReservation,
@@ -29,7 +31,9 @@ export interface SpeechDispatchDeps {
   caller: Caller;
   body: SpeechRequest;
   db: Db;
-  nodeBook: NodeBook;
+  serviceRegistry: ServiceRegistryClient;
+  circuitBreaker: CircuitBreaker;
+  quoteCache: QuoteCache;
   nodeClient: NodeClient;
   paymentsService: PaymentsService;
   pricing: PricingConfig;
@@ -85,19 +89,21 @@ export async function dispatchSpeech(
   try {
     handle = await deps.wallet.reserve(deps.caller.id, reserveQuote);
 
-    const node = pickNode(
-      { nodeBook: deps.nodeBook, ...(deps.rng ? { rng: deps.rng } : {}) },
-      deps.body.model,
-      'prepaid',
-      'speech',
+    const node = await selectNode(
+      {
+        serviceRegistry: deps.serviceRegistry,
+        circuitBreaker: deps.circuitBreaker,
+        ...(deps.rng ? { rng: deps.rng } : {}),
+      },
+      { capability: 'speech', model: deps.body.model, tier: 'prepaid' },
     );
-    const quote = node.quotes.get(capabilityString('speech'));
+    const quote = deps.quoteCache.get(node.id, capabilityString('speech'));
     if (!quote) {
-      throw new UpstreamNodeError(node.config.id, null, 'quote not yet refreshed');
+      throw new UpstreamNodeError(node.id, null, 'quote not yet refreshed');
     }
 
     const payment = await deps.paymentsService.createPaymentForRequest({
-      nodeId: node.config.id,
+      nodeId: node.id,
       quote,
       workUnits: BigInt(charCount),
       capability: capabilityString('speech'),
@@ -106,7 +112,7 @@ export async function dispatchSpeech(
     const paymentHeaderB64 = Buffer.from(payment.paymentBytes).toString('base64');
 
     const call = await deps.nodeClient.createSpeech({
-      url: node.config.url,
+      url: node.url,
       body: deps.body,
       paymentHeaderB64,
       timeoutMs: deps.nodeCallTimeoutMs ?? 60_000,
@@ -115,7 +121,7 @@ export async function dispatchSpeech(
 
     if (call.status >= 400 || call.stream === null) {
       throw new UpstreamNodeError(
-        node.config.id,
+        node.id,
         call.status,
         (call.rawErrorBody ?? '').slice(0, 512),
       );
@@ -139,7 +145,7 @@ export async function dispatchSpeech(
       workId,
       kind: 'speech',
       model: deps.body.model,
-      nodeUrl: node.config.url,
+      nodeUrl: node.url,
       charCount,
       costUsdCents: cost.actualCents,
       nodeCostWei: payment.expectedValueWei.toString(),

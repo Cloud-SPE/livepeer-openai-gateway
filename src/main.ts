@@ -50,7 +50,10 @@ import { createNodesLoader } from './service/nodes/loader.js';
 import { NodeBook } from './service/nodes/nodebook.js';
 import { createNodeBookRegistry } from './service/nodes/nodebookRegistry.js';
 import { createQuoteRefresher } from './service/nodes/quoteRefresher.js';
+import { CircuitBreaker } from './service/routing/circuitBreaker.js';
+import { QuoteCache } from './service/routing/quoteCache.js';
 import { realScheduler } from './service/routing/scheduler.js';
+import { loadRoutingConfig } from './config/routing.js';
 import { createRateLimiter } from './service/rateLimit/index.js';
 import { createTokenAuditService } from './service/tokenAudit/index.js';
 
@@ -79,6 +82,7 @@ async function main(): Promise<void> {
   const pricingConfig = loadPricingConfig();
   const rateLimitConfig = defaultRateLimitConfig();
   const metricsConfig = loadMetricsConfig();
+  const routingConfig = loadRoutingConfig();
 
   // Recorder. METRICS_LISTEN unset => Noop everywhere; metrics server is a
   // no-op shell, hook + sampler skip registration. METRICS_LISTEN set =>
@@ -141,6 +145,16 @@ async function main(): Promise<void> {
     recorder,
   });
   refresher.start();
+  // Bootstrap an initial QuoteCache fill once the legacy refresher has
+  // had a chance to populate NodeBook. Subsequent ticks re-sync via the
+  // setInterval below until task 18 wires the new registry-driven
+  // refresher (which writes to QuoteCache directly).
+  setTimeout(syncNodeBookQuotesToCache, 1_000);
+  const quoteSyncInterval = setInterval(
+    syncNodeBookQuotesToCache,
+    routingConfig.quoteRefreshSeconds * 1000,
+  );
+  quoteSyncInterval.unref();
   payerDaemon.startHealthLoop();
 
   // Services.
@@ -151,8 +165,24 @@ async function main(): Promise<void> {
   // for a gRPC client to livepeer-modules-project/service-registry-daemon
   // and threads serviceRegistry through dispatchers + quoteRefresher;
   // route handlers don't consume it yet.
+  // ServiceRegistryClient — currently NodeBook-backed via the stage-1
+  // wrapper; task 18 swaps to createGrpcServiceRegistryClient when the
+  // daemon-side wiring + quote-cache sync are mature enough to retire
+  // NodeBook entirely. Until then, NodeBook stays as the data source for
+  // both this wrapper AND the legacy adminService/metricsSampler.
   const serviceRegistry = createNodeBookRegistry({ nodeBook });
-  void serviceRegistry; // wired here; stage-2 makes the pass-through exclusive
+  const circuitBreaker = new CircuitBreaker(routingConfig.circuitBreaker);
+  const quoteCache = new QuoteCache();
+  // Legacy quoteRefresher writes quotes to NodeBook; sync them into the
+  // QuoteCache that dispatchers now read from. After each refresh tick,
+  // copy the snapshot in. Out of scope for stage 2: writing the new
+  // quoteRefresher in service/routing/quoteRefresher.ts which writes
+  // directly to QuoteCache (it exists; main.ts just doesn't use it yet).
+  function syncNodeBookQuotesToCache(): void {
+    for (const entry of nodeBook.list()) {
+      quoteCache.replaceNode(entry.config.id, entry.quotes);
+    }
+  }
   const sessionCache = createSessionCache({ payerDaemon });
   const paymentsService = createPaymentsService({ payerDaemon, sessions: sessionCache });
   const rateLimiter = createRateLimiter({ redis, config: rateLimitConfig, recorder });
@@ -202,7 +232,9 @@ async function main(): Promise<void> {
   registerHealthzRoute(server.app);
   registerChatCompletionsRoute(server.app, {
     db,
-    nodeBook,
+    serviceRegistry,
+    circuitBreaker,
+    quoteCache,
     nodeClient,
     paymentsService,
     authResolver,
@@ -214,7 +246,9 @@ async function main(): Promise<void> {
   });
   registerEmbeddingsRoute(server.app, {
     db,
-    nodeBook,
+    serviceRegistry,
+    circuitBreaker,
+    quoteCache,
     nodeClient,
     paymentsService,
     authResolver,
@@ -224,7 +258,9 @@ async function main(): Promise<void> {
   });
   registerImagesGenerationsRoute(server.app, {
     db,
-    nodeBook,
+    serviceRegistry,
+    circuitBreaker,
+    quoteCache,
     nodeClient,
     paymentsService,
     authResolver,
@@ -234,7 +270,9 @@ async function main(): Promise<void> {
   });
   registerSpeechRoute(server.app, {
     db,
-    nodeBook,
+    serviceRegistry,
+    circuitBreaker,
+    quoteCache,
     nodeClient,
     paymentsService,
     authResolver,
@@ -244,7 +282,9 @@ async function main(): Promise<void> {
   });
   await registerTranscriptionsRoute(server.app, {
     db,
-    nodeBook,
+    serviceRegistry,
+    circuitBreaker,
+    quoteCache,
     nodeClient,
     paymentsService,
     authResolver,
@@ -271,6 +311,7 @@ async function main(): Promise<void> {
   await registerAdminConsoleStatic(server.app);
 
   // Graceful shutdown.
+  void quoteCache;
   let shuttingDown = false;
   const shutdown = async (signal: string): Promise<void> => {
     if (shuttingDown) return;

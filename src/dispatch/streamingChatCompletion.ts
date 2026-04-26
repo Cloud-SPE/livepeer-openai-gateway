@@ -5,7 +5,9 @@ import type { PricingConfig } from '../config/pricing.js';
 import { rateForTier } from '../config/pricing.js';
 import type { NodeClient } from '../providers/nodeClient.js';
 import type { PaymentsService } from '../service/payments/createPayment.js';
-import type { NodeBook } from '../service/nodes/nodebook.js';
+import type { ServiceRegistryClient } from '../providers/serviceRegistry.js';
+import type { CircuitBreaker } from '../service/routing/circuitBreaker.js';
+import type { QuoteCache } from '../service/routing/quoteCache.js';
 import { capabilityString } from '../types/capability.js';
 import {
   ChatCompletionChunkSchema,
@@ -36,7 +38,9 @@ export interface StreamingChatCompletionDispatchDeps {
   caller: Caller;
   body: ChatCompletionRequest;
   db: Db;
-  nodeBook: NodeBook;
+  serviceRegistry: ServiceRegistryClient;
+  circuitBreaker: CircuitBreaker;
+  quoteCache: QuoteCache;
   nodeClient: NodeClient;
   paymentsService: PaymentsService;
   pricing: PricingConfig;
@@ -112,16 +116,18 @@ export async function dispatchStreamingChatCompletion(
 
   const attemptResult = await runWithRetry(
     {
-      nodeBook: deps.nodeBook,
+      serviceRegistry: deps.serviceRegistry,
+      circuitBreaker: deps.circuitBreaker,
       model: deps.body.model,
       tier: callerTier,
+      capability: 'chat',
       maxAttempts: MAX_RETRY_ATTEMPTS,
       ...(deps.rng ? { rng: deps.rng } : {}),
       ...(deps.recorder ? { recorder: deps.recorder } : {}),
     },
     async (ctx) => {
       const node = ctx.node;
-      const quote = node.quotes.get(capabilityString('chat'));
+      const quote = deps.quoteCache.get(node.id, capabilityString('chat'));
       if (!quote) {
         return {
           ok: false as const,
@@ -132,7 +138,7 @@ export async function dispatchStreamingChatCompletion(
       }
       try {
         const payment = await deps.paymentsService.createPaymentForRequest({
-          nodeId: node.config.id,
+          nodeId: node.id,
           quote,
           workUnits: BigInt(estimate.maxCompletionTokens),
           capability: capabilityString('chat'),
@@ -140,7 +146,7 @@ export async function dispatchStreamingChatCompletion(
         });
         const paymentHeaderB64 = Buffer.from(payment.paymentBytes).toString('base64');
         const stream = await deps.nodeClient.streamChatCompletion({
-          url: node.config.url,
+          url: node.url,
           body: upstreamBody,
           paymentHeaderB64,
           timeoutMs: deps.nodeCallTimeoutMs ?? 300_000,
@@ -150,7 +156,7 @@ export async function dispatchStreamingChatCompletion(
           return {
             ok: false as const,
             error: new UpstreamNodeError(
-              node.config.id,
+              node.id,
               stream.status,
               (stream.rawErrorBody ?? '').slice(0, 512),
             ),
@@ -240,7 +246,7 @@ export async function dispatchStreamingChatCompletion(
     callerTier,
     callerId: deps.caller.id,
     workId,
-    nodeUrl: node.config.url,
+    nodeUrl: node.url,
     model: deps.body.model,
     pricing: deps.pricing,
     estimate,
@@ -250,7 +256,7 @@ export async function dispatchStreamingChatCompletion(
     paymentWei,
     ...(deps.tokenAudit !== undefined ? { tokenAudit: deps.tokenAudit } : {}),
     messages: deps.body.messages,
-    nodeId: node.config.id,
+    nodeId: node.id,
   });
 
   if (settlement.emittedError) {

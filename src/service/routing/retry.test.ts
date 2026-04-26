@@ -1,67 +1,37 @@
 import { describe, expect, it } from 'vitest';
-import { parseNodesYaml } from '../../config/nodes.js';
-import { capabilityString } from '../../types/capability.js';
-import type { Quote } from '../../types/node.js';
-import { NodeBook } from '../nodes/nodebook.js';
-
-// Stub quote sufficient to satisfy NodeBook.findNodesFor's
-// post-0020 quote-presence check. Values don't drive any retry-test
-// assertion.
-function stubQuote(): Quote {
-  return {
-    ticketParams: {
-      recipient: '0x' + 'aa'.repeat(20),
-      faceValueWei: 1n,
-      winProb: '0x01',
-      recipientRandHash: '0x' + 'de'.repeat(32),
-      seed: '0x' + 'be'.repeat(32),
-      expirationBlock: 1n,
-      expirationParams: { creationRound: 1n, creationRoundBlockHash: '0x' + 'ca'.repeat(32) },
-    },
-    priceInfo: { pricePerUnitWei: 1n, pixelsPerUnit: 1n },
-    modelPrices: {},
-    lastRefreshedAt: new Date(),
-    expiresAt: new Date(Date.now() + 60_000),
-  };
-}
+import type { NodeRef, ServiceRegistryClient } from '../../providers/serviceRegistry.js';
+import { CircuitBreaker } from './circuitBreaker.js';
 import { classifyNodeError, runWithRetry, type AttemptResult } from './retry.js';
 
-const yaml = `
-nodes:
-  - id: node-a
-    url: https://a.example
-    ethAddress: "0x${'aa'.repeat(20)}"
-    supportedModels: ["m"]
-    enabled: true
-    tierAllowed: ["prepaid"]
-    weight: 1
-  - id: node-b
-    url: https://b.example
-    ethAddress: "0x${'bb'.repeat(20)}"
-    supportedModels: ["m"]
-    enabled: true
-    tierAllowed: ["prepaid"]
-    weight: 1
-  - id: node-c
-    url: https://c.example
-    ethAddress: "0x${'cc'.repeat(20)}"
-    supportedModels: ["m"]
-    enabled: true
-    tierAllowed: ["prepaid"]
-    weight: 1
-`;
+const cbConfig = { failureThreshold: 3, coolDownSeconds: 60 };
 
-function mkNodeBook(): NodeBook {
-  const nb = new NodeBook();
-  nb.replaceAll(parseNodesYaml(yaml));
-  // Seed quotes for every (node, advertised-capability) pair —
-  // post-0020 NodeBook.findNodesFor excludes quote-less nodes.
-  for (const entry of nb.list()) {
-    for (const cap of entry.config.capabilities) {
-      nb.setCapabilityQuote(entry.config.id, capabilityString(cap), stubQuote());
-    }
-  }
-  return nb;
+function fakeRegistry(nodes: NodeRef[]): ServiceRegistryClient {
+  return {
+    async select() {
+      return nodes;
+    },
+    async listKnown() {
+      return nodes;
+    },
+  };
+}
+
+function ref(id: string): NodeRef {
+  return { id, url: `https://${id}.example`, capabilities: ['chat'], weight: 1 };
+}
+
+const POOL: NodeRef[] = [ref('node-a'), ref('node-b'), ref('node-c')];
+
+function deps() {
+  return {
+    serviceRegistry: fakeRegistry(POOL),
+    circuitBreaker: new CircuitBreaker(cbConfig),
+    model: 'm',
+    tier: 'prepaid' as const,
+    capability: 'chat' as const,
+    maxAttempts: 3,
+    rng: () => 0,
+  };
 }
 
 describe('classifyNodeError', () => {
@@ -84,25 +54,20 @@ describe('classifyNodeError', () => {
 
 describe('runWithRetry', () => {
   it('returns on first success without further attempts', async () => {
-    const nb = mkNodeBook();
     let attempts = 0;
-    const out = await runWithRetry<number>(
-      { nodeBook: nb, model: 'm', tier: 'prepaid', maxAttempts: 3 },
-      async () => {
-        attempts++;
-        return { ok: true, value: 42 };
-      },
-    );
+    const out = await runWithRetry<number>(deps(), async () => {
+      attempts++;
+      return { ok: true, value: 42 };
+    });
     expect(out.ok).toBe(true);
     if (out.ok) expect(out.value).toBe(42);
     expect(attempts).toBe(1);
   });
 
   it('retries retry_next_node failures up to maxAttempts', async () => {
-    const nb = mkNodeBook();
     let attempts = 0;
     const out = await runWithRetry<number>(
-      { nodeBook: nb, model: 'm', tier: 'prepaid', maxAttempts: 3 },
+      { ...deps(), maxAttempts: 3 },
       async (): Promise<AttemptResult<number>> => {
         attempts++;
         return {
@@ -118,10 +83,9 @@ describe('runWithRetry', () => {
   });
 
   it('bails immediately on no_retry disposition', async () => {
-    const nb = mkNodeBook();
     let attempts = 0;
     await runWithRetry<number>(
-      { nodeBook: nb, model: 'm', tier: 'prepaid', maxAttempts: 5 },
+      { ...deps(), maxAttempts: 5 },
       async (): Promise<AttemptResult<number>> => {
         attempts++;
         return {
@@ -136,10 +100,9 @@ describe('runWithRetry', () => {
   });
 
   it('bails immediately once firstTokenDelivered is true', async () => {
-    const nb = mkNodeBook();
     let attempts = 0;
     await runWithRetry<number>(
-      { nodeBook: nb, model: 'm', tier: 'prepaid', maxAttempts: 5 },
+      { ...deps(), maxAttempts: 5 },
       async (): Promise<AttemptResult<number>> => {
         attempts++;
         return {
@@ -154,23 +117,19 @@ describe('runWithRetry', () => {
   });
 
   it('succeeds on the second attempt after the first fails', async () => {
-    const nb = mkNodeBook();
     let attempts = 0;
-    const out = await runWithRetry<string>(
-      { nodeBook: nb, model: 'm', tier: 'prepaid', maxAttempts: 3 },
-      async (): Promise<AttemptResult<string>> => {
-        attempts++;
-        if (attempts === 1) {
-          return {
-            ok: false,
-            error: new Error('transient'),
-            disposition: 'retry_next_node',
-            firstTokenDelivered: false,
-          };
-        }
-        return { ok: true, value: 'ok' };
-      },
-    );
+    const out = await runWithRetry<string>(deps(), async (): Promise<AttemptResult<string>> => {
+      attempts++;
+      if (attempts === 1) {
+        return {
+          ok: false,
+          error: new Error('transient'),
+          disposition: 'retry_next_node',
+          firstTokenDelivered: false,
+        };
+      }
+      return { ok: true, value: 'ok' };
+    });
     expect(attempts).toBe(2);
     expect(out.ok).toBe(true);
   });

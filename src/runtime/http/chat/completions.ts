@@ -3,7 +3,9 @@ import type { Db } from '../../../repo/db.js';
 import type { PricingConfig } from '../../../config/pricing.js';
 import type { NodeClient } from '../../../providers/nodeClient.js';
 import type { PaymentsService } from '../../../service/payments/createPayment.js';
-import type { NodeBook } from '../../../service/nodes/nodebook.js';
+import type { ServiceRegistryClient } from '../../../providers/serviceRegistry.js';
+import type { CircuitBreaker } from '../../../service/routing/circuitBreaker.js';
+import type { QuoteCache } from '../../../service/routing/quoteCache.js';
 import type { AuthResolver, Wallet } from '../../../interfaces/index.js';
 import type { RateLimiter } from '../../../service/rateLimit/index.js';
 import { authPreHandler } from '../middleware/auth.js';
@@ -17,7 +19,9 @@ import { dispatchChatCompletion } from '../../../dispatch/chatCompletion.js';
 
 export interface ChatCompletionsDeps {
   db: Db;
-  nodeBook: NodeBook;
+  serviceRegistry: ServiceRegistryClient;
+  circuitBreaker: CircuitBreaker;
+  quoteCache: QuoteCache;
   nodeClient: NodeClient;
   paymentsService: PaymentsService;
   authResolver: AuthResolver;
@@ -65,7 +69,9 @@ async function handleChatCompletion(
   if (body.stream === true) {
     await handleStreamingChatCompletion(req, reply, body, {
       db: deps.db,
-      nodeBook: deps.nodeBook,
+      serviceRegistry: deps.serviceRegistry,
+      circuitBreaker: deps.circuitBreaker,
+      quoteCache: deps.quoteCache,
       nodeClient: deps.nodeClient,
       paymentsService: deps.paymentsService,
       pricing: deps.pricing,
@@ -86,7 +92,9 @@ async function handleChatCompletion(
       caller,
       body,
       db: deps.db,
-      nodeBook: deps.nodeBook,
+      serviceRegistry: deps.serviceRegistry,
+      circuitBreaker: deps.circuitBreaker,
+      quoteCache: deps.quoteCache,
       nodeClient: deps.nodeClient,
       paymentsService: deps.paymentsService,
       pricing: deps.pricing,
