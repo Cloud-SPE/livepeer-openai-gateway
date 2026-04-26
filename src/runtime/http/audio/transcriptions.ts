@@ -1,35 +1,21 @@
-import { randomUUID } from 'node:crypto';
-import { Readable } from 'node:stream';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import multipart from '@fastify/multipart';
 import type { Db } from '../../../repo/db.js';
-import * as usageRecordsRepo from '../../../repo/usageRecords.js';
 import type { PricingConfig } from '../../../config/pricing.js';
 import type { NodeClient } from '../../../providers/nodeClient.js';
 import type { PaymentsService } from '../../../service/payments/createPayment.js';
 import type { NodeBook } from '../../../service/nodes/nodebook.js';
-import { capabilityString } from '../../../types/capability.js';
-import {
-  commit,
-  refund,
-  reserve,
-  type PrepaidReserveResult,
-} from '../../../service/billing/reservations.js';
-import type { AuthenticatedCaller } from '../../../service/auth/authenticate.js';
-import type { AuthResolver } from '../../../interfaces/index.js';
+import type { AuthResolver, Wallet } from '../../../interfaces/index.js';
 import type { RateLimiter } from '../../../service/rateLimit/index.js';
 import { authPreHandler } from '../middleware/auth.js';
 import { rateLimitPreHandler } from '../middleware/rateLimit.js';
-import { pickNode } from '../../../service/routing/router.js';
-import {
-  computeTranscriptionsActualCost,
-  estimateTranscriptionsReservation,
-} from '../../../service/pricing/index.js';
 import { toHttpError, UpstreamNodeError, MissingUsageError } from '../errors.js';
 import {
   TRANSCRIPTIONS_MAX_FILE_BYTES,
   TranscriptionsFormFieldsSchema,
 } from '../../../types/transcriptions.js';
+import { dispatchTranscriptions } from '../../../dispatch/transcriptions.js';
+import { FreeTierUnsupportedError } from '../../../dispatch/embeddings.js';
 
 export interface TranscriptionsDeps {
   db: Db;
@@ -37,6 +23,7 @@ export interface TranscriptionsDeps {
   nodeClient: NodeClient;
   paymentsService: PaymentsService;
   authResolver: AuthResolver;
+  wallet: Wallet;
   rateLimiter?: RateLimiter;
   pricing: PricingConfig;
   nodeCallTimeoutMs?: number;
@@ -80,18 +67,6 @@ async function handleTranscription(
   if (!caller) {
     const { status, envelope } = toHttpError(new Error('missing caller'));
     await reply.code(status).send(envelope);
-    return;
-  }
-  const inner = caller.metadata as AuthenticatedCaller;
-
-  if (inner.customer.tier === 'free') {
-    await reply.code(402).send({
-      error: {
-        code: 'insufficient_quota',
-        type: 'FreeTierUnsupported',
-        message: '/v1/audio/transcriptions is not available on the free tier',
-      },
-    });
     return;
   }
 
@@ -185,122 +160,40 @@ async function handleTranscription(
     return;
   }
 
-  const workId = `${inner.customer.id}:${randomUUID()}`;
-  let estimate;
-  try {
-    estimate = estimateTranscriptionsReservation(
-      fileBuffer.length,
-      fields.data.model,
-      deps.pricing,
-    );
-  } catch (err) {
-    const { status, envelope } = toHttpError(err);
-    await reply.code(status).send(envelope);
-    return;
-  }
-
-  let reservation: PrepaidReserveResult | null = null;
-  let committed = false;
+  const upstreamAbort = new AbortController();
+  req.raw.on('close', () => {
+    if (!req.raw.complete) upstreamAbort.abort();
+  });
 
   try {
-    reservation = await reserve(deps.db, {
-      customerId: inner.customer.id,
-      workId,
-      estCostCents: estimate.estCents,
-    });
-
-    const node = pickNode(
-      { nodeBook: deps.nodeBook, ...(deps.rng ? { rng: deps.rng } : {}) },
-      fields.data.model,
-      inner.customer.tier,
-      'transcriptions',
-    );
-    const quote = node.quotes.get(capabilityString('transcriptions'));
-    if (!quote) {
-      throw new UpstreamNodeError(node.config.id, null, 'quote not yet refreshed');
-    }
-
-    const payment = await deps.paymentsService.createPaymentForRequest({
-      nodeId: node.config.id,
-      quote,
-      workUnits: BigInt(estimate.estimatedSeconds),
-      capability: capabilityString('transcriptions'),
-      model: fields.data.model,
-    });
-    const paymentHeaderB64 = Buffer.from(payment.paymentBytes).toString('base64');
-
-    const upstreamAbort = new AbortController();
-    req.raw.on('close', () => {
-      if (!req.raw.complete) upstreamAbort.abort();
-    });
-
-    const { boundary, body: outboundBody, contentType } = buildOutboundMultipart({
+    const result = await dispatchTranscriptions({
+      wallet: deps.wallet,
+      caller,
       file: fileBuffer,
       fileName,
       fileMime,
-      fields: {
-        model: fields.data.model,
-        prompt: fields.data.prompt,
-        response_format: fields.data.response_format,
-        temperature: fields.data.temperature?.toString(),
-        language: fields.data.language,
-      },
-    });
-    void boundary;
-
-    const call = await deps.nodeClient.createTranscription({
-      url: node.config.url,
-      body: Readable.toWeb(Readable.from(outboundBody)) as unknown as ReadableStream<Uint8Array>,
-      contentType,
-      paymentHeaderB64,
-      timeoutMs: deps.nodeCallTimeoutMs ?? 120_000,
+      fields: fields.data,
+      db: deps.db,
+      nodeBook: deps.nodeBook,
+      nodeClient: deps.nodeClient,
+      paymentsService: deps.paymentsService,
+      pricing: deps.pricing,
+      ...(deps.nodeCallTimeoutMs !== undefined
+        ? { nodeCallTimeoutMs: deps.nodeCallTimeoutMs }
+        : {}),
+      ...(deps.rng !== undefined ? { rng: deps.rng } : {}),
       signal: upstreamAbort.signal,
     });
 
-    if (call.status >= 400) {
-      throw new UpstreamNodeError(
-        node.config.id,
-        call.status,
-        (call.rawErrorBody ?? '').slice(0, 512),
-      );
-    }
-    if (call.reportedDurationSeconds === null) {
-      throw new MissingUsageError(node.config.id);
-    }
-
-    const cost = computeTranscriptionsActualCost(
-      call.reportedDurationSeconds,
-      fields.data.model,
-      deps.pricing,
-    );
-    await commit(deps.db, {
-      reservationId: reservation.reservationId,
-      actualCostCents: cost.actualCents,
-    });
-    committed = true;
-
-    await usageRecordsRepo.insertUsageRecord(deps.db, {
-      customerId: inner.customer.id,
-      workId,
-      kind: 'transcriptions',
-      model: fields.data.model,
-      nodeUrl: node.config.url,
-      durationSeconds: Math.ceil(call.reportedDurationSeconds),
-      costUsdCents: cost.actualCents,
-      nodeCostWei: payment.expectedValueWei.toString(),
-      status: 'success',
-    });
-
-    reply.raw.statusCode = call.status;
-    if (call.contentType) reply.raw.setHeader('content-type', call.contentType);
-    reply.raw.end(call.bodyText);
+    reply.raw.statusCode = result.status;
+    if (result.contentType) reply.raw.setHeader('content-type', result.contentType);
+    reply.raw.end(result.bodyText);
   } catch (err) {
-    if (reservation && !committed) {
-      try {
-        await refund(deps.db, reservation.reservationId);
-      } catch {
-        /* refund best-effort */
-      }
+    if (err instanceof FreeTierUnsupportedError) {
+      await reply.code(402).send({
+        error: { code: 'insufficient_quota', type: 'FreeTierUnsupported', message: err.message },
+      });
+      return;
     }
     if (err instanceof UpstreamNodeError || err instanceof MissingUsageError) {
       await reply.code(503).send({
@@ -311,47 +204,4 @@ async function handleTranscription(
     const { status, envelope } = toHttpError(err);
     await reply.code(status).send(envelope);
   }
-}
-
-interface OutboundMultipart {
-  boundary: string;
-  body: Buffer;
-  contentType: string;
-}
-
-// buildOutboundMultipart constructs a fresh multipart/form-data body
-// for forwarding to the worker. We re-encode (rather than relay the
-// inbound stream) so we don't have to keep the inbound multipart parser
-// alive while the worker call is in flight, and so we can append the
-// validated form fields verbatim.
-function buildOutboundMultipart(input: {
-  file: Buffer;
-  fileName: string;
-  fileMime: string;
-  fields: Record<string, string | undefined>;
-}): OutboundMultipart {
-  const boundary = '----livepeer-bridge-' + randomUUID().replace(/-/g, '');
-  const parts: Buffer[] = [];
-  for (const [name, value] of Object.entries(input.fields)) {
-    if (value === undefined) continue;
-    parts.push(
-      Buffer.from(
-        `--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`,
-        'utf8',
-      ),
-    );
-  }
-  parts.push(
-    Buffer.from(
-      `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${input.fileName.replace(/"/g, '')}"\r\nContent-Type: ${input.fileMime}\r\n\r\n`,
-      'utf8',
-    ),
-  );
-  parts.push(input.file);
-  parts.push(Buffer.from(`\r\n--${boundary}--\r\n`, 'utf8'));
-  return {
-    boundary,
-    body: Buffer.concat(parts),
-    contentType: `multipart/form-data; boundary=${boundary}`,
-  };
 }

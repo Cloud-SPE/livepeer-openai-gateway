@@ -218,6 +218,7 @@ async function main(): Promise<void> {
     nodeClient,
     paymentsService,
     authResolver,
+    wallet,
     rateLimiter,
     pricing: pricingConfig,
   });
@@ -227,6 +228,7 @@ async function main(): Promise<void> {
     nodeClient,
     paymentsService,
     authResolver,
+    wallet,
     rateLimiter,
     pricing: pricingConfig,
   });
@@ -236,6 +238,7 @@ async function main(): Promise<void> {
     nodeClient,
     paymentsService,
     authResolver,
+    wallet,
     rateLimiter,
     pricing: pricingConfig,
   });
@@ -245,6 +248,7 @@ async function main(): Promise<void> {
     nodeClient,
     paymentsService,
     authResolver,
+    wallet,
     rateLimiter,
     pricing: pricingConfig,
   });
