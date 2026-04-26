@@ -1,7 +1,7 @@
 import type { ResolvedNodeConfig, NodesConfig } from '../../config/nodes.js';
 import type { NodeCapability, Quote } from '../../types/node.js';
 import { capabilityString } from '../../types/capability.js';
-import { CircuitState, initialCircuitState } from './circuitBreaker.js';
+import { CircuitState, initialCircuitState } from '../routing/circuitBreaker.js';
 import { NoHealthyNodesError } from './errors.js';
 
 /**

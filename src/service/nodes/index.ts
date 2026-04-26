@@ -1,5 +1,5 @@
 export * from './errors.js';
-export * from './circuitBreaker.js';
+export * from '../routing/circuitBreaker.js';
 export * from './nodebook.js';
 export * from './quoteRefresher.js';
 export * from '../routing/scheduler.js';

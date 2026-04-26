@@ -17,7 +17,7 @@ import {
   shouldProbe,
   type CircuitResult,
   type CircuitStatus,
-} from './circuitBreaker.js';
+} from '../routing/circuitBreaker.js';
 import type { NodeBook } from './nodebook.js';
 import type { Scheduler, ScheduledTask } from '../routing/scheduler.js';
 
