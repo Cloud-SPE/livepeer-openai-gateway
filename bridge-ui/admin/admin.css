@@ -116,8 +116,33 @@
   admin-health .tile:has([data-status='warn']) { border-color: var(--warning); background: var(--warning-tint); }
   admin-health .tile .label { font-size: var(--font-size-sm); color: var(--text-3); margin-bottom: var(--space-2); }
   admin-health .tile .value { font-size: var(--font-size-xl); font-weight: 700; color: var(--text-1); font-family: var(--font-mono); }
-  admin-health .grafana { background: var(--surface-1); border: 1px solid var(--border-1); border-radius: var(--radius-lg); overflow: hidden; min-height: 24rem; }
-  admin-health .grafana-empty { padding: var(--space-6); text-align: center; color: var(--text-3); }
+  admin-health .metrics-link {
+    background: var(--surface-1);
+    border: 1px solid var(--border-1);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5) var(--space-6);
+    display: grid;
+    gap: var(--space-3);
+  }
+  admin-health .metrics-link p { margin: 0; }
+  admin-health .grafana-link {
+    display: inline-flex;
+    align-items: center;
+    justify-self: start;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--accent);
+    color: white;
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+    text-decoration: none;
+    transition: background var(--duration-fast) var(--ease-standard);
+  }
+  admin-health .grafana-link:hover { background: var(--accent-hover); }
+  admin-health .grafana-link:focus-visible {
+    outline: 0;
+    box-shadow: 0 0 0 3px var(--accent-tint);
+  }
 
   /* Nodes / Customers */
   admin-nodes .badge,

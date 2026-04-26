@@ -38,9 +38,9 @@ Two inputs: admin token (`type="password"`) and operator handle (`type="text"`, 
 
 Top: 4 status tiles (PayerDaemon, Database, Redis, Nodes `<healthy>/<total>`). `:has([data-status='down'])` flips the tile container to danger-tint; `[data-status='warn']` to warning-tint.
 
-Below: an embedded Grafana iframe pointed at `window.GRAFANA_DASHBOARD_URL`. The bridge does not inject this value — operators wire it on the served `index.html` (build-time env or bootstrap script). Unset → the panel collapses to "Configure `window.GRAFANA_DASHBOARD_URL` to embed the Grafana dashboard here." See [`deployment.md`](../operations/deployment.md#operator-admin--grafana-embedding) for the three deployment options.
+Below: a link panel — when `window.GRAFANA_DASHBOARD_URL` is set on the served `index.html` (build-time env or a small bootstrap script), the panel renders a styled "Open Grafana dashboard ↗" link that opens in a new tab. Unset → the panel collapses to a "configure to enable" hint. See [`deployment.md`](../operations/deployment.md#operator-admin--grafana-link) for the link wiring.
 
-The console **does not re-render the metrics in-app.** Grafana is the canonical view.
+The console **does not re-render the metrics in-app and does not embed Grafana via `<iframe>`.** Grafana is the canonical view; the console links to it. Embedding was considered and rejected — it forces one of three Grafana auth strategies (anonymous role / shared auth-proxy / signed iframe URLs) for a workflow that's well-served by a link button.
 
 ### `#nodes`
 
@@ -111,7 +111,7 @@ The admin services do **not** auto-poll in v1. Each page fetches once on mount; 
 - "Edit `nodes.yaml`" UI (read-only `GET /admin/config/nodes` only).
 - Manually closing stuck reservations (Invariant 5 violation; investigation-only).
 - Per-operator audit retention / archive policy (full table exposed; partition + archive is tech-debt).
-- Re-rendering Grafana panels in-app (iframe-embed only).
+- Re-rendering Grafana panels in-app or embedding via `<iframe>` (link-out only).
 - Bulk operations (mass-suspend, batch-refund).
 - CIDR support in the IP allowlist (exact IPs only — same as JSON surface).
 
@@ -119,5 +119,5 @@ The admin services do **not** auto-poll in v1. Each page fetches once on mount; 
 
 - [`docs/product-specs/admin-endpoints.md`](./admin-endpoints.md) — JSON surface this console consumes.
 - [`docs/design-docs/ui-architecture.md`](../design-docs/ui-architecture.md) — implementation contract.
-- [`docs/operations/deployment.md`](../operations/deployment.md) — Grafana embedding options.
+- [`docs/operations/deployment.md`](../operations/deployment.md) — Grafana link wiring.
 - [`docs/exec-plans/completed/0023-operator-admin.md`](../exec-plans/completed/0023-operator-admin.md) — exec plan tracking the build.

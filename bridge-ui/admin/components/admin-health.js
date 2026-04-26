@@ -40,12 +40,25 @@ export class AdminHealth extends LitElement {
                 `${h.nodesHealthy} / ${h.nodeCount}`)}
       </section>
 
-      <section class="grafana">
+      <section class="metrics-link">
         ${GRAFANA_URL
-          ? html`<iframe src=${GRAFANA_URL} width="100%" height="600" frameborder="0" title="Grafana — bridge dashboard"></iframe>`
-          : html`<div class="grafana-empty">
-              Configure <code>window.GRAFANA_DASHBOARD_URL</code> to embed the Grafana dashboard here.
-            </div>`}
+          ? html`
+              <p class="muted">
+                Detailed metrics — request rates, latency histograms, payer-daemon
+                throughput — live in Grafana. The bridge ships a 37-panel dashboard
+                (exec-plan 0021); this link opens it in a new tab.
+              </p>
+              <a class="grafana-link" href=${GRAFANA_URL} target="_blank" rel="noopener noreferrer">
+                Open Grafana dashboard ↗
+              </a>
+            `
+          : html`
+              <p class="muted">
+                Configure <code>window.GRAFANA_DASHBOARD_URL</code> on the served
+                <code>index.html</code> to surface a link to the operator's Grafana
+                dashboard here. Until then this panel is informational.
+              </p>
+            `}
       </section>
     `;
   }

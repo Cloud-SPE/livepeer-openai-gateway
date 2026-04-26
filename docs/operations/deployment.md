@@ -308,19 +308,17 @@ npm run dev:ui:admin       # → http://localhost:5174/admin/console/
 
 `vite.config.js` for each module proxies its API path prefix to `BRIDGE_DEV_TARGET` (default `http://localhost:8080`).
 
-### Operator admin — Grafana embedding
+### Operator admin — Grafana link
 
-The Health page renders an iframe at `window.GRAFANA_DASHBOARD_URL` when set; otherwise the panel collapses to "Grafana not configured." The bridge does not inject this value — operators define it on the served `index.html` via a small bootstrap script, a build-time env, or a reverse-proxy `Set-Cookie`.
+The Health page renders a styled "Open Grafana dashboard ↗" link when `window.GRAFANA_DASHBOARD_URL` is set on the served `index.html` (via a build-time env, a small bootstrap script, or a reverse-proxy injection); otherwise the panel collapses to a "configure to enable" hint. The link opens in a new tab — operators stay on the console for audit / customer / node investigations and pop out to Grafana for metrics drill-down.
 
-Three deployment options for the iframe to actually load:
+This deliberately does **not** embed Grafana via `<iframe>`. Embedding would force one of three setup costs (anonymous read-only role on the dashboard, a shared auth proxy across both surfaces, or signed-iframe URLs from a bridge backend route) plus `allow_embedding = true` on Grafana's side. None of those are necessary for the workflow — a link gives the same single-tab feel for nine investigations out of ten and zero infrastructure cost. If embedding ever becomes load-bearing, this section + `bridge-ui/admin/components/admin-health.js` are the two places to revisit.
 
-| Option                          | Cost                                 | Trade                                                      |
-| ------------------------------- | ------------------------------------ | ---------------------------------------------------------- |
-| Grafana anonymous role          | Lowest (config flag)                 | Anyone with the URL sees the dashboard                     |
-| Shared auth-proxy               | Existing infra (oauth2-proxy, etc.)  | Single sign-on across both surfaces                        |
-| Signed iframe URLs from bridge  | Backend route + Grafana renderer key | Per-operator, time-bound; most flexible                    |
+`window.GRAFANA_DASHBOARD_URL` accepts any URL the operator's browser can reach. Common shape — inject via build-time env or `index.html` template:
 
-`allow_embedding = true` in Grafana's `[security]` block is required for any of these.
+```html
+<script>window.GRAFANA_DASHBOARD_URL = 'https://grafana.internal/d/livepeer-bridge';</script>
+```
 
 ### Operator handle (`X-Admin-Actor`)
 
