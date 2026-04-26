@@ -275,11 +275,16 @@ Append-only list of known debt. Strike through when resolved; include the PR or 
 - Remediation: pick a codegen path (zod-to-json-schema → zod-from-json-schema in JS, or a custom emitter that walks the Zod object tree). Wire into `npm run build:ui` so client validators regenerate on each build. Defer until the first drift incident or when the route count grows past ~20.
 - Resolved: _(open)_
 
-### pre-existing-doc-lint-violations
+### ~~pre-existing-doc-lint-violations~~
 
 - Opened: 2026-04-26
 - Severity: low
 - Area: docs / lint
-- Description: `npm run doc-lint` currently reports 11 pre-existing violations — none introduced by 0022/0023, but they predate the doc-gardener extension and never got cleaned up. Breakdown: 4 completed plans (0018, 0019, 0020, 0021) missing the `closed: YYYY-MM-DD` frontmatter field that plan-lifecycle requires; 5 `design-doc-links-into-plans` violations in `docs/design-docs/metrics.md` (docs may not link into `exec-plans/`); 2 cross-repo broken links in 0021 to `livepeer-payment-library` and `openai-worker-node` exec-plans (the convention is to link as if sibling repos colocate, but doc-lint can't reach them). The extension added in 4dfba27 inherits these violations; a clean `doc-lint` run would require fixing them.
-- Remediation: (1) backfill `closed:` dates in the four completed plans (look up commit dates in `git log`); (2) rewrite metrics.md's plan-references to text-only or to design-doc cross-refs; (3) for the cross-repo links in 0021, either drop the markdown link syntax (keep as text) or extend doc-gardener to skip cross-repo paths. One small commit; do during the next doc cleanup pass.
-- Resolved: _(open)_
+- Description: `npm run doc-lint` reported 11 pre-existing violations — none introduced by 0022/0023, but they predated the doc-gardener extension and never got cleaned up. Breakdown: 4 completed plans (0018, 0019, 0020, 0021) missing the `closed: YYYY-MM-DD` frontmatter field; 5 `design-doc-links-into-plans` violations in `docs/design-docs/metrics.md`; 2 cross-repo broken links in 0021 to `livepeer-payment-library` and `openai-worker-node` exec-plans.
+- Remediation: see Resolved.
+- Resolved: 2026-04-26 — fixed in one pass.
+  1. `closed: 2026-04-25` backfilled into 0018/0019/0020/0021 (the date each was archived per `git log`).
+  2. `metrics.md`'s three markdown links into `exec-plans/completed/0011-local-tokenizer-metric.md` flattened to text-only references; the two links into `tech-debt-tracker.md` now pass thanks to a doc-gardener whitelist (it lives under `exec-plans/` for organization but acts as a durable append-only registry, not a transient plan).
+  3. Cross-repo markdown links in 0021 / 0022 / 0023 (six total) stripped to text-only references. Established the convention "no cross-repo markdown links in this repo's docs" — sibling-repo paths stay as backticked path text so readers can still locate them, but doc-lint no longer chases broken paths to repos that may not be colocated.
+  4. Drive-by fix to doc-gardener's `plan-closed-before-opened` check, which was string-comparing JS Date `toString()` output (alphabetical, not chronological — `Fri Apr 24` < `Thu Apr 23` because `F` < `T`). Now compares via `.getTime()`.
+  5. `npm run doc-lint` now passes clean.

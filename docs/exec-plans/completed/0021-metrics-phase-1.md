@@ -5,17 +5,18 @@ title: Metrics Phase 1 — prom-client Recorder, /metrics listener, request + mo
 status: completed
 owner: agent
 opened: 2026-04-25
+closed: 2026-04-25
 started: 2026-04-25
 completed: 2026-04-25
 ---
 
 ## Goal
 
-Wire a `prom-client`-backed Recorder behind the existing `MetricsSink` interface (introduced in [`0011-local-tokenizer-metric.md`](../completed/0011-local-tokenizer-metric.md)), expose it on a separate Fastify listener via `METRICS_LISTEN`, and instrument the request path / billing / node selection / PayerDaemon client / Stripe webhook with the Phase 1 catalog from [`docs/design-docs/metrics.md`](../../design-docs/metrics.md). Mirrors the verified pattern in [`livepeer-service-registry`](../../../../livepeer-service-registry/docs/design-docs/observability.md) wholesale, adapted for TypeScript / Fastify.
+Wire a `prom-client`-backed Recorder behind the existing `MetricsSink` interface (introduced in [`0011-local-tokenizer-metric.md`](../completed/0011-local-tokenizer-metric.md)), expose it on a separate Fastify listener via `METRICS_LISTEN`, and instrument the request path / billing / node selection / PayerDaemon client / Stripe webhook with the Phase 1 catalog from [`docs/design-docs/metrics.md`](../../design-docs/metrics.md). Mirrors the verified pattern in `livepeer-service-registry` wholesale, adapted for TypeScript / Fastify.
 
-This is the bridge-side third of the cross-repo metrics rollout. Pairs with [`livepeer-payment-library/docs/exec-plans/0019-metrics-phase-1.md`](../../../../livepeer-payment-library/docs/exec-plans/0019-metrics-phase-1.md) and [`openai-worker-node/docs/exec-plans/active/0008-metrics-phase-1.md`](../../../../openai-worker-node/docs/exec-plans/active/0008-metrics-phase-1.md). Consistent label keys (`capability`, `model`, `tier`, `node_id`, `unit`) across all three is what makes the four reconciliation panels in `metrics.md` Cross-repo reconciliation work.
+This is the bridge-side third of the cross-repo metrics rollout. Pairs with `livepeer-payment-library/docs/exec-plans/0019-metrics-phase-1.md` and `openai-worker-node/docs/exec-plans/active/0008-metrics-phase-1.md`. Consistent label keys (`capability`, `model`, `tier`, `node_id`, `unit`) across all three is what makes the four reconciliation panels in `metrics.md` Cross-repo reconciliation work.
 
-Authoritative cross-repo conventions: [`../../../../livepeer-modules-conventions/metrics-conventions.md`](../../../../livepeer-modules-conventions/metrics-conventions.md).
+Authoritative cross-repo conventions: `livepeer-modules-conventions/metrics-conventions.md`.
 
 Advances [`operator-economics-metrics-tooling`](../tech-debt-tracker.md#operator-economics-metrics-tooling) (HIGH severity) — closes item 4 (Prometheus endpoint) and lays the data foundation for items 1–3 (Phase 3 SQL rollups).
 
@@ -44,7 +45,7 @@ Package layout follows service-registry, adapted for TypeScript: `src/providers/
 
 - [x] `src/runtime/metrics/server.ts` — separate Fastify instance (NOT the customer-facing one). Listens on `METRICS_LISTEN` env (e.g. `127.0.0.1:9602`). Single route: `GET /metrics` returning `register.contentType` + `register.metrics()`. Graceful shutdown via the existing lifecycle hook.
 - [x] **Env config** in `src/config/env.ts`: add `METRICS_LISTEN` (string, default empty = OFF) and `METRICS_MAX_SERIES_PER_METRIC` (int, default `10000`). Document in `.env.example`.
-- [x] **`.env.example`**: `METRICS_LISTEN=127.0.0.1:9602` (commented, port `:9602` per [`port-allocation.md`](../../../../livepeer-modules-conventions/port-allocation.md)). Comment block explains: bind `127.0.0.1` or internal-LAN — never the public interface.
+- [x] **`.env.example`**: `METRICS_LISTEN=127.0.0.1:9602` (commented, port `:9602` per `port-allocation.md`). Comment block explains: bind `127.0.0.1` or internal-LAN — never the public interface.
 
 ### Per-provider decorators
 

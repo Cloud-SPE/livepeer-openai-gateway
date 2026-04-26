@@ -5,6 +5,7 @@ title: Per-(capability, model) NodeBook quotes — 0018 phase 2
 status: completed
 owner: agent
 opened: 2026-04-24
+closed: 2026-04-25
 completed: 2026-04-25
 ---
 

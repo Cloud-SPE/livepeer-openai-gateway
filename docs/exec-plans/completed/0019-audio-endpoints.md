@@ -5,6 +5,7 @@ title: /v1/audio/speech + /v1/audio/transcriptions — audio endpoints
 status: completed
 owner: claude
 opened: 2026-04-24
+closed: 2026-04-25
 completed: 2026-04-25
 ---
 

@@ -10,6 +10,8 @@
 //   - Internal `.md` cross-links under `docs/` resolve to an existing file.
 //   - Design-docs do not link into `exec-plans/` (plans are transient; docs
 //     are durable — conventions section of `design-docs/index.md`).
+//     Exception: `tech-debt-tracker.md` lives under `exec-plans/` but is a
+//     durable, append-only registry — design-docs may link into it.
 //   - bridge-ui/<consumer>/lib/ does not redefine a filename present in
 //     bridge-ui/shared/lib/ (consumers must wrap, not duplicate).
 //
@@ -51,6 +53,15 @@ function parseFrontmatter(text) {
   } catch {
     return { data: null, bodyStartLine: 1 };
   }
+}
+
+function toEpoch(value) {
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === 'string') {
+    const ms = Date.parse(value);
+    return Number.isNaN(ms) ? null : ms;
+  }
+  return null;
 }
 
 function required(file, data, key, ruleId) {
@@ -96,13 +107,21 @@ function validateExecPlan(file, data) {
         'plan-closed-required',
         `status=\`${status}\` requires a \`closed: YYYY-MM-DD\` field`,
       );
-    } else if (data.opened && String(data.closed) < String(data.opened)) {
-      report(
-        file,
-        1,
-        'plan-closed-before-opened',
-        `closed=\`${data.closed}\` precedes opened=\`${data.opened}\``,
-      );
+    } else if (data.opened) {
+      // YAML loads `YYYY-MM-DD` frontmatter values as Date objects.
+      // String-compare on `toString()` is alphabetical (e.g. `Fri Apr 24` <
+      // `Thu Apr 23` because 'F' < 'T'), not chronological — compare via
+      // .getTime() instead.
+      const closedAt = toEpoch(data.closed);
+      const openedAt = toEpoch(data.opened);
+      if (closedAt !== null && openedAt !== null && closedAt < openedAt) {
+        report(
+          file,
+          1,
+          'plan-closed-before-opened',
+          `closed=\`${data.closed}\` precedes opened=\`${data.opened}\``,
+        );
+      }
     }
   }
 }
@@ -156,8 +175,15 @@ async function validateCrossLinks(file, text) {
       report(file, 1, 'broken-link', `markdown link resolves to missing file: ${target}`);
     }
 
-    // Design-doc rule: no cross-links into exec-plans/.
-    if (file.includes('/design-docs/') && resolvedTarget.includes('/exec-plans/')) {
+    // Design-doc rule: no cross-links into exec-plans/. Exception:
+    // tech-debt-tracker.md lives under exec-plans/ for organizational reasons
+    // but acts as a durable, append-only registry — design-docs may link
+    // into it (it's not a transient plan).
+    if (
+      file.includes('/design-docs/') &&
+      resolvedTarget.includes('/exec-plans/') &&
+      !resolvedTarget.endsWith('/tech-debt-tracker.md')
+    ) {
       report(
         file,
         1,
