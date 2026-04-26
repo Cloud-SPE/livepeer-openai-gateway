@@ -42,6 +42,7 @@ import { createMetricsServer } from './runtime/metrics/server.js';
 import { createAdminService } from './service/admin/index.js';
 import { createAuthService } from './service/auth/index.js';
 import { createAuthResolver } from './service/auth/authResolver.js';
+import { createPrepaidQuotaWallet } from './service/billing/wallet.js';
 import { createMetricsSampler } from './service/metrics/sampler.js';
 import { createPaymentsService } from './service/payments/createPayment.js';
 import { createSessionCache } from './service/payments/sessions.js';
@@ -145,6 +146,7 @@ async function main(): Promise<void> {
   // Services.
   const authService = createAuthService({ db, config: authConfig });
   const authResolver = createAuthResolver({ authService });
+  const wallet = createPrepaidQuotaWallet({ db, recorder });
   // ServiceRegistryClient — stage-1 NodeBook-backed wrapper. Stage-2 swaps
   // for a gRPC client to livepeer-modules-project/service-registry-daemon
   // and threads serviceRegistry through dispatchers + quoteRefresher;
@@ -204,6 +206,7 @@ async function main(): Promise<void> {
     nodeClient,
     paymentsService,
     authResolver,
+    wallet,
     rateLimiter,
     tokenAudit,
     recorder,
