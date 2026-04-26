@@ -1,12 +1,19 @@
-import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { expect, fixture, html } from '@open-wc/testing';
 import '../../../../shared/components/bridge-button.js';
 import '../../../../shared/components/bridge-spinner.js';
 
+// bridge-button uses shadow DOM (the inner <button> needs <slot> projection
+// to keep the slotted text inside the visual button — light DOM <slot> is
+// inert, see the component's docstring). Tests therefore query through
+// `shadowRoot`. Shadow DOM does NOT block CSS custom-property inheritance,
+// so the global token catalogue still applies.
+
 describe('bridge-button', () => {
-  it('renders a button with slot text', async () => {
+  it('renders a button (in shadow root) with the slot text in the host', async () => {
     const el = await fixture(html`<bridge-button>Save</bridge-button>`);
-    const button = el.querySelector('button');
+    const button = el.shadowRoot.querySelector('button');
     expect(button).to.exist;
+    // textContent walks the host (light DOM); the slotted "Save" lives there.
     expect(el.textContent.trim()).to.contain('Save');
   });
 
@@ -17,39 +24,49 @@ describe('bridge-button', () => {
     }
   });
 
-  it('shows the spinner and disables the button when loading', async () => {
+  it('shows the spinner and disables the inner button when loading', async () => {
     const el = await fixture(html`<bridge-button loading>Working</bridge-button>`);
-    expect(el.querySelector('bridge-spinner')).to.exist;
-    expect(el.querySelector('button').disabled).to.equal(true);
+    expect(el.shadowRoot.querySelector('bridge-spinner')).to.exist;
+    expect(el.shadowRoot.querySelector('button').disabled).to.equal(true);
   });
 
-  it('disables the button when disabled prop is set', async () => {
+  it('disables the inner button when disabled prop is set', async () => {
     const el = await fixture(html`<bridge-button disabled>x</bridge-button>`);
-    expect(el.querySelector('button').disabled).to.equal(true);
+    expect(el.shadowRoot.querySelector('button').disabled).to.equal(true);
   });
 
-  it('blocks clicks when disabled', async () => {
+  it('blocks click events when disabled (browser short-circuits disabled buttons)', async () => {
     const el = await fixture(html`<bridge-button disabled>x</bridge-button>`);
     let clicked = false;
     el.addEventListener('click', () => { clicked = true; });
-    el.querySelector('button').click();
-    // Browser does not fire click on a disabled <button>; sanity-check
+    el.shadowRoot.querySelector('button').click();
     expect(clicked).to.equal(false);
   });
 
-  it('blocks clicks when loading (button is disabled at runtime)', async () => {
+  it('blocks clicks when loading (inner button disabled)', async () => {
     const el = await fixture(html`<bridge-button loading>x</bridge-button>`);
-    expect(el.querySelector('button').disabled).to.equal(true);
+    expect(el.shadowRoot.querySelector('button').disabled).to.equal(true);
   });
 
-  it('forwards type=submit so it works inside <form>', async () => {
+  it('type=submit forwards: clicking submits the enclosing <form>', async () => {
     const form = await fixture(html`
       <form>
         <bridge-button type="submit">Go</bridge-button>
       </form>
     `);
-    const button = form.querySelector('button');
-    expect(button.getAttribute('type')).to.equal('submit');
+    const inner = form.querySelector('bridge-button').shadowRoot.querySelector('button');
+    expect(inner.getAttribute('type')).to.equal('submit');
+
+    let submitted = false;
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      submitted = true;
+    });
+    inner.click();
+    // requestSubmit is async via microtask
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(submitted).to.equal(true);
   });
 
   it('grows to full width when block attribute set', async () => {

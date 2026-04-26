@@ -256,9 +256,5 @@ Implementation in progress (status remains `active` — see "What's still pendin
 
 ### What's still pending
 
-- Per-page operator-admin product spec (`docs/product-specs/operator-admin.md`).
-- `docs/product-specs/admin-endpoints.md` update covering the 8 new routes + `X-Admin-Actor` semantics.
-- `docs/design-docs/architecture.md` + `AGENTS.md` updates pointing to `bridge-ui/admin/`.
-- `docs/operations/deployment.md` `GRAFANA_DASHBOARD_URL` documentation.
-- Grafana iframe wiring strategy (deployment-context-dependent — see Open questions).
-- End-to-end Playwright happy-path (sign-in → search customer → suspend → audit row appears with actor).
+- Grafana iframe wiring strategy — deployment-context-dependent (see Open questions). `deployment.md` documents the three options (anonymous role, shared auth-proxy, signed iframe URLs). Picking one is an operator decision when the bridge actually deploys.
+- (other items shipped: product specs, admin-endpoints update, architecture/AGENTS/deployment doc updates, E2E Playwright covering sign-in + customer-detail suspend with type-to-confirm + `X-Admin-Actor` audit attribution.)

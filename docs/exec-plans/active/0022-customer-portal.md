@@ -370,13 +370,12 @@ Implementation in progress (status remains `active` — see "What's still pendin
 
 ### What's still pending
 
-- Per-page product spec (`docs/product-specs/customer-portal.md`).
-- `docs/design-docs/architecture.md` and `AGENTS.md` updates pointing to `bridge-ui/`.
-- `docs/operations/deployment.md` notes for the new build/serve.
-- End-to-end Playwright happy-path (sign-in → create-key → sign-out → re-sign-in → revoke). Infrastructure not stood up; deferred.
-- Doc-lint rule forbidding consumer/lib redefining shared/lib filenames.
-- CSS smoke test for `light-dark()` resolution.
+- (none — all called-out items have shipped: spec, architecture/AGENTS/deployment doc updates, doc-lint rule, E2E Playwright happy-path covering sign-in / dashboard render / create-key / sign-out, CSS smoke for `light-dark()` resolution + `color-mix()` chain.)
 
 ### Plan-level corrections (erratum)
 
 - The plan wrote `lpb_live_` as the API-key prefix; the existing implementation uses `sk-live-` / `sk-test-` (per `src/service/auth/keys.ts` and `API_KEY_PATTERN`). Built code uses the existing format; this plan is in error. No action needed beyond noting it.
+
+### Architectural correction discovered during E2E
+
+- Plan said all `bridge-ui/shared/components/*` would render in **light DOM** (`createRenderRoot() { return this; }`). E2E discovered that components using `<slot>` (`bridge-button`, `bridge-dialog`) are visually broken in light DOM — `<slot>` is shadow-DOM-specific, so consumer-slotted text renders **alongside** the inner button instead of inside it. Worse, when `bridge-dialog.showModal()` runs, slotted action buttons end up outside the modal's top layer and become unclickable. Fix: bridge-button and bridge-dialog now use shadow DOM (CSS custom properties cross the boundary, so the global token catalogue still drives them). Other shared components (bridge-spinner, bridge-table, bridge-toast, bridge-popover-menu) don't use `<slot>` and stay light DOM. Tests query through `shadowRoot` for the inner template; slotted children remain on the host. The `ui-architecture.md` design doc was updated to reflect the per-component decision.

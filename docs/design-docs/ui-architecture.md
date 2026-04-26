@@ -12,7 +12,7 @@ This document is the canonical reference for **how** every UI module in this rep
 
 ## Stack
 
-- **Lit** (`^3.3`) — `LitElement` subclasses with **light DOM** (`createRenderRoot() { return this; }`). No shadow DOM. Cascade layers and `@scope` blocks reach every component without prop-drilling CSS custom properties.
+- **Lit** (`^3.3`) — `LitElement` subclasses, **light DOM by default** (`createRenderRoot() { return this; }`). Cascade layers and `@scope` blocks reach every component without prop-drilling CSS custom properties. **Exception:** components that need `<slot>` projection use shadow DOM — see "Shadow vs light DOM" below.
 - **RxJS** (`^7.8`) — services own `BehaviorSubject`s; pages subscribe via a Lit `ReactiveController` that calls `host.requestUpdate()` on each emission.
 - **Modern CSS 2026** — cascade layers, native nesting, OKLCH + `light-dark()`, `color-mix`, `@property`, `@container`, `@scope`, View Transitions, Popover API, `@starting-style`, `clamp()`, `text-wrap`, `field-sizing`, `:has()`, `:user-invalid`. Browser-support floor: Chrome/Edge ≥ 122, Firefox ≥ 124, Safari ≥ 17.5.
 - **Vite** (`^8`) — per-module dev server and build. No SSR.
@@ -93,9 +93,15 @@ Every consumer's stylesheet declares the layer order and pulls cross-UI layers f
 
 Theming is by `color-scheme` only — no `[data-theme]` attribute swap. A future toggle flips `color-scheme: light` / `dark` on `:root`; tokens re-resolve through `light-dark()` automatically.
 
-### Light DOM and shared component CSS
+### Shadow vs light DOM
 
-Lit's `static styles` is silently ignored when a component returns `this` from `createRenderRoot()`. Generic shared components (`bridge-button`, `bridge-dialog`, etc.) instead inject their CSS into `document.adoptedStyleSheets` once on first construction (idempotent, keyed by tag name). Per-page `@layer components` rules in consumer stylesheets apply normally.
+The default is **light DOM** so cascade layers and `@scope` rules from the consumer's stylesheet reach every component, and tokens flow naturally through inheritance. Components that don't accept slotted content from consumers (`bridge-spinner`, `bridge-table`, `bridge-toast`, `bridge-popover-menu`) keep this default. Their CSS is injected once into `document.adoptedStyleSheets` (`shared/components/_adopt-styles.js`) on first construction — Lit's `static styles` is ignored in light DOM.
+
+Components that **do** accept slotted children — `bridge-button`, `bridge-dialog` — use **shadow DOM**. `<slot>` is a shadow-DOM-specific feature; in light DOM, `<slot>` is inert and consumer-slotted content stays outside the rendered template. For `bridge-button` this means the slotted text renders alongside the inner empty `<button>` instead of inside it (visually broken). For `bridge-dialog` it's worse: when `dialog.showModal()` runs, slotted action buttons end up outside the modal's top layer and become unclickable.
+
+CSS custom properties cross the shadow boundary via inheritance, so the global `--accent`, `--surface-1`, etc. tokens still drive these components without re-declaration. They use `static styles = css\`...\`` for component-scoped CSS. One trade-off: native form submission doesn't cross the shadow boundary, so `<bridge-button type="submit">` manually calls `form.requestSubmit()` on the closest ancestor `<form>` to preserve the expected behavior.
+
+Tests query light-DOM components with `el.querySelector(...)` and shadow-DOM components with `el.shadowRoot.querySelector(...)`. Slotted children remain on the host's light DOM in both cases.
 
 ### Modern CSS feature inventory
 
