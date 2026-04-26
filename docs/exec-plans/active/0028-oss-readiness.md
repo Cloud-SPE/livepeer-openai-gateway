@@ -71,7 +71,7 @@ We backport security fixes to the latest minor release in the current pre-1.0 se
 Once 1.0 ships, we maintain the latest two minor versions.
 
 ## Reporting a vulnerability
-Email <security@cloud-spe.example> (replace with real address before publish).
+Email <security@livepeer.cloud>.
 Do NOT open a public GitHub issue.
 We acknowledge within 48 hours and aim to ship a patched release within 14 days.
 
@@ -87,11 +87,11 @@ Coordinated disclosure. Reporters credited in CHANGELOG.md if they wish.
 Out of scope: the operator's own Wallet/AuthResolver impl (operator-owned).
 ```
 
-The `security@cloud-spe.example` address is a placeholder — must be replaced with a real monitored inbox before publish.
+The `security@livepeer.cloud` address must be provisioned (forwarding alias on the `livepeer.cloud` domain pointing to a monitored inbox) before stage-4 publish.
 
 ### 4. CODE_OF_CONDUCT.md
 
-Adopt [Contributor Covenant v2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct.html) verbatim. Replace the contact email placeholder with `<conduct@cloud-spe.example>` (real inbox required before publish).
+Adopt [Contributor Covenant v2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct.html) verbatim. Set the contact email to `<conduct@livepeer.cloud>` (forwarding alias on the `livepeer.cloud` domain — must be provisioned before stage-4 publish).
 
 ### 5. CHANGELOG.md
 
@@ -258,7 +258,8 @@ Each is a single-file, ~50-LOC stub with an `npm test` smoke test.
 
 - [ ] Author `LICENSE` (MIT verbatim, "Cloud-SPE contributors" copyright)
 - [ ] Author `CONTRIBUTING.md` (sections: bug, proposal, dev setup, testing, style, commits, pre-1.0 policy, adapter contracts, CoC)
-- [ ] Author `SECURITY.md` (with placeholder email; flag must-replace before publish)
+- [ ] Author `SECURITY.md` with `security@livepeer.cloud` as the reporting address
+- [ ] Provision `security@livepeer.cloud` + `conduct@livepeer.cloud` as forwarding aliases on the `livepeer.cloud` domain pointing to a monitored inbox (must be live before stage-4 publish)
 - [ ] Author `CODE_OF_CONDUCT.md` (Contributor Covenant v2.1 verbatim)
 - [ ] Author `CHANGELOG.md` (Keep a Changelog format; 0.1.0 entry stub)
 - [ ] Author `GOVERNANCE.md` (maintainers, decision rules, adding maintainers)
@@ -266,17 +267,18 @@ Each is a single-file, ~50-LOC stub with an `npm test` smoke test.
 - [ ] Author `.github/PULL_REQUEST_TEMPLATE.md`
 - [ ] Author `docs/adapters.md` (public-repo destination)
 - [ ] Author `examples/wallets/{postpaid,prepaid-usd,free-quota}.ts` + `examples/wallets/README.md`
-- [ ] Provision real `security@` and `conduct@` inboxes; replace placeholders
 - [ ] Confirm `package.json` field `"license": "MIT"` (was "TBD")
 - [ ] Confirm all the above are committed to `Cloud-SPE/livepeer-bridge-core` BEFORE the `v0.1.0` tag in [`0027`](./0027-engine-extraction-public-release.md) is pushed
 
 ## Decisions log
 
-(empty)
+### 2026-04-26 — Email contact addresses
+
+`security@livepeer.cloud` and `conduct@livepeer.cloud` will be the public-facing contact aliases. Reason: domain owned, fits the ecosystem branding, and forwarding aliases are cheap to set up. Provisioning the aliases (DNS + forwarding rule pointing to a monitored inbox) is a manual step before stage-4 publish.
 
 ## Open questions
 
-1. Real inbox addresses for `security@` and `conduct@` — placeholders must be swapped before publish. Who provisions?
+1. ~~Real inbox addresses for `security@` and `conduct@`~~ — resolved 2026-04-26: `security@livepeer.cloud` and `conduct@livepeer.cloud`. Forwarding aliases on the `livepeer.cloud` domain still need to be provisioned before stage-4 publish.
 2. `GOVERNANCE.md` lists Mike Zupper (@mazup) as initial maintainer. Add others now or wait for sustained contributions? Default: solo until contribution patterns suggest co-maintainers.
 3. CLA vs DCO: defaulting to DCO (lighter, sufficient for MIT). Re-evaluate if any contributor's employer asks for CLA.
 
