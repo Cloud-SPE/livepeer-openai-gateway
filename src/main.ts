@@ -22,6 +22,7 @@ import { createGrpcPayerDaemonClient } from './providers/payerDaemon/grpc.js';
 import { createIoRedisClient } from './providers/redis/ioredis.js';
 import { createSdkStripeClient } from './providers/stripe/sdk.js';
 import { createTiktokenProvider } from './providers/tokenizer/tiktoken.js';
+import { createConsoleLogger } from './providers/logger/console.js';
 import { makeDb } from './repo/db.js';
 import { runMigrations } from './repo/migrate.js';
 import { registerAccountRoutes } from './runtime/http/account/routes.js';
@@ -63,6 +64,7 @@ const MainEnvSchema = z.object({
 
 async function main(): Promise<void> {
   const env = MainEnvSchema.parse(process.env);
+  const logger = createConsoleLogger();
 
   // Config loading — each loader is Zod-validated and throws with a clear
   // message on missing/invalid env. Let those errors bubble out of main().
@@ -85,9 +87,7 @@ async function main(): Promise<void> {
     ? new PrometheusRecorder({
         maxSeriesPerMetric: metricsConfig.maxSeriesPerMetric,
         onCapExceeded: (name, observed, cap) => {
-          console.warn(
-            `[bridge] metric cardinality cap exceeded: name=${name} observed=${observed} cap=${cap}`,
-          );
+          logger.warn(`metric cardinality cap exceeded: name=${name} observed=${observed} cap=${cap}`);
         },
       })
     : new NoopRecorder();
@@ -99,9 +99,9 @@ async function main(): Promise<void> {
   const database = createPgDatabase(dbConfig);
   const db = makeDb(database);
   if (env.BRIDGE_AUTO_MIGRATE) {
-    console.warn('[bridge] running migrations...');
+    logger.info('running migrations...');
     await runMigrations(db);
-    console.warn('[bridge] migrations complete');
+    logger.info('migrations complete');
   }
 
   const redis = createIoRedisClient(redisConfig);
@@ -163,8 +163,8 @@ async function main(): Promise<void> {
     listen: metricsConfig.listen,
     recorder,
     logger: {
-      info: (msg, ctx) => console.warn(`[metrics] ${msg}`, ctx ?? ''),
-      warn: (msg, ctx) => console.warn(`[metrics] ${msg}`, ctx ?? ''),
+      info: (msg, ctx) => logger.info(`[metrics] ${msg}`, ctx as Record<string, unknown> | undefined),
+      warn: (msg, ctx) => logger.warn(`[metrics] ${msg}`, ctx as Record<string, unknown> | undefined),
     },
   });
   await metricsServer.start();
@@ -261,9 +261,9 @@ async function main(): Promise<void> {
   const shutdown = async (signal: string): Promise<void> => {
     if (shuttingDown) return;
     shuttingDown = true;
-    console.warn(`[bridge] ${signal} received — shutting down`);
+    logger.info(`${signal} received — shutting down`);
     const hardKillTimer = setTimeout(() => {
-      console.error('[bridge] graceful shutdown exceeded 30s — force exit');
+      logger.error('graceful shutdown exceeded 30s — force exit');
       process.exit(1);
     }, 30_000);
     hardKillTimer.unref();
@@ -277,10 +277,10 @@ async function main(): Promise<void> {
       await redis.close();
       await database.end();
       tokenizer.close();
-      console.warn('[bridge] shutdown complete');
+      logger.info('shutdown complete');
       process.exit(0);
     } catch (err) {
-      console.error('[bridge] shutdown error', err);
+      logger.error('shutdown error', err as Error);
       process.exit(1);
     }
   };
@@ -288,10 +288,11 @@ async function main(): Promise<void> {
   process.on('SIGINT', () => void shutdown('SIGINT'));
 
   const address = await server.listen({ host: env.HOST, port: env.PORT });
-  console.warn(`[bridge] listening on ${address}`);
+  logger.info(`listening on ${address}`);
 }
 
 main().catch((err) => {
+  // Logger isn't constructed yet on startup-error path — fall back to console.
   console.error('[bridge] fatal startup error', err);
   process.exit(1);
 });
