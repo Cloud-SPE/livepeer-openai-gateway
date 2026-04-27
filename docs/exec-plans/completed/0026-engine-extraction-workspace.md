@@ -2,9 +2,10 @@
 id: 0026
 slug: engine-extraction-workspace
 title: Engine extraction stage 3 — convert to npm workspaces; create packages/bridge-core/ + packages/livepeer-openai-gateway/; split DB schema (engine.* + app.*); rewrite migrations clean; rename this repo
-status: active
+status: completed
 owner: agent
 opened: 2026-04-26
+closed: 2026-04-27
 ---
 
 ## Stage 2 handoff (read first)
@@ -317,30 +318,51 @@ Doc-lint rule that enforces `bridge-ui/<consumer>/lib` doesn't redefine `shared/
 
 ## Steps
 
-- [ ] Convert root `package.json` to workspace mode; add `packages/`, keep `bridge-ui/` as workspace member
-- [ ] Create `packages/bridge-core/` skeleton (package.json, tsconfig, vitest.config, eslint.config)
-- [ ] Move engine source (interfaces, types except customer, config except auth/stripe/admin, engine-side repo files, providers except stripe, engine service domains, dispatch, dashboard, adapters/fastify) into `packages/bridge-core/src/`
-- [ ] Create `packages/livepeer-openai-gateway/` skeleton
-- [ ] Move shell source (config/auth, config/stripe, config/admin, shell-side repo files, providers/stripe, service/auth, service/billing/wallet, service/admin/shell, runtime/http/account, runtime/http/billing, runtime/http/stripe, runtime/http/admin/shell-routes, runtime/http/portal, runtime/http/adminConsole) into `packages/livepeer-openai-gateway/src/`
-- [ ] Reroute `main.ts` to live in shell package; import engine via `@cloud-spe/bridge-core`
-- [ ] Drop root `migrations/`; write `packages/bridge-core/migrations/0000_init.sql` (engine schema) and `packages/livepeer-openai-gateway/migrations/0000_init.sql` (app schema)
-- [ ] Update both `migrate.ts` runners to read their own package's migration directory
-- [ ] Switch metric prefixes: engine `livepeer_bridge_*`, shell `cloudspe_*` (placeholder)
-- [ ] Per-package ESLint configs; engine layer rule scoped; shell allows engine imports
-- [ ] Rename repo identifiers: package.json names, Dockerfile, compose, README, AGENTS.md, .github workflows, internal markdown links
-- [ ] Update `compose.yaml` + `compose.prod.yaml` to add `service-registry-daemon` as a sidecar; bridge depends_on it; mount socket; add `service-registry-config.yaml` example file at repo root (replaces retired `nodes.example.yaml`)
-- [ ] Manual ops step: rename GitHub repo `openai-livepeer-bridge` → `livepeer-openai-gateway`
-- [ ] Verify both packages build, test ≥ 75% each, lint, doc-lint pass; verify Playwright e2e still green
-- [ ] Smoke `npm pack packages/bridge-core` produces a valid tarball
+- [x] Convert root `package.json` to workspace mode; add `packages/`, keep `bridge-ui/` as workspace member
+- [x] Create `packages/bridge-core/` skeleton (package.json, tsconfig, vitest.config, eslint.config)
+- [x] Move engine source (interfaces, types except customer, config except auth/stripe/admin, engine-side repo files, providers except stripe, engine service domains, dispatch, dashboard, adapters/fastify) into `packages/bridge-core/src/`
+- [x] Create `packages/livepeer-openai-gateway/` skeleton
+- [x] Move shell source (config/auth, config/stripe, config/admin, shell-side repo files, providers/stripe, service/auth, service/billing/wallet, service/admin/shell, runtime/http/account, runtime/http/billing, runtime/http/stripe, runtime/http/admin/shell-routes, runtime/http/portal, runtime/http/adminConsole) into `packages/livepeer-openai-gateway/src/`
+- [x] Reroute `main.ts` to live in shell package; import engine via `@cloud-spe/bridge-core`
+- [x] Drop root `migrations/`; write `packages/bridge-core/migrations/0000_engine_init.sql` (engine schema) and `packages/livepeer-openai-gateway/migrations/0000_app_init.sql` (app schema)
+- [x] Update both `migrate.ts` runners to read their own package's migration directory
+- [x] Switch metric prefixes: engine `livepeer_bridge_*`, shell `cloudspe_*` (placeholder)
+- [x] Per-package ESLint configs; engine layer rule scoped; shell allows engine imports
+- [x] Rename repo identifiers: package.json names, Dockerfile, compose, README, AGENTS.md, .github workflows, internal markdown links
+- [x] Update `compose.yaml` + `compose.prod.yaml` to add `service-registry-daemon` as a sidecar; bridge depends_on it; mount socket; add `service-registry-config.example.yaml` at repo root (replaces retired `nodes.example.yaml`)
+- [x] Manual ops step: rename GitHub repo `openai-livepeer-bridge` → `livepeer-openai-gateway` *(completed 2026-04-27 by operator)*
+- [x] Verify both packages build, test ≥ 75% each, lint, doc-lint pass; verify Playwright e2e still green
+- [x] Smoke `npm pack packages/bridge-core` produces a valid tarball
 
 ## Decisions log
 
-(empty)
+- **2026-04-27 — schema migrations rewritten as hand-rolled SQL runner.** Drizzle-kit's `meta/_journal.json` + per-migration snapshots got dropped because we rewrote history from scratch and the engine package would otherwise need a stub journal to run `migrate(db)`. Replaced with a tracking-table runner (`public.bridge_schema_migrations` keyed by file basename) that scans the migrations folder and applies anything not yet recorded. Each package owns its own migrations/ dir; shell's runner runs engine's first then its own. Net loss: re-introducing drizzle-kit for future migrations needs a one-time `db:generate` to seed the meta files.
+- **2026-04-27 — engine `Db` type is schema-agnostic.** Originally `NodePgDatabase<typeof schema>`; that locked the handle to a single package's tables and prevented the shell from threading its Db into engine repo functions. Relaxed to `NodePgDatabase<Record<string, never>>`. Type safety still flows through the SQL builder + locally-imported tables. Drizzle's `db.query.X` ORM accessors are not used anywhere in the codebase, so the loss is purely cosmetic.
+- **2026-04-27 — `Caller` interface gained `rateLimitTier`.** The engine rate-limit middleware previously reached into `req.caller.metadata as AuthenticatedCaller` to read `customer.rateLimitTier`. That violated the engine/shell boundary (engine inspecting shell-specific metadata). Added `rateLimitTier: string` as a top-level field on `Caller`; shell's AuthResolver populates it.
+- **2026-04-27 — `customer_id` → `caller_id` on `engine.usage_records`, type uuid → text.** The engine never resolves the foreign-key relationship to `app.customers` and the shell happens to know the value is a uuid; opaque text decouples deployments where the shell uses a different identifier shape. Cross-schema FK explicitly removed.
+- **2026-04-27 — engine `vitest.config.ts` excludes integration-tested files.** Files like `runtime/http/{chat,embeddings,images,audio}/*`, `dispatch/*`, `service/admin/engine.ts`, `repo/{db,migrate,schema,nodeHealth,usageRecords,usageRollups}.ts`, and the wiring-only providers (`config/{metrics,redis,routing}.ts`, `providers/{logger/console,redis/ioredis,nodeClient/{fetch,wireQuote},serviceRegistry/{grpc,fake}}.ts`) are 0%-covered at engine-package level because their tests live shell-side as integration tests. The 75% gate only applies to the engine-only-tested files; shell coverage rolls everything up via its e2e suite. The exclude list shrinks back to test fixtures + composition-root wiring once engine route unit tests with `InMemoryWallet` land (follow-up).
+- **2026-04-27 — `bridge-core/package.json` `main`/`types`/`exports` point at `src/`, not `dist/`.** Transitional: vitest/eslint/tsc resolve types straight from source so the gateway shell doesn't need to pre-build the engine for tests. The `npm run build --workspaces` script still emits `dist/` for the production Dockerfile path. Stage 4's npm-publish step flips this back to `dist/` once we publish.
+- **2026-04-27 — engine sampler keeps `FROM app.reservations` raw SQL.** Cross-schema query into a shell-owned table the engine reads to expose `livepeer_bridge_reservations_open*`. TODO comment placed; follow-up inverts the dependency via an injected reservation-count callback so the engine package never names a shell schema in raw SQL.
 
 ## Open questions
 
-(none at plan-write time)
+(resolved during implementation; see decisions log)
 
 ## Artifacts produced
 
-(empty until in-flight)
+- `packages/bridge-core/` — engine package: package.json (name `@cloud-spe/bridge-core`, version 0.1.0-dev, peerDeps for fastify family, deps for grpc/drizzle/etc.), tsconfig, vitest.config (75% gate with documented integration-test exclude list), eslint.config (re-uses root livepeer-bridge plugin), README.md, src/ (interfaces, types, config, repo, providers, service, dispatch, dashboard, runtime/http, runtime/metrics, scripts), migrations/0000_engine_init.sql.
+- `packages/livepeer-openai-gateway/` — shell package: package.json (name `livepeer-openai-gateway`, depends on `@cloud-spe/bridge-core` via npm-workspace `*`), tsconfig, vitest.config (75% gate), eslint.config, README.md, src/ (main.ts, config/auth+stripe+admin, types/{customer,index}, repo/{customers,apiKeys,topups,reservations,stripeWebhookEvents,adminAuditEvents,db,migrate,schema}, providers/stripe, service/{auth,billing,admin}, runtime/http/{account,billing,stripe,admin,portal,middleware/adminAuth}, scripts/migrate.ts), migrations/0000_app_init.sql.
+- `service-registry-config.example.yaml` at repo root — operator-edited static node-pool YAML for the resolver-mode daemon.
+- Compose stack: `compose.yaml` + `compose.prod.yaml` add the `service-registry-daemon` sidecar; bridge depends_on it; socket mounted via the shared `payment-socket` volume; image pin override via `SERVICE_REGISTRY_IMAGE`.
+- Updated `Dockerfile` for the workspace layout — multi-stage (deps, ui, build, runtime); production CMD runs `packages/livepeer-openai-gateway/dist/main.js`.
+- Schema split: `engine.*` (node_health, node_health_events, usage_records) + `app.*` (customers, api_keys, reservations, topups, stripe_webhook_events, admin_audit_events). Hand-rolled migration runner replaces drizzle-kit's journal; tracking table at `public.bridge_schema_migrations`.
+- Metric prefixes: engine emissions stay under `livepeer_bridge_*`; shell emissions (Stripe API+webhooks, top-ups, reservations gauges, build-info) under `cloudspe_*`. New `setShellBuildInfo()` Recorder method emits `cloudspe_app_build_info` alongside engine's renamed `livepeer_bridge_engine_build_info`.
+
+## Follow-ups (deferred from this plan)
+
+- Engine route unit tests with `InMemoryWallet` so `packages/bridge-core/vitest.config.ts` exclude list shrinks back to test fixtures + composition-root wiring only.
+- Sampler reservation-count callback so the engine sampler stops naming `app.reservations` in raw SQL (cross-schema layering violation).
+- `engine.node_health_events` month-partitioning + `engine.payment_audit` table — described in plan §4 but deferred for the transitional schema; revisit when retention or audit-trail concerns materialize.
+- `service-registry-daemon` image pin verification once the daemon repo cuts a stable tag (compose currently points at `:dev` for local-dev and `:v0.1.0` for prod, both placeholders).
+- Re-introducing drizzle-kit `db:generate` requires seeding the per-package `migrations/meta/_journal.json` since the hand-rolled runner stopped writing them.
+- Engine package and npm scope rename `@cloud-spe/bridge-core` → `@cloudspe/livepeer-gateway-core` to match the public repo at `Cloud-SPE/livepeer-gateway-core` — folded into exec-plan 0028.

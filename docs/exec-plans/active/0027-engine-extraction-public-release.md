@@ -9,7 +9,7 @@ opened: 2026-04-26
 
 ## Goal
 
-Stage 4 of a 4-stage extraction. With the engine isolated as a workspace package from [`0026`](./0026-engine-extraction-workspace.md), this stage bootstraps the public OSS repo `Cloud-SPE/livepeer-bridge-core` on GitHub, syncs the engine package over, sets up CI to build/test/publish-on-tag, ships a runnable `examples/minimal-shell/` (using `InMemoryWallet` + a no-op `AuthResolver`) so adopters can clone-and-run in 30 seconds, cuts version `0.1.0`, and rewires this repo to consume the engine via npm dep instead of the workspace symlink.
+Stage 4 of a 4-stage extraction. With the engine isolated as a workspace package from [`0026`](../completed/0026-engine-extraction-workspace.md), this stage bootstraps the public OSS repo `Cloud-SPE/livepeer-bridge-core` on GitHub, syncs the engine package over, sets up CI to build/test/publish-on-tag, ships a runnable `examples/minimal-shell/` (using `InMemoryWallet` + a no-op `AuthResolver`) so adopters can clone-and-run in 30 seconds, cuts version `0.1.0`, and rewires this repo to consume the engine via npm dep instead of the workspace symlink.
 
 After this stage:
 - Public GitHub repo `Cloud-SPE/livepeer-bridge-core` exists, MIT-licensed, with the engine source.
