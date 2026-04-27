@@ -1,4 +1,4 @@
-# openai-livepeer-bridge
+# livepeer-openai-gateway
 
 An OpenAI-compatible API service that fronts a pool of Livepeer WorkerNodes. Customers pay in USD (prepaid balance + free tier); the service pays nodes in ETH via the [`livepeer-payment-library`](../livepeer-payment-library) daemon running as a sidecar.
 

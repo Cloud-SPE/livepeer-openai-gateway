@@ -1,4 +1,4 @@
-# PRODUCT_SENSE — openai-livepeer-bridge
+# PRODUCT_SENSE — livepeer-openai-gateway
 
 ## What we're building
 

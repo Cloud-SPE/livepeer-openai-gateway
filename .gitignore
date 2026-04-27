@@ -29,6 +29,9 @@ coverage/
 *.key
 *.pem
 
+# Operator-authored service-registry config (mounted into the daemon).
+service-registry-config.yaml
+
 # Data / local state
 data/
 *.db

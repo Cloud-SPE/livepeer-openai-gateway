@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Customer-facing self-service portal for the openai-livepeer-bridge",
+  "description": "Customer-facing self-service portal for the livepeer-openai-gateway",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

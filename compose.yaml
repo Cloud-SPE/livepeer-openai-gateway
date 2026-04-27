@@ -55,6 +55,19 @@ services:
       - ${PAYER_KEYSTORE_PASSWORD_PATH:-./keystore-password}:/etc/livepeer/keystore-password:ro
       - payment-socket:/var/run/livepeer
 
+  service-registry-daemon:
+    # Resolver-mode daemon that the bridge calls via gRPC to discover
+    # WorkerNodes. The image is a placeholder pin until the daemon repo
+    # publishes a stable tag — set $SERVICE_REGISTRY_IMAGE to override.
+    image: ${SERVICE_REGISTRY_IMAGE:-ghcr.io/livepeer-modules-project/service-registry-daemon:dev}
+    command:
+      - --mode=resolver
+      - --socket=/var/run/livepeer/service-registry.sock
+      - --config=/etc/livepeer/service-registry.yaml
+    volumes:
+      - ${SERVICE_REGISTRY_CONFIG_PATH:-./service-registry-config.yaml}:/etc/livepeer/service-registry.yaml:ro
+      - payment-socket:/var/run/livepeer
+
   bridge:
     build:
       context: .
@@ -64,6 +77,8 @@ services:
       redis:
         condition: service_healthy
       payment-daemon:
+        condition: service_started
+      service-registry-daemon:
         condition: service_started
     environment:
       HOST: '0.0.0.0'
@@ -102,7 +117,7 @@ services:
       ADMIN_IP_ALLOWLIST: ${ADMIN_IP_ALLOWLIST:-}
 
       BRIDGE_AUTO_MIGRATE: 'true'
-      # service-registry-daemon socket — daemon sidecar lands in stage-3 step 12.
+      # service-registry-daemon resolver socket on the shared payment-socket volume.
       SERVICE_REGISTRY_SOCKET: ${SERVICE_REGISTRY_SOCKET:-/var/run/livepeer/service-registry.sock}
     volumes:
       - payment-socket:/var/run/livepeer

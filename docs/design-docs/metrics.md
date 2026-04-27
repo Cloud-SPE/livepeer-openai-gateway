@@ -6,7 +6,7 @@ last-reviewed: 2026-04-25
 
 # Bridge metrics catalog
 
-What `openai-livepeer-bridge` exposes on `/metrics` and why each metric exists. The bridge is the only place in the stack where USD, customer identity, and node identity all meet — so this is the catalog where business metrics live and where cross-repo reconciliation is computed.
+What `livepeer-openai-gateway` exposes on `/metrics` and why each metric exists. The bridge is the only place in the stack where USD, customer identity, and node identity all meet — so this is the catalog where business metrics live and where cross-repo reconciliation is computed.
 
 Every metric pairs to a question someone (SRE, finance, or product) will dashboard or alert on. No vanity metrics.
 

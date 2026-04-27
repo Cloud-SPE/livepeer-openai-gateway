@@ -30,7 +30,7 @@ docker compose up --build
 # prod (consumes a pre-built image)
 docker compose -f compose.yaml -f compose.prod.yaml up -d
 
-# smoke (consumes openai-livepeer-bridge:local)
+# smoke (consumes livepeer-openai-gateway:local)
 docker compose -f compose.smoke.yaml up -d
 ```
 
@@ -148,7 +148,7 @@ Dev (`compose.yaml`) builds inline via `build: { context: . }` — `docker compo
 Three npm scripts wrap the `docker build / tag / push` cycle so the recipe is in-repo and consistent across operators:
 
 ```bash
-npm run docker:build       # → openai-livepeer-bridge:local
+npm run docker:build       # → livepeer-openai-gateway:local
 npm run docker:tag         # → tztcloud/livepeer-openai-gateway:v0.8.10
 npm run docker:push        # pushes the tag above
 ```
@@ -202,7 +202,7 @@ Tracked as [`tech-debt`](../exec-plans/tech-debt-tracker.md) — local recipe is
 
 ## Smoke a built image (no daemon, no Stripe)
 
-`compose.smoke.yaml` brings up `postgres + redis + bridge` against the locally-built `openai-livepeer-bridge:local` image with the payment daemon stripped out, dummy Stripe values inline, and pre-baked dummy secrets. Use to verify the bridge image starts cleanly and serves the UIs (`/portal/*` + `/admin/console/*`) and the non-payment HTTP surface (`/healthz`, `/admin/*`, `/v1/account/*`) without standing up an Ethereum keystore + RPC + a real Stripe account.
+`compose.smoke.yaml` brings up `postgres + redis + bridge` against the locally-built `livepeer-openai-gateway:local` image with the payment daemon stripped out, dummy Stripe values inline, and pre-baked dummy secrets. Use to verify the bridge image starts cleanly and serves the UIs (`/portal/*` + `/admin/console/*`) and the non-payment HTTP surface (`/healthz`, `/admin/*`, `/v1/account/*`) without standing up an Ethereum keystore + RPC + a real Stripe account.
 
 `/v1/chat/completions` and friends will return 503 (Invariant 6 — the bridge fails-closed when the PayerDaemon socket is unreachable). That's correct behavior, not a regression.
 

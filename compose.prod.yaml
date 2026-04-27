@@ -98,6 +98,31 @@ services:
           cpus: '1'
           memory: 512m
 
+  service-registry-daemon:
+    image: ${SERVICE_REGISTRY_IMAGE:-ghcr.io/livepeer-modules-project/service-registry-daemon:v0.1.0}
+    restart: unless-stopped
+    command:
+      - --mode=resolver
+      - --socket=/var/run/livepeer/service-registry.sock
+      - --config=/etc/livepeer/service-registry.yaml
+      - --log-level=${DAEMON_LOG_LEVEL:-info}
+    volumes:
+      - ${SERVICE_REGISTRY_CONFIG_PATH:-./service-registry-config.yaml}:/etc/livepeer/service-registry.yaml:ro
+      - payment-socket:/var/run/livepeer
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '5'
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256m
+
   # One-shot migration job. Runs and exits; the bridge service gates on
   # its successful completion.
   bridge-migrate:
@@ -128,6 +153,8 @@ services:
       redis:
         condition: service_healthy
       payment-daemon:
+        condition: service_started
+      service-registry-daemon:
         condition: service_started
       bridge-migrate:
         condition: service_completed_successfully

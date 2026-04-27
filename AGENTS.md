@@ -1,4 +1,4 @@
-# AGENTS.md — openai-livepeer-bridge
+# AGENTS.md — livepeer-openai-gateway
 
 This is an OpenAI-compatible API service that accepts customer requests, routes them to a pool of Livepeer WorkerNodes, and bridges USD billing (prepaid + free tier) to Livepeer's probabilistic-micropayment protocol (via the `livepeer-payment-library` daemon).
 

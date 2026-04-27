@@ -1,4 +1,4 @@
-# DESIGN — openai-livepeer-bridge
+# DESIGN — livepeer-openai-gateway
 
 ## What this is
 

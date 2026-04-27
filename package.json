@@ -1,5 +1,5 @@
 {
-  "name": "openai-livepeer-bridge-monorepo",
+  "name": "livepeer-openai-gateway-monorepo",
   "version": "0.0.0",
   "private": true,
   "description": "Monorepo root for the @cloud-spe/bridge-core engine + livepeer-openai-gateway shell + bridge-ui SPAs.",
@@ -30,7 +30,7 @@
     "proto:gen": "npm run proto:gen:payer && npm run proto:gen:registry",
     "proto:gen:payer": "rm -rf packages/bridge-core/src/providers/payerDaemon/gen && mkdir -p packages/bridge-core/src/providers/payerDaemon/gen && buf generate",
     "proto:gen:registry": "rm -rf packages/bridge-core/src/providers/serviceRegistry/gen && mkdir -p packages/bridge-core/src/providers/serviceRegistry/gen && buf generate --template buf.gen.serviceRegistry.yaml",
-    "docker:build": "docker build -t openai-livepeer-bridge:local .",
+    "docker:build": "docker build -t livepeer-openai-gateway:local .",
     "docker:tag": "scripts/docker-tag.sh",
     "docker:push": "scripts/docker-push.sh",
     "docker:release": "npm run docker:build && npm run docker:tag && npm run docker:push"

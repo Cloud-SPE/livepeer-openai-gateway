@@ -1,0 +1,48 @@
+# Example resolver-mode config for the service-registry-daemon sidecar.
+# Copy to service-registry-config.yaml at the repo root (gitignored) and
+# edit to point at the WorkerNode pool the bridge should route to.
+#
+# The compose stack mounts this file at /etc/livepeer/service-registry.yaml
+# on both the local-dev (compose.yaml) and prod (compose.prod.yaml) layers.
+# See docs/operations/deployment.md for the operator walkthrough.
+
+# Resolver-mode daemon: it answers Select / ListKnown / ResolveByAddress
+# RPCs based on this static node pool. Production deployments wire the
+# daemon up to a registry contract or other discovery source instead;
+# this YAML is only for fixed-pool dev/staging.
+mode: static
+
+nodes:
+  - id: worker-chat-1
+    url: https://worker1.example.com
+    eth_address: '0x1111111111111111111111111111111111111111'
+    capabilities:
+      - openai:/v1/chat/completions
+    weight: 100
+    tier_allowed:
+      - free
+      - prepaid
+    supported_models:
+      - llama-3.3-70b
+      - mistral-7b-instruct
+
+  - id: worker-multi-1
+    url: https://worker2.example.com
+    eth_address: '0x2222222222222222222222222222222222222222'
+    capabilities:
+      - openai:/v1/chat/completions
+      - openai:/v1/embeddings
+      - openai:/v1/images/generations
+      - openai:/v1/images/edits
+      - openai:/v1/audio/speech
+      - openai:/v1/audio/transcriptions
+    weight: 50
+    tier_allowed:
+      - prepaid
+    supported_models:
+      - llama-3.3-70b
+      - text-embedding-3-small
+      - sdxl-turbo
+      - sdxl-edit
+      - tts-1
+      - whisper-large-v3

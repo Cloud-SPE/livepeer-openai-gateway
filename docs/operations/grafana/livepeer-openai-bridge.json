@@ -3,7 +3,7 @@
     {
       "name": "DS_PROMETHEUS",
       "label": "Prometheus",
-      "description": "Prometheus instance scraping the openai-livepeer-bridge daemon",
+      "description": "Prometheus instance scraping the livepeer-openai-gateway daemon",
       "type": "datasource",
       "pluginId": "prometheus",
       "pluginName": "Prometheus"
@@ -63,7 +63,7 @@
       }
     ]
   },
-  "description": "Operator-facing dashboard for the openai-livepeer-bridge. Top row joins bridge, daemon, and worker metrics to answer 'is the system honest' (cross-repo reconciliation). Subsequent rows mirror the bridge metric catalog in docs/design-docs/metrics.md.",
+  "description": "Operator-facing dashboard for the livepeer-openai-gateway. Top row joins bridge, daemon, and worker metrics to answer 'is the system honest' (cross-repo reconciliation). Subsequent rows mirror the bridge metric catalog in docs/design-docs/metrics.md.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
