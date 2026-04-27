@@ -6,7 +6,7 @@ import { sql } from 'drizzle-orm';
 import Fastify, { type FastifyInstance } from 'fastify';
 import OpenAI from 'openai';
 import { Server, ServerCredentials } from '@grpc/grpc-js';
-import { startTestPg, type TestPg } from '@cloud-spe/bridge-core/service/billing/testPg.js';
+import { startTestPg, type TestPg } from '../../../service/billing/testPg.js';
 import * as customersRepo from '../../../repo/customers.js';
 import { createAuthService, issueKey } from '../../../service/auth/index.js';
 import { createAuthResolver } from '../../../service/auth/authResolver.js';
@@ -258,7 +258,7 @@ afterAll(async () => {
 });
 beforeEach(async () => {
   await pg.db.execute(
-    sql`TRUNCATE TABLE api_key, reservation, usage_record, topup, node_health_event, node_health, customer CASCADE`,
+    sql`TRUNCATE TABLE app.api_keys, app.reservations, engine.usage_records, app.topups, engine.node_health_events, engine.node_health, app.customers CASCADE`,
   );
 });
 
@@ -281,7 +281,7 @@ describe('/v1/images/generations (end-to-end)', () => {
       expect(after!.balanceUsdCents).toBe(9_997n);
 
       const usage = await pg.db.execute(
-        sql`SELECT kind, image_count, status FROM usage_record WHERE customer_id = ${bridge.customerId}`,
+        sql`SELECT kind, image_count, status FROM engine.usage_records WHERE caller_id = ${bridge.customerId}`,
       );
       const row = usage.rows[0] as { kind: string; image_count: number; status: string };
       expect(row.kind).toBe('images');
@@ -314,7 +314,7 @@ describe('/v1/images/generations (end-to-end)', () => {
       expect(after!.balanceUsdCents).toBe(9_994n);
 
       const usage = await pg.db.execute(
-        sql`SELECT image_count, status FROM usage_record WHERE customer_id = ${bridge.customerId}`,
+        sql`SELECT image_count, status FROM engine.usage_records WHERE caller_id = ${bridge.customerId}`,
       );
       const row = usage.rows[0] as { image_count: number; status: string };
       expect(row.image_count).toBe(2);

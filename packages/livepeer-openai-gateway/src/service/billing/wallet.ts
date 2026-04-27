@@ -1,4 +1,4 @@
-import type { Db } from '@cloud-spe/bridge-core/repo/db.js';
+import type { Db } from '../../repo/db.js';
 import type { Recorder } from '@cloud-spe/bridge-core/providers/metrics/recorder.js';
 import type {
   CostQuote,

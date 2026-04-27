@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
-import { startTestPg, type TestPg } from '@cloud-spe/bridge-core/service/billing/testPg.js';
+import { startTestPg, type TestPg } from '../../../service/billing/testPg.js';
 import * as customersRepo from '../../../repo/customers.js';
 import { creditTopup } from '../../../service/billing/topups.js';
 import { CircuitBreaker } from '@cloud-spe/bridge-core/service/routing/circuitBreaker.js';
@@ -67,12 +67,12 @@ afterAll(async () => {
 });
 beforeEach(async () => {
   await pg.db.execute(
-    sql`TRUNCATE TABLE admin_audit_event, api_key, reservation, usage_record, topup, stripe_webhook_event, node_health_event, node_health, customer CASCADE`,
+    sql`TRUNCATE TABLE app.admin_audit_events, app.api_keys, app.reservations, engine.usage_records, app.topups, app.stripe_webhook_events, engine.node_health_events, engine.node_health, app.customers CASCADE`,
   );
 });
 
 async function countAuditRows(): Promise<number> {
-  const rows = await pg.db.execute(sql`SELECT count(*)::int as c FROM admin_audit_event`);
+  const rows = await pg.db.execute(sql`SELECT count(*)::int as c FROM app.admin_audit_events`);
   return (rows.rows[0] as { c: number }).c;
 }
 

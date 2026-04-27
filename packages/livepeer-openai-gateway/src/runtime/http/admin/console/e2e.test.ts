@@ -14,7 +14,7 @@ import { resolve } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
 import { chromium, type Browser } from 'playwright';
-import { startTestPg, type TestPg } from '@cloud-spe/bridge-core/service/billing/testPg.js';
+import { startTestPg, type TestPg } from '../../../../service/billing/testPg.js';
 import * as customersRepo from '../../../../repo/customers.js';
 import * as adminAuditEventsRepo from '../../../../repo/adminAuditEvents.js';
 import { CircuitBreaker } from '@cloud-spe/bridge-core/service/routing/circuitBreaker.js';
@@ -85,7 +85,7 @@ async function buildBridge() {
 describe.skipIf(!HAS_DIST)('admin E2E', () => {
   it('sign-in renders the health page with status tiles', async () => {
     await pg.db.execute(
-      sql`TRUNCATE TABLE admin_audit_event, api_key, reservation, usage_record, topup, stripe_webhook_event, node_health_event, node_health, customer CASCADE`,
+      sql`TRUNCATE TABLE app.admin_audit_events, app.api_keys, app.reservations, engine.usage_records, app.topups, app.stripe_webhook_events, engine.node_health_events, engine.node_health, app.customers CASCADE`,
     );
     bridge = await buildBridge();
     const page = await browser.newPage();
@@ -115,7 +115,7 @@ describe.skipIf(!HAS_DIST)('admin E2E', () => {
 
   it('suspend a customer with type-to-confirm; audit row carries the actor handle', async () => {
     await pg.db.execute(
-      sql`TRUNCATE TABLE admin_audit_event, api_key, reservation, usage_record, topup, stripe_webhook_event, node_health_event, node_health, customer CASCADE`,
+      sql`TRUNCATE TABLE app.admin_audit_events, app.api_keys, app.reservations, engine.usage_records, app.topups, app.stripe_webhook_events, engine.node_health_events, engine.node_health, app.customers CASCADE`,
     );
     const customer = await customersRepo.insertCustomer(pg.db, {
       email: 'suspendme@example.com',

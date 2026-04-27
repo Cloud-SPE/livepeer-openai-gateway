@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import type { Db } from '@cloud-spe/bridge-core/repo/db.js';
+import type { Db } from '../../../repo/db.js';
 import * as stripeWebhookEventsRepo from '../../../repo/stripeWebhookEvents.js';
 import * as billing from '../../../service/billing/index.js';
 import type { StripeClient, StripeEventMinimal } from '../../../providers/stripe.js';

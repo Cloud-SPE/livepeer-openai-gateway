@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
-import { startTestPg, type TestPg } from '@cloud-spe/bridge-core/service/billing/testPg.js';
+import { startTestPg, type TestPg } from '../service/billing/testPg.js';
 import { insertIfNew } from './stripeWebhookEvents.js';
 
 let pg: TestPg;
@@ -12,7 +12,7 @@ afterAll(async () => {
   if (pg) await pg.close();
 });
 beforeEach(async () => {
-  await pg.db.execute(sql`TRUNCATE TABLE stripe_webhook_event CASCADE`);
+  await pg.db.execute(sql`TRUNCATE TABLE app.stripe_webhook_events CASCADE`);
 });
 
 describe('stripeWebhookEvents.insertIfNew', () => {

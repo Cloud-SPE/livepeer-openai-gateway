@@ -68,11 +68,15 @@ export function createMetricsSampler(deps: MetricsSamplerDeps): MetricsSampler {
 
   async function sampleReservations(): Promise<void> {
     try {
+      // Cross-schema query into app.reservations — shell-owned table the
+      // engine reads to expose `livepeer_bridge_reservations_open*`. A
+      // follow-up will invert this with an injected reservation-count
+      // callback so the engine package never names a shell schema.
       const result = await deps.db.execute(sql`
         SELECT
           COUNT(*)::int AS count,
           COALESCE(EXTRACT(EPOCH FROM (NOW() - MIN(created_at)))::int, 0) AS oldest_seconds
-        FROM reservation
+        FROM app.reservations
         WHERE state = 'open'
       `);
       const row = result.rows[0] as { count?: number; oldest_seconds?: number } | undefined;

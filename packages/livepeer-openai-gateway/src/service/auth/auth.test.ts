@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
-import { startTestPg, type TestPg } from '@cloud-spe/bridge-core/service/billing/testPg.js';
+import { startTestPg, type TestPg } from '../billing/testPg.js';
 import * as customersRepo from '../../repo/customers.js';
 import * as apiKeysRepo from '../../repo/apiKeys.js';
 import {
@@ -25,7 +25,7 @@ afterAll(async () => {
 });
 beforeEach(async () => {
   await pg.db.execute(
-    sql`TRUNCATE TABLE api_key, reservation, usage_record, topup, customer CASCADE`,
+    sql`TRUNCATE TABLE app.api_keys, app.reservations, engine.usage_records, app.topups, app.customers CASCADE`,
   );
 });
 
@@ -102,7 +102,7 @@ describe('service/auth', () => {
     const customerId = await seedActiveCustomer();
     const { plaintext } = await issueKey(pg.db, { customerId, envPrefix: 'test', pepper });
 
-    await pg.db.execute(sql`UPDATE customer SET status = 'suspended' WHERE id = ${customerId}`);
+    await pg.db.execute(sql`UPDATE app.customers SET status = 'suspended' WHERE id = ${customerId}`);
 
     const auth = createAuthService({ db: pg.db, config });
     await expect(auth.authenticate(`Bearer ${plaintext}`)).rejects.toBeInstanceOf(
@@ -114,7 +114,7 @@ describe('service/auth', () => {
     const customerId = await seedActiveCustomer();
     const { plaintext } = await issueKey(pg.db, { customerId, envPrefix: 'test', pepper });
 
-    await pg.db.execute(sql`UPDATE customer SET status = 'closed' WHERE id = ${customerId}`);
+    await pg.db.execute(sql`UPDATE app.customers SET status = 'closed' WHERE id = ${customerId}`);
 
     const auth = createAuthService({ db: pg.db, config });
     await expect(auth.authenticate(`Bearer ${plaintext}`)).rejects.toBeInstanceOf(

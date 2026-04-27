@@ -1,6 +1,6 @@
 import { eq, and, desc, isNull } from 'drizzle-orm';
-import type { Db } from '@cloud-spe/bridge-core/repo/db.js';
-import { apiKeys, customers } from '@cloud-spe/bridge-core/repo/schema.js';
+import type { Db } from '../repo/db.js';
+import { apiKeys, customers } from '../repo/schema.js';
 import type { CustomerRow } from './customers.js';
 
 export type ApiKeyRow = typeof apiKeys.$inferSelect;
@@ -24,7 +24,7 @@ export async function findActiveByHash(
     .limit(1);
   const row = rows[0];
   if (!row) return null;
-  return { apiKey: row.api_key, customer: row.customer };
+  return { apiKey: row.api_keys, customer: row.customers };
 }
 
 export async function findById(db: Db, id: string): Promise<ApiKeyRow | null> {

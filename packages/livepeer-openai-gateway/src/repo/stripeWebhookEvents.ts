@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
-import type { Db } from '@cloud-spe/bridge-core/repo/db.js';
-import { stripeWebhookEvents } from '@cloud-spe/bridge-core/repo/schema.js';
+import type { Db } from '../repo/db.js';
+import { stripeWebhookEvents } from '../repo/schema.js';
 
 export type StripeWebhookEventRow = typeof stripeWebhookEvents.$inferSelect;
 
@@ -17,7 +17,7 @@ export async function insertIfNew(
 ): Promise<boolean> {
   const result = await db.execute(
     sql`
-      INSERT INTO stripe_webhook_event (event_id, type, payload)
+      INSERT INTO app.stripe_webhook_events (event_id, type, payload)
       VALUES (${eventId}, ${type}, ${payload})
       ON CONFLICT (event_id) DO NOTHING
       RETURNING event_id

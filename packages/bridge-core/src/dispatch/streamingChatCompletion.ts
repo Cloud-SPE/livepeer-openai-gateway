@@ -310,7 +310,7 @@ async function settleReservation(input: SettleInput): Promise<{
       }
       const localPrompt = input.tokenAudit?.countPromptTokens(input.model, input.messages) ?? null;
       await usageRecordsRepo.insertUsageRecord(input.db, {
-        customerId: input.callerId,
+        callerId: input.callerId,
         workId: input.workId,
         model: input.model,
         nodeUrl: input.nodeUrl,
@@ -387,7 +387,7 @@ async function settleReservation(input: SettleInput): Promise<{
       await input.wallet.commit(input.handle, usage);
     }
     await usageRecordsRepo.insertUsageRecord(input.db, {
-      customerId: input.callerId,
+      callerId: input.callerId,
       workId: input.workId,
       model: input.model,
       nodeUrl: input.nodeUrl,

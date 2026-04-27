@@ -1,6 +1,6 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import type { FastifyReply, FastifyRequest, preHandlerAsyncHookHandler } from 'fastify';
-import type { Db } from '@cloud-spe/bridge-core/repo/db.js';
+import type { Db } from '../../../repo/db.js';
 import type { AdminConfig } from '../../../config/admin.js';
 import * as adminAuditEventsRepo from '../../../repo/adminAuditEvents.js';
 

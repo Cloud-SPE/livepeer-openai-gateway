@@ -158,7 +158,7 @@ export async function dispatchEmbeddings(
     committed = true;
 
     await usageRecordsRepo.insertUsageRecord(deps.db, {
-      customerId: deps.caller.id,
+      callerId: deps.caller.id,
       workId,
       kind: 'embeddings',
       model: deps.body.model,

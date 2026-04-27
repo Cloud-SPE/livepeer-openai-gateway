@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import type { Db } from '@cloud-spe/bridge-core/repo/db.js';
+import type { Db } from '../../../repo/db.js';
 import type { AuthenticatedCaller } from '../../../service/auth/authenticate.js';
 import type { AuthResolver } from '@cloud-spe/bridge-core/interfaces/index.js';
 import type { AuthConfig } from '../../../config/auth.js';
@@ -213,7 +213,7 @@ async function handleUsage(
       ? new Date(parsed.data.from)
       : new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
     const rows = await usageRollups.rollup(deps.db, {
-      customerId: customer.id,
+      callerId: customer.id,
       from,
       to,
       groupBy: parsed.data.group_by,

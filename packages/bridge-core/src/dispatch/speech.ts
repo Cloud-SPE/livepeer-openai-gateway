@@ -141,7 +141,7 @@ export async function dispatchSpeech(
     committed = true;
 
     await usageRecordsRepo.insertUsageRecord(deps.db, {
-      customerId: deps.caller.id,
+      callerId: deps.caller.id,
       workId,
       kind: 'speech',
       model: deps.body.model,

@@ -6,7 +6,7 @@ import { sql } from 'drizzle-orm';
 import Fastify, { type FastifyInstance } from 'fastify';
 import OpenAI from 'openai';
 import { Server, ServerCredentials } from '@grpc/grpc-js';
-import { startTestPg, type TestPg } from '@cloud-spe/bridge-core/service/billing/testPg.js';
+import { startTestPg, type TestPg } from '../../../service/billing/testPg.js';
 import * as customersRepo from '../../../repo/customers.js';
 import { createAuthService, issueKey } from '../../../service/auth/index.js';
 import { createAuthResolver } from '../../../service/auth/authResolver.js';
@@ -262,7 +262,7 @@ afterAll(async () => {
 });
 beforeEach(async () => {
   await pg.db.execute(
-    sql`TRUNCATE TABLE api_key, reservation, usage_record, topup, node_health_event, node_health, customer CASCADE`,
+    sql`TRUNCATE TABLE app.api_keys, app.reservations, engine.usage_records, app.topups, engine.node_health_events, engine.node_health, app.customers CASCADE`,
   );
 });
 
@@ -284,7 +284,7 @@ describe('/v1/embeddings (end-to-end)', () => {
       expect(after!.reservedUsdCents).toBe(0n);
 
       const usage = await pg.db.execute(
-        sql`SELECT kind, completion_tokens_reported FROM usage_record WHERE customer_id = ${bridge.customerId}`,
+        sql`SELECT kind, completion_tokens_reported FROM engine.usage_records WHERE caller_id = ${bridge.customerId}`,
       );
       expect(usage.rows).toHaveLength(1);
       const row = usage.rows[0] as { kind: string; completion_tokens_reported: number | null };

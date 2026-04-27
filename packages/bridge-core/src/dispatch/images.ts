@@ -158,7 +158,7 @@ export async function dispatchImages(
     committed = true;
 
     await usageRecordsRepo.insertUsageRecord(deps.db, {
-      customerId: deps.caller.id,
+      callerId: deps.caller.id,
       workId,
       kind: 'images',
       model: deps.body.model,

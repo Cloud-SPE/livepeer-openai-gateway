@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
-import { startTestPg, type TestPg } from '@cloud-spe/bridge-core/service/billing/testPg.js';
+import { startTestPg, type TestPg } from '../service/billing/testPg.js';
 import * as apiKeysRepo from './apiKeys.js';
 import * as customersRepo from './customers.js';
 import * as reservationsRepo from './reservations.js';
@@ -19,7 +19,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await pg.db.execute(
-    sql`TRUNCATE TABLE api_key, reservation, usage_record, topup, customer CASCADE`,
+    sql`TRUNCATE TABLE app.api_keys, app.reservations, engine.usage_records, app.topups, app.customers CASCADE`,
   );
 });
 
@@ -201,7 +201,7 @@ describe('repo/usageRecords', () => {
       tier: 'prepaid',
     });
     const rec = await usageRecordsRepo.insertUsageRecord(pg.db, {
-      customerId: customer.id,
+      callerId: customer.id,
       workId: 'w-u',
       model: 'model-small',
       nodeUrl: 'https://node.example',
@@ -221,7 +221,7 @@ describe('repo/usageRecords', () => {
       tier: 'prepaid',
     });
     const rec = await usageRecordsRepo.insertUsageRecord(pg.db, {
-      customerId: customer.id,
+      callerId: customer.id,
       workId: 'w-emb',
       kind: 'embeddings',
       model: 'text-embedding-3-small',
@@ -241,7 +241,7 @@ describe('repo/usageRecords', () => {
       tier: 'prepaid',
     });
     const rec = await usageRecordsRepo.insertUsageRecord(pg.db, {
-      customerId: customer.id,
+      callerId: customer.id,
       workId: 'w-img',
       kind: 'images',
       model: 'dall-e-3',
@@ -263,7 +263,7 @@ describe('repo/usageRecords', () => {
     });
     await expect(
       usageRecordsRepo.insertUsageRecord(pg.db, {
-        customerId: customer.id,
+        callerId: customer.id,
         workId: 'w-bad',
         kind: 'images',
         model: 'dall-e-3',

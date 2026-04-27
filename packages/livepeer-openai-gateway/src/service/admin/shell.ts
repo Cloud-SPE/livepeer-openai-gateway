@@ -1,7 +1,8 @@
 import { desc, eq } from 'drizzle-orm';
-import type { Db } from '@cloud-spe/bridge-core/repo/db.js';
+import type { Db } from '../../repo/db.js';
 import * as customersRepo from '../../repo/customers.js';
-import { topups, usageRecords } from '@cloud-spe/bridge-core/repo/schema.js';
+import { topups } from '../../repo/schema.js';
+import { usageRecords } from '@cloud-spe/bridge-core/repo/schema.js';
 import { reverseTopup, setCustomerStatus } from '../billing/topups.js';
 import type { ReverseTopupResult } from '../billing/topups.js';
 
@@ -70,7 +71,7 @@ export function createShellAdminService(deps: ShellAdminServiceDeps): ShellAdmin
       const usage = await deps.db
         .select()
         .from(usageRecords)
-        .where(eq(usageRecords.customerId, id))
+        .where(eq(usageRecords.callerId, id))
         .orderBy(desc(usageRecords.createdAt))
         .limit(50);
 

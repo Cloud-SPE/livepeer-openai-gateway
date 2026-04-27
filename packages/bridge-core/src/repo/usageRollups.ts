@@ -15,16 +15,17 @@ export interface UsageRollupRow {
 }
 
 export interface UsageRollupInput {
-  customerId: string;
+  callerId: string;
   from: Date;
   to: Date;
   groupBy: GroupBy;
 }
 
 /**
- * Aggregate usage_records for one customer between [from, to) grouped by the
- * requested dimension. Tokens are summed from the *_local columns when present
- * and fall back to *_reported (matches the prior server-side aggregation).
+ * Aggregate engine.usage_records for one caller between [from, to)
+ * grouped by the requested dimension. Tokens are summed from the *_local
+ * columns when present and fall back to *_reported (matches the prior
+ * server-side aggregation).
  */
 export async function rollup(db: Db, input: UsageRollupInput): Promise<UsageRollupRow[]> {
   const bucketExpr =
@@ -53,8 +54,8 @@ export async function rollup(db: Db, input: UsageRollupInput): Promise<UsageRoll
       COUNT(*) FILTER (WHERE status = 'success')::bigint AS success_count,
       COUNT(*) FILTER (WHERE status = 'partial')::bigint AS partial_count,
       COUNT(*) FILTER (WHERE status = 'failed')::bigint AS failed_count
-    FROM usage_record
-    WHERE customer_id = ${input.customerId}
+    FROM engine.usage_records
+    WHERE caller_id = ${input.callerId}
       AND created_at >= ${input.from}
       AND created_at < ${input.to}
     GROUP BY bucket

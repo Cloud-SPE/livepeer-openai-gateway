@@ -170,7 +170,7 @@ export async function dispatchTranscriptions(
     committed = true;
 
     await usageRecordsRepo.insertUsageRecord(deps.db, {
-      customerId: deps.caller.id,
+      callerId: deps.caller.id,
       workId,
       kind: 'transcriptions',
       model: deps.fields.model,

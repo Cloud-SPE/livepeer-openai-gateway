@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
-import { startTestPg, type TestPg } from '@cloud-spe/bridge-core/service/billing/testPg.js';
+import { startTestPg, type TestPg } from './testPg.js';
 import * as customersRepo from '../../repo/customers.js';
 import type { CostQuote, UsageReport } from '@cloud-spe/bridge-core/interfaces/index.js';
 import { UnknownCallerTierError } from '@cloud-spe/bridge-core/service/billing/errors.js';
@@ -18,7 +18,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await pg.db.execute(
-    sql`TRUNCATE TABLE api_key, reservation, usage_record, topup, customer CASCADE`,
+    sql`TRUNCATE TABLE app.api_keys, app.reservations, engine.usage_records, app.topups, app.customers CASCADE`,
   );
 });
 

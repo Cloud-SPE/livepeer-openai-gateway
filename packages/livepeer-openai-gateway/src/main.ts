@@ -26,8 +26,8 @@ import { createGrpcServiceRegistryClient } from '@cloud-spe/bridge-core/provider
 import { createSdkStripeClient } from './providers/stripe/sdk.js';
 import { createTiktokenProvider } from '@cloud-spe/bridge-core/providers/tokenizer/tiktoken.js';
 import { createConsoleLogger } from '@cloud-spe/bridge-core/providers/logger/console.js';
-import { makeDb } from '@cloud-spe/bridge-core/repo/db.js';
-import { runMigrations } from '@cloud-spe/bridge-core/repo/migrate.js';
+import { makeDb } from './repo/db.js';
+import { runMigrations } from './repo/migrate.js';
 import { registerAccountRoutes } from './runtime/http/account/routes.js';
 import { registerAdminConsoleStatic } from './runtime/http/admin/console/static.js';
 import { registerAdminRoutes } from './runtime/http/admin/routes.js';

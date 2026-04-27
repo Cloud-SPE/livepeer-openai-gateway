@@ -1,6 +1,6 @@
 import { and, asc, eq, gt } from 'drizzle-orm';
-import type { Db } from '@cloud-spe/bridge-core/repo/db.js';
-import { reservations } from '@cloud-spe/bridge-core/repo/schema.js';
+import type { Db } from '../repo/db.js';
+import { reservations } from '../repo/schema.js';
 
 export type ReservationRow = typeof reservations.$inferSelect;
 export type ReservationInsert = typeof reservations.$inferInsert;

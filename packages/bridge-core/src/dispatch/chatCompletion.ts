@@ -149,7 +149,7 @@ export async function dispatchChatCompletion(
       deps.tokenAudit?.countCompletionText(deps.body.model, completionText) ?? null;
 
     await usageRecordsRepo.insertUsageRecord(deps.db, {
-      customerId: deps.caller.id,
+      callerId: deps.caller.id,
       workId,
       model: deps.body.model,
       nodeUrl: node.url,

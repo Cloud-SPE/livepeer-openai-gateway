@@ -1,4 +1,4 @@
-import type { Db } from '@cloud-spe/bridge-core/repo/db.js';
+import type { Db } from '../../repo/db.js';
 import type { PayerDaemonClient } from '@cloud-spe/bridge-core/providers/payerDaemon.js';
 import type { RedisClient } from '@cloud-spe/bridge-core/providers/redis.js';
 import type { CircuitBreaker } from '@cloud-spe/bridge-core/service/routing/circuitBreaker.js';

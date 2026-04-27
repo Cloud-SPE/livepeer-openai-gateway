@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
-import { startTestPg, type TestPg } from '@cloud-spe/bridge-core/service/billing/testPg.js';
+import { startTestPg, type TestPg } from '../../../service/billing/testPg.js';
 import * as customersRepo from '../../../repo/customers.js';
 import * as apiKeysRepo from '../../../repo/apiKeys.js';
 import * as topupsRepo from '../../../repo/topups.js';
@@ -22,7 +22,7 @@ afterAll(async () => {
 });
 beforeEach(async () => {
   await pg.db.execute(
-    sql`TRUNCATE TABLE api_key, reservation, usage_record, topup, stripe_webhook_event, customer CASCADE`,
+    sql`TRUNCATE TABLE app.api_keys, app.reservations, engine.usage_records, app.topups, app.stripe_webhook_events, app.customers CASCADE`,
   );
 });
 
@@ -317,7 +317,7 @@ describe('GET /v1/account/usage', () => {
   it('returns rolled-up usage with totals', async () => {
     const { customer, plaintext } = await seedCustomerAndKey();
     await usageRecordsRepo.insertUsageRecord(pg.db, {
-      customerId: customer.id,
+      callerId: customer.id,
       workId: 'w-1',
       kind: 'chat',
       model: 'gpt-4o',
@@ -329,7 +329,7 @@ describe('GET /v1/account/usage', () => {
       status: 'success',
     });
     await usageRecordsRepo.insertUsageRecord(pg.db, {
-      customerId: customer.id,
+      callerId: customer.id,
       workId: 'w-2',
       kind: 'chat',
       model: 'gpt-4o-mini',
