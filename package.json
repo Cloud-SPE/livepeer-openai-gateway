@@ -7,6 +7,9 @@
   "engines": {
     "node": ">=20"
   },
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json && npm run build:ui",
     "build:ui": "cd bridge-ui && npm ci && npm run build:all",
