@@ -4,7 +4,7 @@ import type {
   AdminAuthResolver,
   AdminAuthResolverRequest,
   AdminAuthResolverResult,
-} from '@cloud-spe/bridge-core/interfaces/index.js';
+} from '@cloudspe/livepeer-gateway-core/interfaces/index.js';
 
 export interface AdminAuthResolverDeps {
   config: AdminConfig;

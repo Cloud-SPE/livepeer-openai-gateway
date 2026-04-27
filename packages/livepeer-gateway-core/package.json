@@ -1,5 +1,5 @@
 {
-  "name": "@cloud-spe/bridge-core",
+  "name": "@cloudspe/livepeer-gateway-core",
   "version": "0.1.0-dev",
   "private": true,
   "description": "OSS engine: registry-driven node selection + payment-daemon orchestration + dispatchers + Fastify adapter for an OpenAI-compatible bridge over Livepeer WorkerNodes.",

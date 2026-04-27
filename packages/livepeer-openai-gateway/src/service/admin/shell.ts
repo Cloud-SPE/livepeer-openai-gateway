@@ -2,7 +2,7 @@ import { desc, eq } from 'drizzle-orm';
 import type { Db } from '../../repo/db.js';
 import * as customersRepo from '../../repo/customers.js';
 import { topups } from '../../repo/schema.js';
-import { usageRecords } from '@cloud-spe/bridge-core/repo/schema.js';
+import { usageRecords } from '@cloudspe/livepeer-gateway-core/repo/schema.js';
 import { reverseTopup, setCustomerStatus } from '../billing/topups.js';
 import type { ReverseTopupResult } from '../billing/topups.js';
 

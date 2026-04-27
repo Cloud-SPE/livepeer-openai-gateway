@@ -1,12 +1,12 @@
 import type { Db } from '../../repo/db.js';
-import type { Recorder } from '@cloud-spe/bridge-core/providers/metrics/recorder.js';
+import type { Recorder } from '@cloudspe/livepeer-gateway-core/providers/metrics/recorder.js';
 import type {
   CostQuote,
   ReservationHandle,
   UsageReport,
   Wallet,
-} from '@cloud-spe/bridge-core/interfaces/index.js';
-import { UnknownCallerTierError } from '@cloud-spe/bridge-core/service/billing/errors.js';
+} from '@cloudspe/livepeer-gateway-core/interfaces/index.js';
+import { UnknownCallerTierError } from '@cloudspe/livepeer-gateway-core/service/billing/errors.js';
 import {
   commit,
   commitQuota,

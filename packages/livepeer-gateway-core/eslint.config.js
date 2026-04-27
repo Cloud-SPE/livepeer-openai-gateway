@@ -1,4 +1,4 @@
-// ESLint 9 flat config for @cloud-spe/bridge-core. Inherits the root
+// ESLint 9 flat config for @cloudspe/livepeer-gateway-core. Inherits the root
 // repository's lint plugin (livepeer-bridge) so the same layer rule and
 // other custom checks apply here as in the shell. Stage 4 of the
 // engine-extraction plan splits this into a standalone published plugin

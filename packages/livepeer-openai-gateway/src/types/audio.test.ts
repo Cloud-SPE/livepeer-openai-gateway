@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest';
 import {
   SPEECH_MAX_INPUT_CHARS,
   SpeechRequestSchema,
-} from '@cloud-spe/bridge-core/types/speech.js';
+} from '@cloudspe/livepeer-gateway-core/types/speech.js';
 import {
   TranscriptionsFormFieldsSchema,
   TranscriptionsResponseFormatSchema,
   TRANSCRIPTIONS_DURATION_HEADER,
   TRANSCRIPTIONS_MAX_FILE_BYTES,
-} from '@cloud-spe/bridge-core/types/transcriptions.js';
+} from '@cloudspe/livepeer-gateway-core/types/transcriptions.js';
 
 describe('SpeechRequestSchema', () => {
   it('accepts a minimal valid request', () => {

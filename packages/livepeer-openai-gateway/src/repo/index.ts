@@ -1,5 +1,5 @@
 // Shell repo barrel. Engine repos are reached directly via
-// `@cloud-spe/bridge-core/repo/<file>.js` subpaths.
+// `@cloudspe/livepeer-gateway-core/repo/<file>.js` subpaths.
 export * from './db.js';
 export * from './migrate.js';
 export * as customers from './customers.js';

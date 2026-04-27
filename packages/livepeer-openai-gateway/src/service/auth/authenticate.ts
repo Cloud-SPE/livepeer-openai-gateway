@@ -9,7 +9,7 @@ import {
   AccountSuspendedError,
   InvalidApiKeyError,
   MalformedAuthorizationError,
-} from '@cloud-spe/bridge-core/service/auth/errors.js';
+} from '@cloudspe/livepeer-gateway-core/service/auth/errors.js';
 import { API_KEY_PATTERN, hashApiKey } from './keys.js';
 
 export interface AuthenticatedCaller {

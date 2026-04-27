@@ -3,12 +3,12 @@ import { sql } from 'drizzle-orm';
 import { startTestPg, type TestPg } from '../../../service/billing/testPg.js';
 import * as customersRepo from '../../../repo/customers.js';
 import { creditTopup } from '../../../service/billing/topups.js';
-import { CircuitBreaker } from '@cloud-spe/bridge-core/service/routing/circuitBreaker.js';
-import { createNodeIndex } from '@cloud-spe/bridge-core/service/routing/nodeIndex.js';
-import { createFastifyServer } from '@cloud-spe/bridge-core/providers/http/fastify.js';
+import { CircuitBreaker } from '@cloudspe/livepeer-gateway-core/service/routing/circuitBreaker.js';
+import { createNodeIndex } from '@cloudspe/livepeer-gateway-core/service/routing/nodeIndex.js';
+import { createFastifyServer } from '@cloudspe/livepeer-gateway-core/providers/http/fastify.js';
 import { createAdminService } from '../../../service/admin/index.js';
 import { registerAdminRoutes } from './routes.js';
-import type { PayerDaemonClient } from '@cloud-spe/bridge-core/providers/payerDaemon.js';
+import type { PayerDaemonClient } from '@cloudspe/livepeer-gateway-core/providers/payerDaemon.js';
 
 let pg: TestPg;
 

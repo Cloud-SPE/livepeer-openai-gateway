@@ -2,8 +2,8 @@
 // success, non-zero on failure. Runs engine migrations first
 // (engine.* schema), then shell migrations (app.* schema) — same order
 // the in-process auto-migrate path uses when BRIDGE_AUTO_MIGRATE=true.
-import { loadDatabaseConfig } from '@cloud-spe/bridge-core/config/database.js';
-import { createPgDatabase } from '@cloud-spe/bridge-core/providers/database/pg/index.js';
+import { loadDatabaseConfig } from '@cloudspe/livepeer-gateway-core/config/database.js';
+import { createPgDatabase } from '@cloudspe/livepeer-gateway-core/providers/database/pg/index.js';
 import { makeDb } from '../repo/db.js';
 import { runMigrations } from '../repo/migrate.js';
 

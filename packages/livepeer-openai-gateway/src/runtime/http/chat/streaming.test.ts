@@ -11,26 +11,26 @@ import * as customersRepo from '../../../repo/customers.js';
 import { createAuthService, issueKey } from '../../../service/auth/index.js';
 import { createAuthResolver } from '../../../service/auth/authResolver.js';
 import { createPrepaidQuotaWallet } from '../../../service/billing/wallet.js';
-import { createFakeServiceRegistry } from '@cloud-spe/bridge-core/providers/serviceRegistry/fake.js';
-import { createQuoteRefresher } from '@cloud-spe/bridge-core/service/routing/quoteRefresher.js';
-import { CircuitBreaker } from '@cloud-spe/bridge-core/service/routing/circuitBreaker.js';
-import { QuoteCache } from '@cloud-spe/bridge-core/service/routing/quoteCache.js';
-import { ManualScheduler } from '@cloud-spe/bridge-core/service/routing/scheduler.js';
-import { createFetchNodeClient } from '@cloud-spe/bridge-core/providers/nodeClient/fetch.js';
+import { createFakeServiceRegistry } from '@cloudspe/livepeer-gateway-core/providers/serviceRegistry/fake.js';
+import { createQuoteRefresher } from '@cloudspe/livepeer-gateway-core/service/routing/quoteRefresher.js';
+import { CircuitBreaker } from '@cloudspe/livepeer-gateway-core/service/routing/circuitBreaker.js';
+import { QuoteCache } from '@cloudspe/livepeer-gateway-core/service/routing/quoteCache.js';
+import { ManualScheduler } from '@cloudspe/livepeer-gateway-core/service/routing/scheduler.js';
+import { createFetchNodeClient } from '@cloudspe/livepeer-gateway-core/providers/nodeClient/fetch.js';
 import {
   TEST_BRIDGE_ETH,
   fakeHealthResponse,
   fakeQuoteResponse,
   fakeQuotesResponse,
-} from '@cloud-spe/bridge-core/providers/nodeClient/testFakes.js';
-import { createFastifyServer } from '@cloud-spe/bridge-core/providers/http/fastify.js';
-import { createGrpcPayerDaemonClient } from '@cloud-spe/bridge-core/providers/payerDaemon/grpc.js';
-import { PayerDaemonService } from '@cloud-spe/bridge-core/providers/payerDaemon/gen/livepeer/payments/v1/payer_daemon.js';
-import { bigintToBigEndianBytes } from '@cloud-spe/bridge-core/providers/payerDaemon/convert.js';
-import { createPaymentsService } from '@cloud-spe/bridge-core/service/payments/createPayment.js';
-import { createSessionCache } from '@cloud-spe/bridge-core/service/payments/sessions.js';
-import { defaultPricingConfig } from '@cloud-spe/bridge-core/config/pricing.js';
-import { registerChatCompletionsRoute } from '@cloud-spe/bridge-core/runtime/http/chat/completions.js';
+} from '@cloudspe/livepeer-gateway-core/providers/nodeClient/testFakes.js';
+import { createFastifyServer } from '@cloudspe/livepeer-gateway-core/providers/http/fastify.js';
+import { createGrpcPayerDaemonClient } from '@cloudspe/livepeer-gateway-core/providers/payerDaemon/grpc.js';
+import { PayerDaemonService } from '@cloudspe/livepeer-gateway-core/providers/payerDaemon/gen/livepeer/payments/v1/payer_daemon.js';
+import { bigintToBigEndianBytes } from '@cloudspe/livepeer-gateway-core/providers/payerDaemon/convert.js';
+import { createPaymentsService } from '@cloudspe/livepeer-gateway-core/service/payments/createPayment.js';
+import { createSessionCache } from '@cloudspe/livepeer-gateway-core/service/payments/sessions.js';
+import { defaultPricingConfig } from '@cloudspe/livepeer-gateway-core/config/pricing.js';
+import { registerChatCompletionsRoute } from '@cloudspe/livepeer-gateway-core/runtime/http/chat/completions.js';
 
 let pg: TestPg;
 

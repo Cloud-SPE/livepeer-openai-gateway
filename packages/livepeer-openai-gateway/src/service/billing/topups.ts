@@ -3,8 +3,8 @@ import type { Db } from '../../repo/db.js';
 import * as customersRepo from '../../repo/customers.js';
 import * as topupsRepo from '../../repo/topups.js';
 import { topups, customers } from '../../repo/schema.js';
-import { OUTCOME_OK, type Recorder } from '@cloud-spe/bridge-core/providers/metrics/recorder.js';
-import { CustomerNotFoundError } from '@cloud-spe/bridge-core/service/billing/errors.js';
+import { OUTCOME_OK, type Recorder } from '@cloudspe/livepeer-gateway-core/providers/metrics/recorder.js';
+import { CustomerNotFoundError } from '@cloudspe/livepeer-gateway-core/service/billing/errors.js';
 
 export interface CreditTopupInput {
   customerId: string;

@@ -3,7 +3,7 @@ import { createHmac } from 'node:crypto';
 import { sql } from 'drizzle-orm';
 import { startTestPg, type TestPg } from '../../../service/billing/testPg.js';
 import * as customersRepo from '../../../repo/customers.js';
-import { createFastifyServer } from '@cloud-spe/bridge-core/providers/http/fastify.js';
+import { createFastifyServer } from '@cloudspe/livepeer-gateway-core/providers/http/fastify.js';
 import { registerStripeWebhookRoute } from './webhook.js';
 import type { StripeClient, StripeEventMinimal } from '../../../providers/stripe.js';
 

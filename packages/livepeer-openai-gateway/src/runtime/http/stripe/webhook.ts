@@ -8,7 +8,7 @@ import {
   OUTCOME_OK,
   type OkErrorOutcome,
   type Recorder,
-} from '@cloud-spe/bridge-core/providers/metrics/recorder.js';
+} from '@cloudspe/livepeer-gateway-core/providers/metrics/recorder.js';
 
 export interface WebhookRouteDeps {
   db: Db;

@@ -1,9 +1,9 @@
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
-import { createPgDatabase } from '@cloud-spe/bridge-core/providers/database/pg/index.js';
+import { createPgDatabase } from '@cloudspe/livepeer-gateway-core/providers/database/pg/index.js';
 import type {
   Database,
   DatabaseConfig,
-} from '@cloud-spe/bridge-core/providers/database.js';
+} from '@cloudspe/livepeer-gateway-core/providers/database.js';
 import { makeDb, type Db } from '../../repo/db.js';
 import { runMigrations } from '../../repo/migrate.js';
 

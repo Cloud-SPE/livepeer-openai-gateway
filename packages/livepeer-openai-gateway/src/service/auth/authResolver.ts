@@ -2,9 +2,9 @@ import type {
   AuthResolver,
   AuthResolverRequest,
   Caller,
-} from '@cloud-spe/bridge-core/interfaces/index.js';
+} from '@cloudspe/livepeer-gateway-core/interfaces/index.js';
 import type { AuthenticatedCaller, AuthService } from './authenticate.js';
-import { AuthError } from '@cloud-spe/bridge-core/service/auth/errors.js';
+import { AuthError } from '@cloudspe/livepeer-gateway-core/service/auth/errors.js';
 
 export interface AuthResolverDeps {
   authService: AuthService;

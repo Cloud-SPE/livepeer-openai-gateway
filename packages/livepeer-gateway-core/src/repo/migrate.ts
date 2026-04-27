@@ -5,7 +5,7 @@ import { sql } from 'drizzle-orm';
 import type { Db } from './db.js';
 
 // Engine migrations live alongside the package source: walk up from
-// src/repo/migrate.ts → packages/bridge-core/migrations/. The default is
+// src/repo/migrate.ts → packages/livepeer-gateway-core/migrations/. The default is
 // override-able so consuming packages (e.g. shell) can run their own
 // migrations dir through the same runner.
 const DEFAULT_ENGINE_MIGRATIONS = path.resolve(

@@ -2,13 +2,14 @@
 
 # ------------------------------------------------------------------------------
 # deps: install all workspace deps (prod + dev) for the build stage. The root
-# package.json declares packages/* as workspaces; npm ci hoists @cloud-spe/
-# bridge-core + livepeer-openai-gateway into the shared node_modules.
+# package.json declares packages/* as workspaces; npm ci hoists
+# @cloudspe/livepeer-gateway-core + livepeer-openai-gateway into the
+# shared node_modules.
 # ------------------------------------------------------------------------------
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-COPY packages/bridge-core/package.json ./packages/bridge-core/
+COPY packages/livepeer-gateway-core/package.json ./packages/livepeer-gateway-core/
 COPY packages/livepeer-openai-gateway/package.json ./packages/livepeer-openai-gateway/
 RUN npm ci --ignore-scripts
 
@@ -46,16 +47,16 @@ RUN npm prune --omit=dev --workspaces --include-workspace-root
 # runtime: distroless Node 20. Non-root by default. No shell.
 #
 # The composition root lives in livepeer-openai-gateway; main.js imports
-# @cloud-spe/bridge-core via the workspace symlink in node_modules/.
+# @cloudspe/livepeer-gateway-core via the workspace symlink in node_modules/.
 # ------------------------------------------------------------------------------
 FROM gcr.io/distroless/nodejs20-debian12 AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./package.json
-COPY --from=build /app/packages/bridge-core/package.json ./packages/bridge-core/package.json
-COPY --from=build /app/packages/bridge-core/dist ./packages/bridge-core/dist
-COPY --from=build /app/packages/bridge-core/migrations ./packages/bridge-core/migrations
+COPY --from=build /app/packages/livepeer-gateway-core/package.json ./packages/livepeer-gateway-core/package.json
+COPY --from=build /app/packages/livepeer-gateway-core/dist ./packages/livepeer-gateway-core/dist
+COPY --from=build /app/packages/livepeer-gateway-core/migrations ./packages/livepeer-gateway-core/migrations
 COPY --from=build /app/packages/livepeer-openai-gateway/package.json ./packages/livepeer-openai-gateway/package.json
 COPY --from=build /app/packages/livepeer-openai-gateway/dist ./packages/livepeer-openai-gateway/dist
 COPY --from=build /app/packages/livepeer-openai-gateway/migrations ./packages/livepeer-openai-gateway/migrations

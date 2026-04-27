@@ -8,7 +8,7 @@ import { issueKey } from '../../../service/auth/keys.js';
 import * as adminAuditEventsRepo from '../../../repo/adminAuditEvents.js';
 import * as apiKeysRepo from '../../../repo/apiKeys.js';
 import * as customersRepo from '../../../repo/customers.js';
-import * as nodeHealthRepo from '@cloud-spe/bridge-core/repo/nodeHealth.js';
+import * as nodeHealthRepo from '@cloudspe/livepeer-gateway-core/repo/nodeHealth.js';
 import * as reservationsRepo from '../../../repo/reservations.js';
 import * as topupsRepo from '../../../repo/topups.js';
 

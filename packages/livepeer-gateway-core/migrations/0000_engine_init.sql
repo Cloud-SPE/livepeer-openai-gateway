@@ -1,4 +1,4 @@
--- @cloud-spe/bridge-core engine schema. Owns the node-pool view +
+-- @cloudspe/livepeer-gateway-core engine schema. Owns the node-pool view +
 -- request-level usage records the engine writes per dispatch.
 --
 -- Per exec-plan 0026 step 7: fresh-install only, no data migration. The

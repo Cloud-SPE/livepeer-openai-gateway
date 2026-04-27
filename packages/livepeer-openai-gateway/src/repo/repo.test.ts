@@ -5,7 +5,7 @@ import * as apiKeysRepo from './apiKeys.js';
 import * as customersRepo from './customers.js';
 import * as reservationsRepo from './reservations.js';
 import * as topupsRepo from './topups.js';
-import * as usageRecordsRepo from '@cloud-spe/bridge-core/repo/usageRecords.js';
+import * as usageRecordsRepo from '@cloudspe/livepeer-gateway-core/repo/usageRecords.js';
 
 let pg: TestPg;
 

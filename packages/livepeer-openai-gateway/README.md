@@ -1,6 +1,6 @@
 # livepeer-openai-gateway
 
-Cloud-SPE shell over [`@cloud-spe/bridge-core`](../bridge-core). Owns:
+Cloud-SPE shell over [`@cloudspe/livepeer-gateway-core`](../livepeer-gateway-core). Owns:
 
 - USD billing ledger (prepaid balance + free-tier quota) — `service/billing`
 - Stripe top-ups + webhook handler — `providers/stripe`, `runtime/http/{billing,stripe}`
