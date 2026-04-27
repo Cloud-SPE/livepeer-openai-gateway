@@ -4,9 +4,9 @@ import { startTestPg, type TestPg } from '../../../service/billing/testPg.js';
 import * as customersRepo from '../../../repo/customers.js';
 import { createAuthService, issueKey } from '../../../service/auth/index.js';
 import { createAuthResolver } from '../../../service/auth/authResolver.js';
-import { createFastifyServer } from '@cloudspe/livepeer-gateway-core/providers/http/fastify.js';
+import { createFastifyServer } from '@cloudspe/livepeer-openai-gateway-core/providers/http/fastify.js';
 import type { AuthenticatedCaller } from '../../../service/auth/authenticate.js';
-import { authPreHandler } from '@cloudspe/livepeer-gateway-core/runtime/http/middleware/auth.js';
+import { authPreHandler } from '@cloudspe/livepeer-openai-gateway-core/runtime/http/middleware/auth.js';
 
 let pg: TestPg;
 const pepper = 'pepper-for-http-tests-123';

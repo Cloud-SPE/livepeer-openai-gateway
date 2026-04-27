@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { runMigrations as runEngineMigrations } from '@cloudspe/livepeer-gateway-core/repo/migrate.js';
+import { runMigrations as runEngineMigrations } from '@cloudspe/livepeer-openai-gateway-core/repo/migrate.js';
 import type { Db } from './db.js';
 
 // Shell migrations live alongside the package source: walk up from

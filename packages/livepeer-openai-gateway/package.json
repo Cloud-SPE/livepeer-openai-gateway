@@ -2,7 +2,7 @@
   "name": "livepeer-openai-gateway",
   "version": "0.0.0",
   "private": true,
-  "description": "Cloud-SPE shell over @cloudspe/livepeer-gateway-core: customer/billing/Stripe layer + admin/portal/console SPAs.",
+  "description": "Cloud-SPE shell over @cloudspe/livepeer-openai-gateway-core: customer/billing/Stripe layer + admin/portal/console SPAs.",
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -17,7 +17,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@cloudspe/livepeer-gateway-core": "*",
+    "@cloudspe/livepeer-openai-gateway-core": "^0.1.0",
     "@fastify/multipart": "^8.3.1",
     "@fastify/sensible": "^5.6.0",
     "@fastify/static": "^7.0.4",

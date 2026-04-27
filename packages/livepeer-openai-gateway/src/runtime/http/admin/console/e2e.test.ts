@@ -17,13 +17,13 @@ import { chromium, type Browser } from 'playwright';
 import { startTestPg, type TestPg } from '../../../../service/billing/testPg.js';
 import * as customersRepo from '../../../../repo/customers.js';
 import * as adminAuditEventsRepo from '../../../../repo/adminAuditEvents.js';
-import { CircuitBreaker } from '@cloudspe/livepeer-gateway-core/service/routing/circuitBreaker.js';
-import { createNodeIndex } from '@cloudspe/livepeer-gateway-core/service/routing/nodeIndex.js';
-import { createFastifyServer } from '@cloudspe/livepeer-gateway-core/providers/http/fastify.js';
+import { CircuitBreaker } from '@cloudspe/livepeer-openai-gateway-core/service/routing/circuitBreaker.js';
+import { createNodeIndex } from '@cloudspe/livepeer-openai-gateway-core/service/routing/nodeIndex.js';
+import { createFastifyServer } from '@cloudspe/livepeer-openai-gateway-core/providers/http/fastify.js';
 import { createAdminService } from '../../../../service/admin/index.js';
 import { registerAdminRoutes } from '../routes.js';
 import { registerAdminConsoleStatic } from './static.js';
-import type { PayerDaemonClient } from '@cloudspe/livepeer-gateway-core/providers/payerDaemon.js';
+import type { PayerDaemonClient } from '@cloudspe/livepeer-openai-gateway-core/providers/payerDaemon.js';
 
 const ADMIN_DIST = resolve(process.cwd(), 'bridge-ui/admin/dist');
 const HAS_DIST = existsSync(ADMIN_DIST);

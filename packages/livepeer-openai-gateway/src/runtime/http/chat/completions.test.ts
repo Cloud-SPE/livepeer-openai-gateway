@@ -12,26 +12,26 @@ import * as apiKeysRepo from '../../../repo/apiKeys.js';
 import { createAuthService, issueKey } from '../../../service/auth/index.js';
 import { createAuthResolver } from '../../../service/auth/authResolver.js';
 import { createPrepaidQuotaWallet } from '../../../service/billing/wallet.js';
-import { createFakeServiceRegistry } from '@cloudspe/livepeer-gateway-core/providers/serviceRegistry/fake.js';
-import { createQuoteRefresher } from '@cloudspe/livepeer-gateway-core/service/routing/quoteRefresher.js';
-import { CircuitBreaker } from '@cloudspe/livepeer-gateway-core/service/routing/circuitBreaker.js';
-import { QuoteCache } from '@cloudspe/livepeer-gateway-core/service/routing/quoteCache.js';
-import { ManualScheduler } from '@cloudspe/livepeer-gateway-core/service/routing/scheduler.js';
-import { createFetchNodeClient } from '@cloudspe/livepeer-gateway-core/providers/nodeClient/fetch.js';
+import { createFakeServiceRegistry } from '@cloudspe/livepeer-openai-gateway-core/providers/serviceRegistry/fake.js';
+import { createQuoteRefresher } from '@cloudspe/livepeer-openai-gateway-core/service/routing/quoteRefresher.js';
+import { CircuitBreaker } from '@cloudspe/livepeer-openai-gateway-core/service/routing/circuitBreaker.js';
+import { QuoteCache } from '@cloudspe/livepeer-openai-gateway-core/service/routing/quoteCache.js';
+import { ManualScheduler } from '@cloudspe/livepeer-openai-gateway-core/service/routing/scheduler.js';
+import { createFetchNodeClient } from '@cloudspe/livepeer-openai-gateway-core/providers/nodeClient/fetch.js';
 import {
   TEST_BRIDGE_ETH,
   fakeHealthResponse,
   fakeQuoteResponse,
   fakeQuotesResponse,
-} from '@cloudspe/livepeer-gateway-core/providers/nodeClient/testFakes.js';
-import { createFastifyServer } from '@cloudspe/livepeer-gateway-core/providers/http/fastify.js';
-import { createGrpcPayerDaemonClient } from '@cloudspe/livepeer-gateway-core/providers/payerDaemon/grpc.js';
-import { PayerDaemonService } from '@cloudspe/livepeer-gateway-core/providers/payerDaemon/gen/livepeer/payments/v1/payer_daemon.js';
-import { bigintToBigEndianBytes } from '@cloudspe/livepeer-gateway-core/providers/payerDaemon/convert.js';
-import { createPaymentsService } from '@cloudspe/livepeer-gateway-core/service/payments/createPayment.js';
-import { createSessionCache } from '@cloudspe/livepeer-gateway-core/service/payments/sessions.js';
-import { defaultPricingConfig } from '@cloudspe/livepeer-gateway-core/config/pricing.js';
-import { registerChatCompletionsRoute } from '@cloudspe/livepeer-gateway-core/runtime/http/chat/completions.js';
+} from '@cloudspe/livepeer-openai-gateway-core/providers/nodeClient/testFakes.js';
+import { createFastifyServer } from '@cloudspe/livepeer-openai-gateway-core/providers/http/fastify.js';
+import { createGrpcPayerDaemonClient } from '@cloudspe/livepeer-openai-gateway-core/providers/payerDaemon/grpc.js';
+import { PayerDaemonService } from '@cloudspe/livepeer-openai-gateway-core/providers/payerDaemon/gen/livepeer/payments/v1/payer_daemon.js';
+import { bigintToBigEndianBytes } from '@cloudspe/livepeer-openai-gateway-core/providers/payerDaemon/convert.js';
+import { createPaymentsService } from '@cloudspe/livepeer-openai-gateway-core/service/payments/createPayment.js';
+import { createSessionCache } from '@cloudspe/livepeer-openai-gateway-core/service/payments/sessions.js';
+import { defaultPricingConfig } from '@cloudspe/livepeer-openai-gateway-core/config/pricing.js';
+import { registerChatCompletionsRoute } from '@cloudspe/livepeer-openai-gateway-core/runtime/http/chat/completions.js';
 
 let pg: TestPg;
 

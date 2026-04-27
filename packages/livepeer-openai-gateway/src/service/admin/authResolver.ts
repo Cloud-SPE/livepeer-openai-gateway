@@ -4,7 +4,7 @@ import type {
   AdminAuthResolver,
   AdminAuthResolverRequest,
   AdminAuthResolverResult,
-} from '@cloudspe/livepeer-gateway-core/interfaces/index.js';
+} from '@cloudspe/livepeer-openai-gateway-core/interfaces/index.js';
 
 export interface AdminAuthResolverDeps {
   config: AdminConfig;

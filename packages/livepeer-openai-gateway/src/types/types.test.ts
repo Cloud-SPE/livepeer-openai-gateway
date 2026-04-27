@@ -4,22 +4,22 @@ import {
   EmbeddingsRateCardSchema,
   ImagesRateCardSchema,
   PricingTierSchema,
-} from '@cloudspe/livepeer-gateway-core/types/pricing.js';
-import { ChatCompletionRequestSchema } from '@cloudspe/livepeer-gateway-core/types/openai.js';
+} from '@cloudspe/livepeer-openai-gateway-core/types/pricing.js';
+import { ChatCompletionRequestSchema } from '@cloudspe/livepeer-openai-gateway-core/types/openai.js';
 import {
   EmbeddingsRequestSchema,
   EmbeddingsResponseSchema,
   normalizeEmbeddingsInput,
-} from '@cloudspe/livepeer-gateway-core/types/embeddings.js';
+} from '@cloudspe/livepeer-openai-gateway-core/types/embeddings.js';
 import {
   ImagesGenerationRequestSchema,
   ImagesResponseSchema,
-} from '@cloudspe/livepeer-gateway-core/types/images.js';
+} from '@cloudspe/livepeer-openai-gateway-core/types/images.js';
 import {
   ErrorCodeSchema,
   ErrorEnvelopeSchema,
-} from '@cloudspe/livepeer-gateway-core/types/error.js';
-import { WorkIdSchema } from '@cloudspe/livepeer-gateway-core/types/payment.js';
+} from '@cloudspe/livepeer-openai-gateway-core/types/error.js';
+import { WorkIdSchema } from '@cloudspe/livepeer-openai-gateway-core/types/payment.js';
 import { CustomerSchema, CustomerTierSchema } from './customer.js';
 
 describe('types/error', () => {

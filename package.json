@@ -2,7 +2,7 @@
   "name": "livepeer-openai-gateway-monorepo",
   "version": "0.0.0",
   "private": true,
-  "description": "Monorepo root for the @cloudspe/livepeer-gateway-core engine + livepeer-openai-gateway shell + bridge-ui SPAs.",
+  "description": "Monorepo root for the livepeer-openai-gateway shell (built on @cloudspe/livepeer-openai-gateway-core) + bridge-ui SPAs.",
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -18,25 +18,20 @@
     "start": "npm --workspace=livepeer-openai-gateway run start",
     "typecheck": "npm run typecheck --workspaces",
     "test": "npm run test --workspaces && npm run test:ui",
-    "test:nocov": "npm --workspace=@cloudspe/livepeer-gateway-core run test:watch -- run && npm --workspace=livepeer-openai-gateway run test:watch -- run",
+    "test:nocov": "npm --workspace=livepeer-openai-gateway run test:watch -- run",
     "test:ui": "cd bridge-ui && npm run test:all",
     "lint": "npm run lint --workspaces",
     "fmt": "prettier --write .",
     "fmt:check": "prettier --check .",
     "doc-lint": "node ./lint/doc-gardener/index.mjs",
-    "proto:check": "npm run proto:gen && git diff --exit-code -- packages/livepeer-gateway-core/src/providers/payerDaemon/gen/ packages/livepeer-gateway-core/src/providers/serviceRegistry/gen/",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --experimental-strip-types ./packages/livepeer-openai-gateway/src/scripts/migrate.ts",
-    "proto:gen": "npm run proto:gen:payer && npm run proto:gen:registry",
-    "proto:gen:payer": "rm -rf packages/livepeer-gateway-core/src/providers/payerDaemon/gen && mkdir -p packages/livepeer-gateway-core/src/providers/payerDaemon/gen && buf generate",
-    "proto:gen:registry": "rm -rf packages/livepeer-gateway-core/src/providers/serviceRegistry/gen && mkdir -p packages/livepeer-gateway-core/src/providers/serviceRegistry/gen && buf generate --template buf.gen.serviceRegistry.yaml",
     "docker:build": "docker build -t livepeer-openai-gateway:local .",
     "docker:tag": "scripts/docker-tag.sh",
     "docker:push": "scripts/docker-push.sh",
     "docker:release": "npm run docker:build && npm run docker:tag && npm run docker:push"
   },
   "devDependencies": {
-    "@bufbuild/buf": "^1.68.4",
     "@testcontainers/postgresql": "^10.28.0",
     "@types/node": "^20.19.39",
     "@types/pg": "^8.20.0",
@@ -47,7 +42,6 @@
     "playwright": "^1.49.0",
     "prettier": "^3.8.3",
     "testcontainers": "^10.28.0",
-    "ts-proto": "^2.11.6",
     "typescript": "^5.4.0",
     "typescript-eslint": "^8.59.0",
     "vitest": "^1.6.1"

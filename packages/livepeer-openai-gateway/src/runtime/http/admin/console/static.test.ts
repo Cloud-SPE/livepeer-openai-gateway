@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createFastifyServer } from '@cloudspe/livepeer-gateway-core/providers/http/fastify.js';
+import { createFastifyServer } from '@cloudspe/livepeer-openai-gateway-core/providers/http/fastify.js';
 import { registerAdminConsoleStatic } from './static.js';
 
 const closables: Array<() => Promise<void>> = [];

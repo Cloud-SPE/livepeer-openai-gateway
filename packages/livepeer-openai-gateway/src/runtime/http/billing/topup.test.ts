@@ -4,7 +4,7 @@ import { startTestPg, type TestPg } from '../../../service/billing/testPg.js';
 import * as customersRepo from '../../../repo/customers.js';
 import { createAuthService, issueKey } from '../../../service/auth/index.js';
 import { createAuthResolver } from '../../../service/auth/authResolver.js';
-import { createFastifyServer } from '@cloudspe/livepeer-gateway-core/providers/http/fastify.js';
+import { createFastifyServer } from '@cloudspe/livepeer-openai-gateway-core/providers/http/fastify.js';
 import { registerTopupRoute } from './topup.js';
 import type { StripeClient } from '../../../providers/stripe.js';
 

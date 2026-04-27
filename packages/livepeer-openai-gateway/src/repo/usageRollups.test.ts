@@ -2,8 +2,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
 import { startTestPg, type TestPg } from '../service/billing/testPg.js';
 import * as customersRepo from './customers.js';
-import * as usageRecordsRepo from '@cloudspe/livepeer-gateway-core/repo/usageRecords.js';
-import { rollup } from '@cloudspe/livepeer-gateway-core/repo/usageRollups.js';
+import * as usageRecordsRepo from '@cloudspe/livepeer-openai-gateway-core/repo/usageRecords.js';
+import { rollup } from '@cloudspe/livepeer-openai-gateway-core/repo/usageRollups.js';
 
 let pg: TestPg;
 

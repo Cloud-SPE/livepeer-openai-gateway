@@ -9,7 +9,7 @@ import {
   AccountSuspendedError,
   InvalidApiKeyError,
   MalformedAuthorizationError,
-} from '@cloudspe/livepeer-gateway-core/service/auth/errors.js';
+} from '@cloudspe/livepeer-openai-gateway-core/service/auth/errors.js';
 import { API_KEY_PATTERN, hashApiKey } from './keys.js';
 
 export interface AuthenticatedCaller {

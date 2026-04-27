@@ -1,8 +1,8 @@
 import type { Db } from '../../repo/db.js';
-import type { PayerDaemonClient } from '@cloudspe/livepeer-gateway-core/providers/payerDaemon.js';
-import type { RedisClient } from '@cloudspe/livepeer-gateway-core/providers/redis.js';
-import type { CircuitBreaker } from '@cloudspe/livepeer-gateway-core/service/routing/circuitBreaker.js';
-import type { NodeIndex } from '@cloudspe/livepeer-gateway-core/service/routing/nodeIndex.js';
+import type { PayerDaemonClient } from '@cloudspe/livepeer-openai-gateway-core/providers/payerDaemon.js';
+import type { RedisClient } from '@cloudspe/livepeer-openai-gateway-core/providers/redis.js';
+import type { CircuitBreaker } from '@cloudspe/livepeer-openai-gateway-core/service/routing/circuitBreaker.js';
+import type { NodeIndex } from '@cloudspe/livepeer-openai-gateway-core/service/routing/nodeIndex.js';
 import {
   createEngineAdminService,
   type EngineAdminService,
@@ -10,7 +10,7 @@ import {
   type NodeSummary,
   type NodeDetail,
   type EscrowReport,
-} from '@cloudspe/livepeer-gateway-core/service/admin/engine.js';
+} from '@cloudspe/livepeer-openai-gateway-core/service/admin/engine.js';
 import {
   createShellAdminService,
   type ShellAdminService,

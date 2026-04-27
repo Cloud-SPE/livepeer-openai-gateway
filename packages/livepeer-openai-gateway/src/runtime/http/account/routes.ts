@@ -2,17 +2,17 @@ import { z } from 'zod';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { Db } from '../../../repo/db.js';
 import type { AuthenticatedCaller } from '../../../service/auth/authenticate.js';
-import type { AuthResolver } from '@cloudspe/livepeer-gateway-core/interfaces/index.js';
+import type { AuthResolver } from '@cloudspe/livepeer-openai-gateway-core/interfaces/index.js';
 import type { AuthConfig } from '../../../config/auth.js';
-import type { RateLimitConfig } from '@cloudspe/livepeer-gateway-core/config/rateLimit.js';
-import { resolvePolicy } from '@cloudspe/livepeer-gateway-core/config/rateLimit.js';
+import type { RateLimitConfig } from '@cloudspe/livepeer-openai-gateway-core/config/rateLimit.js';
+import { resolvePolicy } from '@cloudspe/livepeer-openai-gateway-core/config/rateLimit.js';
 import { issueKey } from '../../../service/auth/keys.js';
 import * as apiKeysRepo from '../../../repo/apiKeys.js';
 import * as customersRepo from '../../../repo/customers.js';
 import * as topupsRepo from '../../../repo/topups.js';
-import * as usageRollups from '@cloudspe/livepeer-gateway-core/repo/usageRollups.js';
-import { authPreHandler } from '@cloudspe/livepeer-gateway-core/runtime/http/middleware/auth.js';
-import { toHttpError } from '@cloudspe/livepeer-gateway-core/runtime/http/errors.js';
+import * as usageRollups from '@cloudspe/livepeer-openai-gateway-core/repo/usageRollups.js';
+import { authPreHandler } from '@cloudspe/livepeer-openai-gateway-core/runtime/http/middleware/auth.js';
+import { toHttpError } from '@cloudspe/livepeer-openai-gateway-core/runtime/http/errors.js';
 
 export interface AccountRoutesDeps {
   db: Db;

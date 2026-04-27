@@ -1,31 +1,31 @@
 import { z } from 'zod';
 import { loadAdminConfig } from './config/admin.js';
 import { loadAuthConfig } from './config/auth.js';
-import { loadDatabaseConfig } from '@cloudspe/livepeer-gateway-core/config/database.js';
-import { loadMetricsConfig } from '@cloudspe/livepeer-gateway-core/config/metrics.js';
-import { loadPayerDaemonConfig } from '@cloudspe/livepeer-gateway-core/config/payerDaemon.js';
-import { loadPricingConfig } from '@cloudspe/livepeer-gateway-core/config/pricing.js';
-import { defaultRateLimitConfig } from '@cloudspe/livepeer-gateway-core/config/rateLimit.js';
-import { loadRedisConfig } from '@cloudspe/livepeer-gateway-core/config/redis.js';
-import { loadRoutingConfig } from '@cloudspe/livepeer-gateway-core/config/routing.js';
-import { loadServiceRegistryConfig } from '@cloudspe/livepeer-gateway-core/config/serviceRegistry.js';
+import { loadDatabaseConfig } from '@cloudspe/livepeer-openai-gateway-core/config/database.js';
+import { loadMetricsConfig } from '@cloudspe/livepeer-openai-gateway-core/config/metrics.js';
+import { loadPayerDaemonConfig } from '@cloudspe/livepeer-openai-gateway-core/config/payerDaemon.js';
+import { loadPricingConfig } from '@cloudspe/livepeer-openai-gateway-core/config/pricing.js';
+import { defaultRateLimitConfig } from '@cloudspe/livepeer-openai-gateway-core/config/rateLimit.js';
+import { loadRedisConfig } from '@cloudspe/livepeer-openai-gateway-core/config/redis.js';
+import { loadRoutingConfig } from '@cloudspe/livepeer-openai-gateway-core/config/routing.js';
+import { loadServiceRegistryConfig } from '@cloudspe/livepeer-openai-gateway-core/config/serviceRegistry.js';
 import { loadStripeConfig } from './config/stripe.js';
-import { knownEncodings } from '@cloudspe/livepeer-gateway-core/config/tokenizer.js';
-import { createPgDatabase } from '@cloudspe/livepeer-gateway-core/providers/database/pg/index.js';
-import { createFastifyServer } from '@cloudspe/livepeer-gateway-core/providers/http/fastify.js';
-import { NoopRecorder } from '@cloudspe/livepeer-gateway-core/providers/metrics/noop.js';
-import { PrometheusRecorder } from '@cloudspe/livepeer-gateway-core/providers/metrics/prometheus.js';
-import type { Recorder } from '@cloudspe/livepeer-gateway-core/providers/metrics/recorder.js';
-import { withMetrics as withNodeClientMetrics } from '@cloudspe/livepeer-gateway-core/providers/nodeClient/metered.js';
-import { withMetrics as withPayerDaemonMetrics } from '@cloudspe/livepeer-gateway-core/providers/payerDaemon/metered.js';
+import { knownEncodings } from '@cloudspe/livepeer-openai-gateway-core/config/tokenizer.js';
+import { createPgDatabase } from '@cloudspe/livepeer-openai-gateway-core/providers/database/pg/index.js';
+import { createFastifyServer } from '@cloudspe/livepeer-openai-gateway-core/providers/http/fastify.js';
+import { NoopRecorder } from '@cloudspe/livepeer-openai-gateway-core/providers/metrics/noop.js';
+import { PrometheusRecorder } from '@cloudspe/livepeer-openai-gateway-core/providers/metrics/prometheus.js';
+import type { Recorder } from '@cloudspe/livepeer-openai-gateway-core/providers/metrics/recorder.js';
+import { withMetrics as withNodeClientMetrics } from '@cloudspe/livepeer-openai-gateway-core/providers/nodeClient/metered.js';
+import { withMetrics as withPayerDaemonMetrics } from '@cloudspe/livepeer-openai-gateway-core/providers/payerDaemon/metered.js';
 import { withMetrics as withStripeMetrics } from './providers/stripe/metered.js';
-import { createFetchNodeClient } from '@cloudspe/livepeer-gateway-core/providers/nodeClient/fetch.js';
-import { createGrpcPayerDaemonClient } from '@cloudspe/livepeer-gateway-core/providers/payerDaemon/grpc.js';
-import { createIoRedisClient } from '@cloudspe/livepeer-gateway-core/providers/redis/ioredis.js';
-import { createGrpcServiceRegistryClient } from '@cloudspe/livepeer-gateway-core/providers/serviceRegistry/grpc.js';
+import { createFetchNodeClient } from '@cloudspe/livepeer-openai-gateway-core/providers/nodeClient/fetch.js';
+import { createGrpcPayerDaemonClient } from '@cloudspe/livepeer-openai-gateway-core/providers/payerDaemon/grpc.js';
+import { createIoRedisClient } from '@cloudspe/livepeer-openai-gateway-core/providers/redis/ioredis.js';
+import { createGrpcServiceRegistryClient } from '@cloudspe/livepeer-openai-gateway-core/providers/serviceRegistry/grpc.js';
 import { createSdkStripeClient } from './providers/stripe/sdk.js';
-import { createTiktokenProvider } from '@cloudspe/livepeer-gateway-core/providers/tokenizer/tiktoken.js';
-import { createConsoleLogger } from '@cloudspe/livepeer-gateway-core/providers/logger/console.js';
+import { createTiktokenProvider } from '@cloudspe/livepeer-openai-gateway-core/providers/tokenizer/tiktoken.js';
+import { createConsoleLogger } from '@cloudspe/livepeer-openai-gateway-core/providers/logger/console.js';
 import { makeDb } from './repo/db.js';
 import { runMigrations } from './repo/migrate.js';
 import { registerAccountRoutes } from './runtime/http/account/routes.js';
@@ -33,32 +33,32 @@ import { registerAdminConsoleStatic } from './runtime/http/admin/console/static.
 import { registerAdminRoutes } from './runtime/http/admin/routes.js';
 import { registerTopupRoute } from './runtime/http/billing/topup.js';
 import { registerPortalStatic } from './runtime/http/portal/static.js';
-import { registerChatCompletionsRoute } from '@cloudspe/livepeer-gateway-core/runtime/http/chat/completions.js';
-import { registerEmbeddingsRoute } from '@cloudspe/livepeer-gateway-core/runtime/http/embeddings/index.js';
-import { registerImagesGenerationsRoute } from '@cloudspe/livepeer-gateway-core/runtime/http/images/generations.js';
-import { registerSpeechRoute } from '@cloudspe/livepeer-gateway-core/runtime/http/audio/speech.js';
-import { registerTranscriptionsRoute } from '@cloudspe/livepeer-gateway-core/runtime/http/audio/transcriptions.js';
-import { registerHealthzRoute } from '@cloudspe/livepeer-gateway-core/runtime/http/healthz.js';
+import { registerChatCompletionsRoute } from '@cloudspe/livepeer-openai-gateway-core/runtime/http/chat/completions.js';
+import { registerEmbeddingsRoute } from '@cloudspe/livepeer-openai-gateway-core/runtime/http/embeddings/index.js';
+import { registerImagesGenerationsRoute } from '@cloudspe/livepeer-openai-gateway-core/runtime/http/images/generations.js';
+import { registerSpeechRoute } from '@cloudspe/livepeer-openai-gateway-core/runtime/http/audio/speech.js';
+import { registerTranscriptionsRoute } from '@cloudspe/livepeer-openai-gateway-core/runtime/http/audio/transcriptions.js';
+import { registerHealthzRoute } from '@cloudspe/livepeer-openai-gateway-core/runtime/http/healthz.js';
 import { registerStripeWebhookRoute } from './runtime/http/stripe/webhook.js';
-import { metricsHook } from '@cloudspe/livepeer-gateway-core/runtime/http/metricsHook.js';
-import { createMetricsServer } from '@cloudspe/livepeer-gateway-core/runtime/metrics/server.js';
+import { metricsHook } from '@cloudspe/livepeer-openai-gateway-core/runtime/http/metricsHook.js';
+import { createMetricsServer } from '@cloudspe/livepeer-openai-gateway-core/runtime/metrics/server.js';
 import { createAdminService } from './service/admin/index.js';
 import { createAuthService } from './service/auth/index.js';
 import { createAuthResolver } from './service/auth/authResolver.js';
-import { createBasicAdminAuthResolver } from '@cloudspe/livepeer-gateway-core/service/admin/basicAuthResolver.js';
-import { createEngineAdminService } from '@cloudspe/livepeer-gateway-core/service/admin/engine.js';
-import { registerOperatorDashboard } from '@cloudspe/livepeer-gateway-core/dashboard/index.js';
+import { createBasicAdminAuthResolver } from '@cloudspe/livepeer-openai-gateway-core/service/admin/basicAuthResolver.js';
+import { createEngineAdminService } from '@cloudspe/livepeer-openai-gateway-core/service/admin/engine.js';
+import { registerOperatorDashboard } from '@cloudspe/livepeer-openai-gateway-core/dashboard/index.js';
 import { createPrepaidQuotaWallet } from './service/billing/wallet.js';
-import { createMetricsSampler } from '@cloudspe/livepeer-gateway-core/service/metrics/sampler.js';
-import { createPaymentsService } from '@cloudspe/livepeer-gateway-core/service/payments/createPayment.js';
-import { createSessionCache } from '@cloudspe/livepeer-gateway-core/service/payments/sessions.js';
-import { CircuitBreaker } from '@cloudspe/livepeer-gateway-core/service/routing/circuitBreaker.js';
-import { createNodeIndex } from '@cloudspe/livepeer-gateway-core/service/routing/nodeIndex.js';
-import { QuoteCache } from '@cloudspe/livepeer-gateway-core/service/routing/quoteCache.js';
-import { createQuoteRefresher } from '@cloudspe/livepeer-gateway-core/service/routing/quoteRefresher.js';
-import { realScheduler } from '@cloudspe/livepeer-gateway-core/service/routing/scheduler.js';
-import { createRateLimiter } from '@cloudspe/livepeer-gateway-core/service/rateLimit/index.js';
-import { createTokenAuditService } from '@cloudspe/livepeer-gateway-core/service/tokenAudit/index.js';
+import { createMetricsSampler } from '@cloudspe/livepeer-openai-gateway-core/service/metrics/sampler.js';
+import { createPaymentsService } from '@cloudspe/livepeer-openai-gateway-core/service/payments/createPayment.js';
+import { createSessionCache } from '@cloudspe/livepeer-openai-gateway-core/service/payments/sessions.js';
+import { CircuitBreaker } from '@cloudspe/livepeer-openai-gateway-core/service/routing/circuitBreaker.js';
+import { createNodeIndex } from '@cloudspe/livepeer-openai-gateway-core/service/routing/nodeIndex.js';
+import { QuoteCache } from '@cloudspe/livepeer-openai-gateway-core/service/routing/quoteCache.js';
+import { createQuoteRefresher } from '@cloudspe/livepeer-openai-gateway-core/service/routing/quoteRefresher.js';
+import { realScheduler } from '@cloudspe/livepeer-openai-gateway-core/service/routing/scheduler.js';
+import { createRateLimiter } from '@cloudspe/livepeer-openai-gateway-core/service/rateLimit/index.js';
+import { createTokenAuditService } from '@cloudspe/livepeer-openai-gateway-core/service/tokenAudit/index.js';
 
 const MainEnvSchema = z.object({
   HOST: z.string().default('0.0.0.0'),
@@ -199,7 +199,7 @@ async function main(): Promise<void> {
   // Recorder type alias here only declares the new surface — narrow back to
   // the concrete class via the dual interface. Phase 2 deletes the legacy
   // emissions; until then both surfaces stay live.
-  const recorderAsSink = recorder as unknown as import('@cloudspe/livepeer-gateway-core/providers/metrics.js').MetricsSink;
+  const recorderAsSink = recorder as unknown as import('@cloudspe/livepeer-openai-gateway-core/providers/metrics.js').MetricsSink;
   const tokenAudit = createTokenAuditService({ tokenizer, metrics: recorderAsSink, recorder });
   const adminService = createAdminService({
     db,

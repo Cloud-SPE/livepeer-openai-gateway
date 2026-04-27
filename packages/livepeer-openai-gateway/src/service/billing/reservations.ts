@@ -1,14 +1,14 @@
 import type { Db } from '../../repo/db.js';
 import * as customersRepo from '../../repo/customers.js';
 import * as reservationsRepo from '../../repo/reservations.js';
-import type { Recorder } from '@cloudspe/livepeer-gateway-core/providers/metrics/recorder.js';
+import type { Recorder } from '@cloudspe/livepeer-openai-gateway-core/providers/metrics/recorder.js';
 import {
   BalanceInsufficientError,
   CustomerNotFoundError,
   QuotaExceededError,
   ReservationNotOpenError,
   TierMismatchError,
-} from '@cloudspe/livepeer-gateway-core/service/billing/errors.js';
+} from '@cloudspe/livepeer-openai-gateway-core/service/billing/errors.js';
 
 export interface PrepaidReserveInput {
   customerId: string;

@@ -2,4 +2,4 @@
 // build off the SQL builder + locally-imported schema tables; the
 // underlying Drizzle handle is the same shape regardless of which
 // package's schema it ultimately touches.
-export { type Db, makeDb } from '@cloudspe/livepeer-gateway-core/repo/db.js';
+export { type Db, makeDb } from '@cloudspe/livepeer-openai-gateway-core/repo/db.js';
