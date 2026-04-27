@@ -1,0 +1,24 @@
+# payment-daemon sender-mode config — minimal-shell example.
+# Copy to payment-daemon-config.yaml in this directory and edit.
+#
+# Most operators pass these as CLI flags via compose.yaml's command
+# section instead of a config file. The compose.yaml in this directory
+# uses CLI flags (CHAIN_RPC env var); this file is here as a reference
+# for operators who prefer file-based config.
+#
+# Hot/cold split: --orch-address overrides the keystore-derived
+# address with a different orchestrator identity. Useful when the
+# signing key is hot but the ticket recipient should be a cold
+# address.
+
+mode: sender
+socket: /var/run/livepeer/payment.sock
+chain_rpc: https://arb1.arbitrum.io/rpc
+keystore_path: /etc/livepeer/keystore.json
+keystore_password_file: /etc/livepeer/keystore-password
+# orch_address: '0x...'                # optional: hot/cold split
+# expected_chain_id: 42161              # required for non-Arbitrum chains
+# ticketbroker_address: '0x...'         # required for non-Arbitrum chains
+# rounds_manager_address: '0x...'       # required for non-Arbitrum chains
+# bonding_manager_address: '0x...'      # required for non-Arbitrum chains
+log_level: info

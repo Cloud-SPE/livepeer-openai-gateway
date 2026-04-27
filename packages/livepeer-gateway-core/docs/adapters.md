@@ -62,15 +62,20 @@ import type {
   CostQuote,
   UsageReport,
   ReservationHandle,
-  Caller,
 } from '@cloudspe/livepeer-gateway-core/interfaces/index.js';
 
 interface Wallet {
-  reserve(caller: Caller, quote: CostQuote): Promise<ReservationHandle | null>;
-  commit(caller: Caller, handle: ReservationHandle, usage: UsageReport): Promise<void>;
-  refund(caller: Caller, handle: ReservationHandle, reason: string): Promise<void>;
+  reserve(callerId: string, quote: CostQuote): Promise<ReservationHandle | null>;
+  commit(handle: ReservationHandle, usage: UsageReport): Promise<void>;
+  refund(handle: ReservationHandle): Promise<void>;
 }
 ```
+
+The engine passes `callerId` (resolved from the AuthResolver) to
+`reserve` only — `commit` and `refund` operate on the
+`ReservationHandle` you returned. If your wallet needs caller
+identity at commit time, encode it into the handle (see the
+prepaid-USD example).
 
 ### Multi-unit cost
 
@@ -122,29 +127,28 @@ wallet is expected to:
 
 If the dispatcher throws before reaching `commit` (worker returns
 500, network timeout, payment failure), the engine calls `refund`
-with the original `ReservationHandle` and a reason string. The
-wallet should release the reservation and not record any spend.
+with the original `ReservationHandle`. The wallet should release
+the reservation and not record any spend.
 
-The `reason` field is for audit / debugging, not for control flow —
-treat it as opaque.
+`refund` is best-effort — if it throws, the engine swallows the
+error and surfaces the original failure to the caller. Don't rely
+on `refund` for invariants; treat it as a hint.
 
 ### Pattern: postpaid B2B
 
 ```ts
 const postpaidWallet: Wallet = {
-  async reserve() {
+  async reserve(_callerId, _quote) {
     return null; // no upfront authorization
   },
-  async commit(caller, _handle, usage) {
-    await db.insert('usage', {
-      callerId: caller.id,
-      cents: usage.cents.toString(),
-      tokens: usage.actualTokens,
-      model: usage.model,
-      committedAt: new Date(),
-    });
+  async commit(_handle, _usage) {
+    // Postpaid wallets typically pull callerId + workId from the
+    // request context (closure / request-scoped wallet instance)
+    // since reserve() returned null and the engine doesn't pass
+    // them on commit. Record the spend against the operator's
+    // ledger; the engine just confirmed actuals.
   },
-  async refund() {
+  async refund(_handle) {
     // null reservations don't need refunding
   },
 };
@@ -156,32 +160,37 @@ See `examples/wallets/postpaid.ts` for a runnable version.
 
 ```ts
 const prepaidWallet: Wallet = {
-  async reserve(caller, quote) {
-    const balance = await getBalance(caller.id);
+  async reserve(callerId, quote) {
+    const balance = await getBalance(callerId);
     if (balance < quote.cents) {
       throw new BalanceInsufficientError(balance, quote.cents);
     }
-    const handle = await db.insert('reservation', {
-      callerId: caller.id,
-      workId: quote.workId,
+    await db.insert('reservation', {
+      id: quote.workId,
+      callerId,
       cents: quote.cents.toString(),
       state: 'open',
     });
-    await debitBalance(caller.id, quote.cents);
-    return handle.id;
+    await debitBalance(callerId, quote.cents);
+    // Encode callerId into the handle so commit/refund can find it.
+    return { id: quote.workId };
   },
-  async commit(caller, handle, usage) {
-    const reservation = await loadReservation(handle as string);
-    const refundCents = reservation.cents - usage.cents;
+  async commit(handle, usage) {
+    const id = (handle as { id: string }).id;
+    const r = await loadReservation(id);
+    if (!r || r.state !== 'open') return;
+    const refundCents = r.cents - usage.cents;
     if (refundCents > 0n) {
-      await creditBalance(caller.id, refundCents);
+      await creditBalance(r.callerId, refundCents);
     }
-    await markCommitted(handle as string, usage.cents);
+    await markCommitted(id, usage.cents);
   },
-  async refund(caller, handle) {
-    const reservation = await loadReservation(handle as string);
-    await creditBalance(caller.id, reservation.cents);
-    await markRefunded(handle as string);
+  async refund(handle) {
+    const id = (handle as { id: string }).id;
+    const r = await loadReservation(id);
+    if (!r || r.state !== 'open') return;
+    await creditBalance(r.callerId, r.cents);
+    await markRefunded(id);
   },
 };
 ```
@@ -192,32 +201,36 @@ See `examples/wallets/prepaid-usd.ts`.
 
 ```ts
 const freeQuotaWallet: Wallet = {
-  async reserve(caller, quote) {
-    const remaining = await getRemainingTokens(caller.id);
+  async reserve(callerId, quote) {
+    const remaining = await getRemainingTokens(callerId);
     if (remaining < quote.estimatedTokens) {
       throw new QuotaExceededError(BigInt(remaining), BigInt(quote.estimatedTokens));
     }
-    const handle = await db.insert('reservation', {
-      callerId: caller.id,
-      workId: quote.workId,
+    await db.insert('reservation', {
+      id: quote.workId,
+      callerId,
       tokens: quote.estimatedTokens,
       state: 'open',
     });
-    await decrementTokens(caller.id, quote.estimatedTokens);
-    return handle.id;
+    await decrementTokens(callerId, quote.estimatedTokens);
+    return { id: quote.workId };
   },
-  async commit(caller, handle, usage) {
-    const reservation = await loadReservation(handle as string);
-    const refundTokens = reservation.tokens - usage.actualTokens;
+  async commit(handle, usage) {
+    const id = (handle as { id: string }).id;
+    const r = await loadReservation(id);
+    if (!r || r.state !== 'open') return;
+    const refundTokens = r.tokens - usage.actualTokens;
     if (refundTokens > 0) {
-      await incrementTokens(caller.id, refundTokens);
+      await incrementTokens(r.callerId, refundTokens);
     }
-    await markCommitted(handle as string, usage.actualTokens);
+    await markCommitted(id, usage.actualTokens);
   },
-  async refund(caller, handle) {
-    const reservation = await loadReservation(handle as string);
-    await incrementTokens(caller.id, reservation.tokens);
-    await markRefunded(handle as string);
+  async refund(handle) {
+    const id = (handle as { id: string }).id;
+    const r = await loadReservation(id);
+    if (!r || r.state !== 'open') return;
+    await incrementTokens(r.callerId, r.tokens);
+    await markRefunded(id);
   },
 };
 ```

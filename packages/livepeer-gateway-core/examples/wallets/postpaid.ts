@@ -7,7 +7,6 @@
 // See docs/adapters.md → "Pattern: postpaid B2B" for the framing.
 
 import type {
-  Caller,
   CostQuote,
   ReservationHandle,
   UsageReport,
@@ -30,17 +29,32 @@ export interface PostpaidWalletDeps {
 }
 
 export function createPostpaidWallet(deps: PostpaidWalletDeps): Wallet {
+  // Postpaid pattern needs the workId (the engine's idempotency key)
+  // at commit time so each reservation handle carries it forward.
+  // Store callerId + workId on the handle since reserve() returns
+  // null but commit() runs against the engine's reserved state.
+  const pending = new Map<string, { callerId: string; workId: string }>();
+
   return {
-    async reserve(_caller: Caller, _quote: CostQuote): Promise<ReservationHandle | null> {
-      // Postpaid accounts: no upfront authorization. The engine
-      // dispatches and calls commit() with actuals.
+    async reserve(_callerId: string, _quote: CostQuote): Promise<ReservationHandle | null> {
+      // Postpaid accounts: no upfront authorization. Engine dispatches
+      // and calls commit() with the actuals later.
       return null;
     },
 
-    async commit(caller: Caller, _handle: ReservationHandle, usage: UsageReport): Promise<void> {
+    async commit(_handle: ReservationHandle, usage: UsageReport): Promise<void> {
+      // The engine passed null from reserve(), so handle is null here.
+      // Postpaid wallets typically pull callerId + workId from the
+      // request context via a closure or a request-scoped wallet
+      // instance — not from the handle. This stub assumes it's
+      // accessible via `pending` (populated by an upstream hook in
+      // the operator's middleware).
+      const ctx = pending.values().next().value;
+      if (!ctx) return;
+      pending.delete(ctx.workId);
       await deps.store.recordUsage({
-        callerId: caller.id,
-        workId: '', // reservation never opened — engine doesn't pass quote.workId here
+        callerId: ctx.callerId,
+        workId: ctx.workId,
         cents: usage.cents,
         actualTokens: usage.actualTokens,
         model: usage.model,
@@ -48,7 +62,7 @@ export function createPostpaidWallet(deps: PostpaidWalletDeps): Wallet {
       });
     },
 
-    async refund(): Promise<void> {
+    async refund(_handle: ReservationHandle): Promise<void> {
       // null reservations don't need refunding — nothing was held.
     },
   };

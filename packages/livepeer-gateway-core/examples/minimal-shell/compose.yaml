@@ -1,0 +1,98 @@
+# docker-compose for the minimal-shell quickstart. Brings up:
+#   - postgres        (engine.usage_records insert)
+#   - redis           (rate-limit storage)
+#   - payment-daemon  (ticket creation, sender mode)
+#   - service-registry-daemon (node discovery, resolver mode)
+#   - minimal-shell   (this example app)
+#
+# Operator must populate:
+#   - service-registry-config.yaml (worker pool list)
+#   - payment-daemon-config.yaml   (keystore + RPC)
+#   - keystore.json + keystore-password
+#
+# Usage: docker compose up
+#        curl -sS http://localhost:8080/v1/chat/completions ...
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${PGUSER:-bridge}
+      POSTGRES_PASSWORD: ${PGPASSWORD:-bridge_dev_password}
+      POSTGRES_DB: ${PGDATABASE:-bridge}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', '${PGUSER:-bridge}']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  service-registry-daemon:
+    image: ${SERVICE_REGISTRY_IMAGE:-ghcr.io/livepeer-modules-project/service-registry-daemon:dev}
+    command:
+      - --mode=resolver
+      - --socket=/var/run/livepeer/service-registry.sock
+      - --config=/etc/livepeer/service-registry.yaml
+    volumes:
+      - ./service-registry-config.yaml:/etc/livepeer/service-registry.yaml:ro
+      - daemon-sockets:/var/run/livepeer
+
+  payment-daemon:
+    image: ${PAYMENT_DAEMON_IMAGE:-tztcloud/livepeer-payment-daemon:v0.8.10}
+    command:
+      - --mode=sender
+      - --socket=/var/run/livepeer/payment.sock
+      - --chain-rpc=${CHAIN_RPC:?set CHAIN_RPC (Arbitrum One RPC URL)}
+      - --keystore-path=/etc/livepeer/keystore.json
+      - --keystore-password-file=/etc/livepeer/keystore-password
+    volumes:
+      - ./keystore.json:/etc/livepeer/keystore.json:ro
+      - ./keystore-password:/etc/livepeer/keystore-password:ro
+      - daemon-sockets:/var/run/livepeer
+
+  minimal-shell:
+    image: node:20-alpine
+    working_dir: /app
+    command: ['node', '--experimental-strip-types', 'start.ts']
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      payment-daemon:
+        condition: service_started
+      service-registry-daemon:
+        condition: service_started
+    environment:
+      # Database
+      PGHOST: postgres
+      PGPORT: '5432'
+      PGUSER: ${PGUSER:-bridge}
+      PGPASSWORD: ${PGPASSWORD:-bridge_dev_password}
+      PGDATABASE: ${PGDATABASE:-bridge}
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+      # Daemon sockets
+      SERVICE_REGISTRY_SOCKET: /var/run/livepeer/service-registry.sock
+      PAYER_DAEMON_SOCKET: /var/run/livepeer/payment.sock
+      # Bridge ETH address (must match the payer-daemon's keystore)
+      BRIDGE_ETH_ADDRESS: ${BRIDGE_ETH_ADDRESS:?set BRIDGE_ETH_ADDRESS (0x-prefixed 40-hex)}
+    volumes:
+      - .:/app
+      - daemon-sockets:/var/run/livepeer
+    ports:
+      - '8080:8080'
+
+volumes:
+  pgdata:
+  daemon-sockets:

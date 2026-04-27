@@ -1,33 +1,131 @@
-# @cloudspe/livepeer-gateway-core
+# `@cloudspe/livepeer-gateway-core`
 
-OSS engine for an OpenAI-compatible gateway over Livepeer WorkerNodes.
-Surfaces:
+OpenAI-compatible request engine fronting Livepeer worker pools.
+Adapter-driven: bring your own billing, auth, rate-limit, logging,
+and admin auth. Ships an optional Fastify route adapter and a
+read-only operator dashboard.
 
-- `@cloudspe/livepeer-gateway-core/runtime/http/{chat,embeddings,images,audio,healthz,metricsHook,errors}` — Fastify route registers + middleware
-- `@cloudspe/livepeer-gateway-core/dispatch/*` — protocol-correct dispatchers wrapping NodeClient + Wallet + ServiceRegistry
-- `@cloudspe/livepeer-gateway-core/service/{routing,payments,pricing,tokenAudit,rateLimit,metrics}` — engine domains
-- `@cloudspe/livepeer-gateway-core/service/admin/{engine,basicAuthResolver}` — operator dashboard backend
-- `@cloudspe/livepeer-gateway-core/dashboard` — read-only operator dashboard (HTML, no UI build)
-- `@cloudspe/livepeer-gateway-core/providers/*` — DB, HTTP, metrics, Redis, tokenizer, payer-daemon gRPC, service-registry gRPC, NodeClient
-- `@cloudspe/livepeer-gateway-core/repo/*` — Drizzle schema (`engine.*` namespace) + repo helpers + migration runner
-- `@cloudspe/livepeer-gateway-core/interfaces` — adapter contracts (AuthResolver, AdminAuthResolver, Wallet, RateLimiter, Logger, Caller, NodeClient stubs)
-- `@cloudspe/livepeer-gateway-core/types/*` — Zod schemas for OpenAI request/response shapes, capabilities, payment, node, pricing, tier
+```
+┌─────────────────────────┐    ┌──────────────────────────────────────┐    ┌──────────────┐
+│ OpenAI client (curl /   │ →  │  livepeer-gateway-core (this engine) │ →  │ WorkerNodes  │
+│ openai-sdk / langchain) │    │  ─ auth → rate-limit → reserve →     │    │ (paid via    │
+└─────────────────────────┘    │    select node → call → commit       │    │  payment-    │
+                               │  ─ Fastify routes wire in            │    │  daemon)     │
+                               │  ─ adapters: Wallet, AuthResolver,   │    └──────────────┘
+                               │    RateLimiter, Logger,              │
+                               │    AdminAuthResolver                 │
+                               └──────────────────────────────────────┘
+```
 
-## Status
+## Quickstart
 
-`0.1.0-dev` — workspace-internal; consumed by
-[`livepeer-openai-gateway`](../livepeer-openai-gateway) only. Stage 4 of
-exec-plan 0026 carves this package into its own public Cloud-SPE repo
-and publishes 0.1.0 to npm.
+The fastest path to a running gateway is the bundled minimal-shell
+example. It uses `InMemoryWallet` + a no-op AuthResolver so there's
+no DB or identity provider to wire up.
 
-## Deployment
+```sh
+git clone https://github.com/Cloud-SPE/livepeer-gateway-core.git
+cd livepeer-gateway-core
+npm install
+cd examples/minimal-shell
+cp service-registry-config.example.yaml service-registry-config.yaml
+cp payment-daemon-config.example.yaml payment-daemon-config.yaml
+$EDITOR service-registry-config.yaml          # add your worker nodes
+$EDITOR payment-daemon-config.yaml            # add your keystore + RPC
+docker compose up
+# In another shell:
+curl -sS http://localhost:8080/v1/chat/completions \
+  -H 'authorization: Bearer demo' \
+  -H 'content-type: application/json' \
+  -d '{"model":"llama-3.3-70b","messages":[{"role":"user","content":"hi"}]}'
+```
 
-Both the **payment-daemon** and the **service-registry-daemon** must be
-running as sidecars before the engine starts. The compose file in the
-gateway repo wires them up; see `docs/operations/deployment.md` for the
-operator walkthrough.
+Full walkthrough in [`examples/minimal-shell/README.md`](examples/minimal-shell/README.md).
+
+## Adapters (you supply these)
+
+The engine commits to five operator-overridable adapters. Pick the
+ones that match your deployment; all five have working defaults
+shipped with the engine.
+
+| Adapter | Purpose | Default impl |
+|---------|---------|--------------|
+| `Wallet` | Billing/quota authority. Reserve before dispatch, commit on success, refund on failure. | `InMemoryWallet` (testing only) |
+| `AuthResolver` | HTTP `Authorization` header → generic `Caller`. | none — wire your own |
+| `RateLimiter` | Per-caller request gating (sliding window + concurrency). | Redis sliding-window |
+| `Logger` | Structured log sink. | `createConsoleLogger` |
+| `AdminAuthResolver` | Admin-token / basic-auth backing for the optional operator dashboard. | `createBasicAdminAuthResolver` |
+
+Long-form: [`docs/adapters.md`](docs/adapters.md). Three runnable
+Wallet stubs (postpaid B2B / prepaid USD / free-quota tokens) live
+in [`examples/wallets/`](examples/wallets/).
+
+## Ecosystem integration
+
+The engine **requires two sidecar daemons** to run:
+
+- **`livepeer-payment-daemon`** (sender mode) — creates probabilistic
+  micropayment tickets to compensate worker nodes. Repo:
+  [`livepeer-modules-project/livepeer-payment-library`](https://github.com/livepeer-modules-project/livepeer-payment-library).
+  Talks to the engine over a unix socket; the engine pins this
+  daemon's gRPC contract.
+- **`livepeer-service-registry-daemon`** (resolver mode) — answers
+  `Select` / `ListKnown` / `ResolveByAddress` for the WorkerNode
+  pool. Repo:
+  [`livepeer-modules-project/service-registry-daemon`](https://github.com/livepeer-modules-project/service-registry-daemon).
+  Same socket-based contract.
+
+The engine **does not** support a static-YAML node-pool fallback —
+running without the registry-daemon is unsupported. Both daemons
+are MIT-licensed.
+
+The minimal-shell example's `compose.yaml` brings up both daemons
+alongside the gateway process.
+
+`livepeer-modules-project/protocol-daemon` is **orthogonal** —
+orchestrator-side concern, not needed by gateway operators unless
+they also run an orchestrator.
+
+Cross-ecosystem metric naming + port allocation conventions live at
+[`livepeer-modules-project/livepeer-modules-conventions`](https://github.com/livepeer-modules-project/livepeer-modules-conventions).
+
+## Reference shell implementation
+
+[`Cloud-SPE/livepeer-openai-gateway`](https://github.com/Cloud-SPE/livepeer-openai-gateway)
+is a production-ready shell that wires `@cloudspe/livepeer-gateway-core`
+with prepaid USD billing (Postgres + Stripe top-ups), API-key auth,
+Redis-backed rate limiting, and admin + customer-portal SPAs. Read
+it as a worked example of how the adapter contracts compose under
+load.
+
+## Versioning
+
+**Pre-1.0 (`0.x`)**: breaking changes may land in any minor release.
+Every breaking change is documented in [`CHANGELOG.md`](CHANGELOG.md).
+Pin to a `^0.1.0`-style range and bump explicitly — don't
+auto-update.
+
+**Post-1.0**: strict [SemVer](https://semver.org/). 1.0 ships when
+the first external operator successfully runs in production on this
+engine and signs off on the adapter contracts.
+
+## Documentation map
+
+- [`docs/architecture.md`](docs/architecture.md) — engine internals:
+  layer stack, dispatcher pipeline, payment-daemon integration.
+- [`docs/adapters.md`](docs/adapters.md) — long-form adapter guide
+  with patterns for each of the five operator-overridable adapters.
+- [`docs/design-docs/`](docs/design-docs/) — focused design notes
+  (node lifecycle, payer integration, pricing model, streaming
+  semantics, token audit, retry policy, metrics, operator dashboard).
+- [`AGENTS.md`](AGENTS.md) — agent-first contributor guide.
+- [`DESIGN.md`](DESIGN.md) — what the engine is + isn't.
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — dev setup, test rules,
+  commit + PR conventions, the adapter-contract change ladder.
+- [`SECURITY.md`](SECURITY.md) — vulnerability reporting flow.
+- [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) — Contributor Covenant 2.1.
+- [`GOVERNANCE.md`](GOVERNANCE.md) — maintainers + decision rules.
 
 ## License
 
-To be set during stage-4 OSS readiness (exec-plan 0028). Apache-2.0
-candidate.
+[MIT](LICENSE) — Cloud-SPE contributors.
