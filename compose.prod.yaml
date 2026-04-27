@@ -128,7 +128,7 @@ services:
   bridge-migrate:
     image: ${BRIDGE_IMAGE:-tztcloud/livepeer-openai-gateway:v0.8.10}
     restart: 'no'
-    command: ['dist/scripts/migrate.js']
+    command: ['packages/livepeer-openai-gateway/dist/scripts/migrate.js']
     depends_on:
       postgres:
         condition: service_healthy
