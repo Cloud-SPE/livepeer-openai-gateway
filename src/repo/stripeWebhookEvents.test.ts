@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
-import { startTestPg, type TestPg } from '../service/billing/testPg.js';
+import { startTestPg, type TestPg } from '@cloud-spe/bridge-core/service/billing/testPg.js';
 import { insertIfNew } from './stripeWebhookEvents.js';
 
 let pg: TestPg;

@@ -1,4 +1,4 @@
-import type { CustomerTier } from '../../types/customer.js';
+import type { CustomerTier } from '../../types/tier.js';
 import type { NodeCapability } from '../../types/node.js';
 import type {
   NodeRef,

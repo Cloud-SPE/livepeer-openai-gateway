@@ -1,5 +1,5 @@
 import type { AuthConfig } from '../../config/auth.js';
-import type { Db } from '../../repo/db.js';
+import type { Db } from '@cloud-spe/bridge-core/repo/db.js';
 import * as apiKeysRepo from '../../repo/apiKeys.js';
 import type { ApiKeyRow } from '../../repo/apiKeys.js';
 import type { CustomerRow } from '../../repo/customers.js';
@@ -9,7 +9,7 @@ import {
   AccountSuspendedError,
   InvalidApiKeyError,
   MalformedAuthorizationError,
-} from './errors.js';
+} from '@cloud-spe/bridge-core/service/auth/errors.js';
 import { API_KEY_PATTERN, hashApiKey } from './keys.js';
 
 export interface AuthenticatedCaller {

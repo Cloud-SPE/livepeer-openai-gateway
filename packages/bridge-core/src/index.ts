@@ -1,8 +1,8 @@
 // @cloud-spe/bridge-core — public API barrel.
 //
-// Skeleton placeholder for stage-3 step 2 of exec-plan 0026. Step 3
-// moves the engine source from the root `src/` tree into this package
-// and populates these re-exports with concrete symbols (interfaces,
-// dispatchers, factories). Until then this file just keeps the package
-// tsc-buildable so the workspace wiring can be validated.
+// Shell consumers reach engine symbols via subpath imports
+// (`@cloud-spe/bridge-core/<subpath>`) rather than re-exporting everything
+// here. The root barrel is intentionally minimal — a comprehensive
+// re-export ladder is a step-4-stage cleanup once the shell package
+// finalizes its consumption pattern.
 export {};

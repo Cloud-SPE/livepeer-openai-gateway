@@ -1,5 +1,5 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
-import type { Db } from '../../repo/db.js';
+import type { Db } from '@cloud-spe/bridge-core/repo/db.js';
 import * as apiKeysRepo from '../../repo/apiKeys.js';
 
 export type EnvPrefix = 'live' | 'test';

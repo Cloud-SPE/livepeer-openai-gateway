@@ -1,14 +1,14 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
-import { startTestPg, type TestPg } from '../../../service/billing/testPg.js';
+import { startTestPg, type TestPg } from '@cloud-spe/bridge-core/service/billing/testPg.js';
 import * as customersRepo from '../../../repo/customers.js';
 import * as apiKeysRepo from '../../../repo/apiKeys.js';
 import * as topupsRepo from '../../../repo/topups.js';
-import * as usageRecordsRepo from '../../../repo/usageRecords.js';
+import * as usageRecordsRepo from '@cloud-spe/bridge-core/repo/usageRecords.js';
 import { createAuthService, issueKey } from '../../../service/auth/index.js';
 import { createAuthResolver } from '../../../service/auth/authResolver.js';
-import { defaultRateLimitConfig } from '../../../config/rateLimit.js';
-import { createFastifyServer } from '../../../providers/http/fastify.js';
+import { defaultRateLimitConfig } from '@cloud-spe/bridge-core/config/rateLimit.js';
+import { createFastifyServer } from '@cloud-spe/bridge-core/providers/http/fastify.js';
 import { registerAccountRoutes } from './routes.js';
 
 let pg: TestPg;

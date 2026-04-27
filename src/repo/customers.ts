@@ -1,6 +1,6 @@
 import { and, desc, eq, ilike, lt, or, sql } from 'drizzle-orm';
-import type { Db } from './db.js';
-import { customers } from './schema.js';
+import type { Db } from '@cloud-spe/bridge-core/repo/db.js';
+import { customers } from '@cloud-spe/bridge-core/repo/schema.js';
 
 export type CustomerRow = typeof customers.$inferSelect;
 export type CustomerInsert = typeof customers.$inferInsert;

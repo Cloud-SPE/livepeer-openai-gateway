@@ -1,14 +1,14 @@
-import type { Db } from '../../repo/db.js';
+import type { Db } from '@cloud-spe/bridge-core/repo/db.js';
 import * as customersRepo from '../../repo/customers.js';
 import * as reservationsRepo from '../../repo/reservations.js';
-import type { Recorder } from '../../providers/metrics/recorder.js';
+import type { Recorder } from '@cloud-spe/bridge-core/providers/metrics/recorder.js';
 import {
   BalanceInsufficientError,
   CustomerNotFoundError,
   QuotaExceededError,
   ReservationNotOpenError,
   TierMismatchError,
-} from './errors.js';
+} from '@cloud-spe/bridge-core/service/billing/errors.js';
 
 export interface PrepaidReserveInput {
   customerId: string;

@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
-import { startTestPg, type TestPg } from '../service/billing/testPg.js';
+import { startTestPg, type TestPg } from '@cloud-spe/bridge-core/service/billing/testPg.js';
 import * as customersRepo from './customers.js';
-import * as usageRecordsRepo from './usageRecords.js';
-import { rollup } from './usageRollups.js';
+import * as usageRecordsRepo from '@cloud-spe/bridge-core/repo/usageRecords.js';
+import { rollup } from '@cloud-spe/bridge-core/repo/usageRollups.js';
 
 let pg: TestPg;
 

@@ -2,7 +2,6 @@ import type { FastifyReply, FastifyRequest, preHandlerAsyncHookHandler } from 'f
 import type { RateLimiter } from '../../../service/rateLimit/index.js';
 import { RateLimitExceededError } from '../../../service/rateLimit/errors.js';
 import type { ErrorEnvelope } from '../../../types/error.js';
-import type { AuthenticatedCaller } from '../../../service/auth/authenticate.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -16,10 +15,9 @@ declare module 'fastify' {
 export function rateLimitPreHandler(limiter: RateLimiter): preHandlerAsyncHookHandler {
   return async (req: FastifyRequest, reply: FastifyReply): Promise<void> => {
     if (!req.caller) return;
-    const inner = req.caller.metadata as AuthenticatedCaller;
 
     try {
-      const result = await limiter.check(req.caller.id, inner.customer.rateLimitTier);
+      const result = await limiter.check(req.caller.id, req.caller.rateLimitTier);
       reply.header('x-ratelimit-limit-requests', String(result.headers.limitRequests));
       reply.header('x-ratelimit-remaining-requests', String(result.headers.remainingRequests));
       reply.header('x-ratelimit-reset-requests', String(result.headers.resetSeconds));

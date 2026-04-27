@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
-import type { Db } from './db.js';
-import { stripeWebhookEvents } from './schema.js';
+import type { Db } from '@cloud-spe/bridge-core/repo/db.js';
+import { stripeWebhookEvents } from '@cloud-spe/bridge-core/repo/schema.js';
 
 export type StripeWebhookEventRow = typeof stripeWebhookEvents.$inferSelect;
 

@@ -1,10 +1,10 @@
 import { z } from 'zod';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import type { AuthResolver } from '../../../interfaces/index.js';
+import type { AuthResolver } from '@cloud-spe/bridge-core/interfaces/index.js';
 import type { StripeClient } from '../../../providers/stripe.js';
 import type { StripeConfig } from '../../../config/stripe.js';
-import { authPreHandler } from '../middleware/auth.js';
-import { toHttpError } from '../errors.js';
+import { authPreHandler } from '@cloud-spe/bridge-core/runtime/http/middleware/auth.js';
+import { toHttpError } from '@cloud-spe/bridge-core/runtime/http/errors.js';
 
 const TopupRequestSchema = z.object({
   amount_usd_cents: z.number().int().positive(),

@@ -4,7 +4,7 @@ import type {
   AdminAuthResolver,
   AdminAuthResolverRequest,
   AdminAuthResolverResult,
-} from '../../interfaces/index.js';
+} from '@cloud-spe/bridge-core/interfaces/index.js';
 
 export interface AdminAuthResolverDeps {
   config: AdminConfig;

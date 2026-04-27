@@ -1,5 +1,5 @@
 import type { PricingConfig } from '../../config/pricing.js';
-import type { CustomerTier } from '../../types/customer.js';
+import type { CustomerTier } from '../../types/tier.js';
 import type { ChatCompletionRequest, Usage } from '../../types/openai.js';
 import type { ImageQuality, ImageSize, PricingTier } from '../../types/pricing.js';
 import {

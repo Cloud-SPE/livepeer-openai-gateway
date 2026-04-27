@@ -1,10 +1,10 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
-import { startTestPg, type TestPg } from '../../../service/billing/testPg.js';
+import { startTestPg, type TestPg } from '@cloud-spe/bridge-core/service/billing/testPg.js';
 import * as customersRepo from '../../../repo/customers.js';
 import { createAuthService, issueKey } from '../../../service/auth/index.js';
 import { createAuthResolver } from '../../../service/auth/authResolver.js';
-import { createFastifyServer } from '../../../providers/http/fastify.js';
+import { createFastifyServer } from '@cloud-spe/bridge-core/providers/http/fastify.js';
 import { registerTopupRoute } from './topup.js';
 import type { StripeClient } from '../../../providers/stripe.js';
 

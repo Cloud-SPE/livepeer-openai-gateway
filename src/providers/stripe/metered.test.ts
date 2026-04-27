@@ -3,7 +3,7 @@
    it satisfies the structural type, even when the body ignores them. */
 import { describe, expect, it } from 'vitest';
 import { withMetrics } from './metered.js';
-import { CounterRecorder } from '../metrics/testhelpers.js';
+import { CounterRecorder } from '@cloud-spe/bridge-core/providers/metrics/testhelpers.js';
 import type {
   CheckoutSessionInput,
   CheckoutSessionResult,

@@ -1,18 +1,18 @@
 import { z } from 'zod';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import type { Db } from '../../../repo/db.js';
+import type { Db } from '@cloud-spe/bridge-core/repo/db.js';
 import type { AuthenticatedCaller } from '../../../service/auth/authenticate.js';
-import type { AuthResolver } from '../../../interfaces/index.js';
+import type { AuthResolver } from '@cloud-spe/bridge-core/interfaces/index.js';
 import type { AuthConfig } from '../../../config/auth.js';
-import type { RateLimitConfig } from '../../../config/rateLimit.js';
-import { resolvePolicy } from '../../../config/rateLimit.js';
+import type { RateLimitConfig } from '@cloud-spe/bridge-core/config/rateLimit.js';
+import { resolvePolicy } from '@cloud-spe/bridge-core/config/rateLimit.js';
 import { issueKey } from '../../../service/auth/keys.js';
 import * as apiKeysRepo from '../../../repo/apiKeys.js';
 import * as customersRepo from '../../../repo/customers.js';
 import * as topupsRepo from '../../../repo/topups.js';
-import * as usageRollups from '../../../repo/usageRollups.js';
-import { authPreHandler } from '../middleware/auth.js';
-import { toHttpError } from '../errors.js';
+import * as usageRollups from '@cloud-spe/bridge-core/repo/usageRollups.js';
+import { authPreHandler } from '@cloud-spe/bridge-core/runtime/http/middleware/auth.js';
+import { toHttpError } from '@cloud-spe/bridge-core/runtime/http/errors.js';
 
 export interface AccountRoutesDeps {
   db: Db;

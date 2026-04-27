@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createFastifyServer } from '../../../providers/http/fastify.js';
+import { createFastifyServer } from '@cloud-spe/bridge-core/providers/http/fastify.js';
 import { registerPortalStatic } from './static.js';
 
 const closables: Array<() => Promise<void>> = [];

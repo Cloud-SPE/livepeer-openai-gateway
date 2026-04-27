@@ -1,6 +1,6 @@
 import { eq, and, desc, isNull } from 'drizzle-orm';
-import type { Db } from './db.js';
-import { apiKeys, customers } from './schema.js';
+import type { Db } from '@cloud-spe/bridge-core/repo/db.js';
+import { apiKeys, customers } from '@cloud-spe/bridge-core/repo/schema.js';
 import type { CustomerRow } from './customers.js';
 
 export type ApiKeyRow = typeof apiKeys.$inferSelect;

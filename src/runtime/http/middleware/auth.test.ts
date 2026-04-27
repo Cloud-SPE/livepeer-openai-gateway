@@ -1,12 +1,12 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
-import { startTestPg, type TestPg } from '../../../service/billing/testPg.js';
+import { startTestPg, type TestPg } from '@cloud-spe/bridge-core/service/billing/testPg.js';
 import * as customersRepo from '../../../repo/customers.js';
 import { createAuthService, issueKey } from '../../../service/auth/index.js';
 import { createAuthResolver } from '../../../service/auth/authResolver.js';
-import { createFastifyServer } from '../../../providers/http/fastify.js';
+import { createFastifyServer } from '@cloud-spe/bridge-core/providers/http/fastify.js';
 import type { AuthenticatedCaller } from '../../../service/auth/authenticate.js';
-import { authPreHandler } from './auth.js';
+import { authPreHandler } from '@cloud-spe/bridge-core/runtime/http/middleware/auth.js';
 
 let pg: TestPg;
 const pepper = 'pepper-for-http-tests-123';

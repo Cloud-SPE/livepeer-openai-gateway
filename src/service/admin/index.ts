@@ -1,8 +1,8 @@
-import type { Db } from '../../repo/db.js';
-import type { PayerDaemonClient } from '../../providers/payerDaemon.js';
-import type { RedisClient } from '../../providers/redis.js';
-import type { CircuitBreaker } from '../routing/circuitBreaker.js';
-import type { NodeIndex } from '../routing/nodeIndex.js';
+import type { Db } from '@cloud-spe/bridge-core/repo/db.js';
+import type { PayerDaemonClient } from '@cloud-spe/bridge-core/providers/payerDaemon.js';
+import type { RedisClient } from '@cloud-spe/bridge-core/providers/redis.js';
+import type { CircuitBreaker } from '@cloud-spe/bridge-core/service/routing/circuitBreaker.js';
+import type { NodeIndex } from '@cloud-spe/bridge-core/service/routing/nodeIndex.js';
 import {
   createEngineAdminService,
   type EngineAdminService,
@@ -10,7 +10,7 @@ import {
   type NodeSummary,
   type NodeDetail,
   type EscrowReport,
-} from './engine.js';
+} from '@cloud-spe/bridge-core/service/admin/engine.js';
 import {
   createShellAdminService,
   type ShellAdminService,

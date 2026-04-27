@@ -1,12 +1,12 @@
-import type { Db } from '../../repo/db.js';
-import type { Recorder } from '../../providers/metrics/recorder.js';
+import type { Db } from '@cloud-spe/bridge-core/repo/db.js';
+import type { Recorder } from '@cloud-spe/bridge-core/providers/metrics/recorder.js';
 import type {
   CostQuote,
   ReservationHandle,
   UsageReport,
   Wallet,
-} from '../../interfaces/index.js';
-import { UnknownCallerTierError } from './errors.js';
+} from '@cloud-spe/bridge-core/interfaces/index.js';
+import { UnknownCallerTierError } from '@cloud-spe/bridge-core/service/billing/errors.js';
 import {
   commit,
   commitQuota,

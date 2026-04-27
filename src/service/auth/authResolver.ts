@@ -2,9 +2,9 @@ import type {
   AuthResolver,
   AuthResolverRequest,
   Caller,
-} from '../../interfaces/index.js';
+} from '@cloud-spe/bridge-core/interfaces/index.js';
 import type { AuthenticatedCaller, AuthService } from './authenticate.js';
-import { AuthError } from './errors.js';
+import { AuthError } from '@cloud-spe/bridge-core/service/auth/errors.js';
 
 export interface AuthResolverDeps {
   authService: AuthService;
@@ -17,11 +17,12 @@ export interface AuthResolverDeps {
  * pre-handler translates to a 401 with `code: 'authentication_failed'`.
  *
  * Caller shape:
- *   - id   = customer.id
- *   - tier = customer.tier (billing tier: 'free' | 'prepaid')
- *   - metadata = { customer, apiKey } — shell-side consumers narrow via
- *     `caller.metadata as AuthenticatedCaller` to reach customer-specific
- *     fields not in the generic Caller (e.g. rateLimitTier, status).
+ *   - id             = customer.id
+ *   - tier           = customer.tier (billing tier: 'free' | 'prepaid')
+ *   - rateLimitTier  = customer.rateLimitTier (per-customer rate-limit class)
+ *   - metadata       = { customer, apiKey } — shell-side consumers narrow
+ *     via `caller.metadata as AuthenticatedCaller` to reach customer-only
+ *     fields the engine's Caller doesn't expose (e.g. status).
  *
  * Other (non-AuthError) errors propagate; they surface as 500 by Fastify's
  * default handler.
@@ -46,6 +47,7 @@ export function toCaller(inner: AuthenticatedCaller): Caller {
   return {
     id: inner.customer.id,
     tier: inner.customer.tier,
+    rateLimitTier: inner.customer.rateLimitTier,
     metadata: inner,
   };
 }

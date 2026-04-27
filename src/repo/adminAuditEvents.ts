@@ -1,6 +1,6 @@
 import { and, desc, eq, gte, ilike, lt } from 'drizzle-orm';
-import type { Db } from './db.js';
-import { adminAuditEvents } from './schema.js';
+import type { Db } from '@cloud-spe/bridge-core/repo/db.js';
+import { adminAuditEvents } from '@cloud-spe/bridge-core/repo/schema.js';
 
 export type AdminAuditEventRow = typeof adminAuditEvents.$inferSelect;
 export type AdminAuditEventInsert = typeof adminAuditEvents.$inferInsert;

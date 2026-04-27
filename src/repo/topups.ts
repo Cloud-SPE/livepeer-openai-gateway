@@ -1,6 +1,6 @@
 import { eq, and, desc, gte, lt } from 'drizzle-orm';
-import type { Db } from './db.js';
-import { topups } from './schema.js';
+import type { Db } from '@cloud-spe/bridge-core/repo/db.js';
+import { topups } from '@cloud-spe/bridge-core/repo/schema.js';
 
 export type TopupRow = typeof topups.$inferSelect;
 export type TopupInsert = typeof topups.$inferInsert;

@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { SPEECH_MAX_INPUT_CHARS, SpeechRequestSchema } from './speech.js';
+import {
+  SPEECH_MAX_INPUT_CHARS,
+  SpeechRequestSchema,
+} from '@cloud-spe/bridge-core/types/speech.js';
 import {
   TranscriptionsFormFieldsSchema,
   TranscriptionsResponseFormatSchema,
   TRANSCRIPTIONS_DURATION_HEADER,
   TRANSCRIPTIONS_MAX_FILE_BYTES,
-} from './transcriptions.js';
+} from '@cloud-spe/bridge-core/types/transcriptions.js';
 
 describe('SpeechRequestSchema', () => {
   it('accepts a minimal valid request', () => {

@@ -1,10 +1,10 @@
 import { eq, sql } from 'drizzle-orm';
-import type { Db } from '../../repo/db.js';
+import type { Db } from '@cloud-spe/bridge-core/repo/db.js';
 import * as customersRepo from '../../repo/customers.js';
 import * as topupsRepo from '../../repo/topups.js';
-import { topups, customers } from '../../repo/schema.js';
-import { OUTCOME_OK, type Recorder } from '../../providers/metrics/recorder.js';
-import { CustomerNotFoundError } from './errors.js';
+import { topups, customers } from '@cloud-spe/bridge-core/repo/schema.js';
+import { OUTCOME_OK, type Recorder } from '@cloud-spe/bridge-core/providers/metrics/recorder.js';
+import { CustomerNotFoundError } from '@cloud-spe/bridge-core/service/billing/errors.js';
 
 export interface CreditTopupInput {
   customerId: string;

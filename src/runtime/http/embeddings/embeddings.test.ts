@@ -6,31 +6,31 @@ import { sql } from 'drizzle-orm';
 import Fastify, { type FastifyInstance } from 'fastify';
 import OpenAI from 'openai';
 import { Server, ServerCredentials } from '@grpc/grpc-js';
-import { startTestPg, type TestPg } from '../../../service/billing/testPg.js';
+import { startTestPg, type TestPg } from '@cloud-spe/bridge-core/service/billing/testPg.js';
 import * as customersRepo from '../../../repo/customers.js';
 import { createAuthService, issueKey } from '../../../service/auth/index.js';
 import { createAuthResolver } from '../../../service/auth/authResolver.js';
 import { createPrepaidQuotaWallet } from '../../../service/billing/wallet.js';
-import { createFakeServiceRegistry } from '../../../providers/serviceRegistry/fake.js';
-import { createQuoteRefresher } from '../../../service/routing/quoteRefresher.js';
-import { CircuitBreaker } from '../../../service/routing/circuitBreaker.js';
-import { QuoteCache } from '../../../service/routing/quoteCache.js';
-import { ManualScheduler } from '../../../service/routing/scheduler.js';
-import { createFetchNodeClient } from '../../../providers/nodeClient/fetch.js';
+import { createFakeServiceRegistry } from '@cloud-spe/bridge-core/providers/serviceRegistry/fake.js';
+import { createQuoteRefresher } from '@cloud-spe/bridge-core/service/routing/quoteRefresher.js';
+import { CircuitBreaker } from '@cloud-spe/bridge-core/service/routing/circuitBreaker.js';
+import { QuoteCache } from '@cloud-spe/bridge-core/service/routing/quoteCache.js';
+import { ManualScheduler } from '@cloud-spe/bridge-core/service/routing/scheduler.js';
+import { createFetchNodeClient } from '@cloud-spe/bridge-core/providers/nodeClient/fetch.js';
 import {
   TEST_BRIDGE_ETH,
   fakeHealthResponse,
   fakeQuoteResponse,
   fakeQuotesResponse,
-} from '../../../providers/nodeClient/testFakes.js';
-import { createFastifyServer } from '../../../providers/http/fastify.js';
-import { createGrpcPayerDaemonClient } from '../../../providers/payerDaemon/grpc.js';
-import { PayerDaemonService } from '../../../providers/payerDaemon/gen/livepeer/payments/v1/payer_daemon.js';
-import { bigintToBigEndianBytes } from '../../../providers/payerDaemon/convert.js';
-import { createPaymentsService } from '../../../service/payments/createPayment.js';
-import { createSessionCache } from '../../../service/payments/sessions.js';
-import { defaultPricingConfig } from '../../../config/pricing.js';
-import { registerEmbeddingsRoute } from './index.js';
+} from '@cloud-spe/bridge-core/providers/nodeClient/testFakes.js';
+import { createFastifyServer } from '@cloud-spe/bridge-core/providers/http/fastify.js';
+import { createGrpcPayerDaemonClient } from '@cloud-spe/bridge-core/providers/payerDaemon/grpc.js';
+import { PayerDaemonService } from '@cloud-spe/bridge-core/providers/payerDaemon/gen/livepeer/payments/v1/payer_daemon.js';
+import { bigintToBigEndianBytes } from '@cloud-spe/bridge-core/providers/payerDaemon/convert.js';
+import { createPaymentsService } from '@cloud-spe/bridge-core/service/payments/createPayment.js';
+import { createSessionCache } from '@cloud-spe/bridge-core/service/payments/sessions.js';
+import { defaultPricingConfig } from '@cloud-spe/bridge-core/config/pricing.js';
+import { registerEmbeddingsRoute } from '@cloud-spe/bridge-core/runtime/http/embeddings/index.js';
 
 let pg: TestPg;
 

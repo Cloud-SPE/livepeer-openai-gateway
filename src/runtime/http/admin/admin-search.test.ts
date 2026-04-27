@@ -1,18 +1,18 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
-import { startTestPg, type TestPg } from '../../../service/billing/testPg.js';
+import { startTestPg, type TestPg } from '@cloud-spe/bridge-core/service/billing/testPg.js';
 import * as adminAuditEventsRepo from '../../../repo/adminAuditEvents.js';
 import * as apiKeysRepo from '../../../repo/apiKeys.js';
 import * as customersRepo from '../../../repo/customers.js';
-import * as nodeHealthRepo from '../../../repo/nodeHealth.js';
+import * as nodeHealthRepo from '@cloud-spe/bridge-core/repo/nodeHealth.js';
 import * as reservationsRepo from '../../../repo/reservations.js';
 import * as topupsRepo from '../../../repo/topups.js';
-import { CircuitBreaker } from '../../../service/routing/circuitBreaker.js';
-import { createNodeIndex } from '../../../service/routing/nodeIndex.js';
-import { createFastifyServer } from '../../../providers/http/fastify.js';
+import { CircuitBreaker } from '@cloud-spe/bridge-core/service/routing/circuitBreaker.js';
+import { createNodeIndex } from '@cloud-spe/bridge-core/service/routing/nodeIndex.js';
+import { createFastifyServer } from '@cloud-spe/bridge-core/providers/http/fastify.js';
 import { createAdminService } from '../../../service/admin/index.js';
 import { registerAdminRoutes } from './routes.js';
-import type { PayerDaemonClient } from '../../../providers/payerDaemon.js';
+import type { PayerDaemonClient } from '@cloud-spe/bridge-core/providers/payerDaemon.js';
 
 let pg: TestPg;
 const ADMIN_TOKEN = 'a'.repeat(40);

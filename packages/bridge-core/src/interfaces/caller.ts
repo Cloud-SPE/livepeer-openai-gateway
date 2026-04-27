@@ -2,15 +2,23 @@ import type { NodeCapability } from '../types/node.js';
 
 /**
  * Generic caller identity threaded through the engine. The engine treats
- * `id` and `tier` as opaque strings — the shell's AuthResolver impl decides
- * what they mean. `metadata` carries shell-specific context (e.g. the full
- * customer row) and must NOT be inspected by engine code.
+ * `id`, `tier`, and `rateLimitTier` as opaque strings — the shell's
+ * AuthResolver impl decides what they mean. `metadata` carries
+ * shell-specific context (e.g. the full customer row) and must NOT be
+ * inspected by engine code.
+ *
+ * `tier` is the billing/access tier passed to the registry's Select RPC
+ * (engine's selectNode reads it). `rateLimitTier` is the per-caller
+ * rate-limit category passed to the rate-limiter middleware. They are
+ * distinct because a "prepaid" billing tier may map to many rate-limit
+ * tiers (e.g. "paid-starter", "paid-pro"). Shell impls populate both.
  *
  * Locked-in by exec-plan 0024.
  */
 export interface Caller {
   id: string;
   tier: string;
+  rateLimitTier: string;
   metadata?: unknown;
 }
 

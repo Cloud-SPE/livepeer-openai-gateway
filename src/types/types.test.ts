@@ -1,21 +1,26 @@
 import { describe, it, expect } from 'vitest';
 import {
-  ChatCompletionRequestSchema,
   ChatRateCardSchema,
-  CustomerSchema,
-  CustomerTierSchema,
   EmbeddingsRateCardSchema,
+  ImagesRateCardSchema,
+  PricingTierSchema,
+} from '@cloud-spe/bridge-core/types/pricing.js';
+import { ChatCompletionRequestSchema } from '@cloud-spe/bridge-core/types/openai.js';
+import {
   EmbeddingsRequestSchema,
   EmbeddingsResponseSchema,
+  normalizeEmbeddingsInput,
+} from '@cloud-spe/bridge-core/types/embeddings.js';
+import {
+  ImagesGenerationRequestSchema,
+  ImagesResponseSchema,
+} from '@cloud-spe/bridge-core/types/images.js';
+import {
   ErrorCodeSchema,
   ErrorEnvelopeSchema,
-  ImagesGenerationRequestSchema,
-  ImagesRateCardSchema,
-  ImagesResponseSchema,
-  PricingTierSchema,
-  WorkIdSchema,
-  normalizeEmbeddingsInput,
-} from './index.js';
+} from '@cloud-spe/bridge-core/types/error.js';
+import { WorkIdSchema } from '@cloud-spe/bridge-core/types/payment.js';
+import { CustomerSchema, CustomerTierSchema } from './customer.js';
 
 describe('types/error', () => {
   it('accepts a well-formed error envelope', () => {

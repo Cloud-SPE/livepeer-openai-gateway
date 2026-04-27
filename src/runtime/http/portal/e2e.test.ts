@@ -19,13 +19,13 @@ import { resolve } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
 import { chromium, type Browser } from 'playwright';
-import { startTestPg, type TestPg } from '../../../service/billing/testPg.js';
+import { startTestPg, type TestPg } from '@cloud-spe/bridge-core/service/billing/testPg.js';
 import * as customersRepo from '../../../repo/customers.js';
 import { issueKey } from '../../../service/auth/keys.js';
 import { createAuthService } from '../../../service/auth/index.js';
 import { createAuthResolver } from '../../../service/auth/authResolver.js';
-import { defaultRateLimitConfig } from '../../../config/rateLimit.js';
-import { createFastifyServer } from '../../../providers/http/fastify.js';
+import { defaultRateLimitConfig } from '@cloud-spe/bridge-core/config/rateLimit.js';
+import { createFastifyServer } from '@cloud-spe/bridge-core/providers/http/fastify.js';
 import { registerAccountRoutes } from '../account/routes.js';
 import { registerPortalStatic } from './static.js';
 

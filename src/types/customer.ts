@@ -1,10 +1,10 @@
 import { z } from 'zod';
+import { CustomerTierSchema } from '@cloud-spe/bridge-core/types/tier.js';
+
+export { CustomerTierSchema, type CustomerTier } from '@cloud-spe/bridge-core/types/tier.js';
 
 export const CustomerIdSchema = z.string().uuid().brand<'CustomerId'>();
 export type CustomerId = z.infer<typeof CustomerIdSchema>;
-
-export const CustomerTierSchema = z.enum(['free', 'prepaid']);
-export type CustomerTier = z.infer<typeof CustomerTierSchema>;
 
 export const CustomerStatusSchema = z.enum(['active', 'suspended', 'closed']);
 export type CustomerStatus = z.infer<typeof CustomerStatusSchema>;

@@ -1,8 +1,4 @@
-export * from './error.js';
+// Shell-side types barrel. Engine types are reached directly via
+// `@cloud-spe/bridge-core/types/*` subpaths; only the shell-owned
+// Customer/ApiKey/etc. domain lives here.
 export * from './customer.js';
-export * from './pricing.js';
-export * from './node.js';
-export * from './payment.js';
-export * from './openai.js';
-export * from './embeddings.js';
-export * from './images.js';
