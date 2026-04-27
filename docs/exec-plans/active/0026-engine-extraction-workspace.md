@@ -7,6 +7,21 @@ owner: agent
 opened: 2026-04-26
 ---
 
+## Stage 2 handoff (read first)
+
+Stage 2 closed with a transitional state that stage 3 needs to clean up. Future-session-resume notes:
+
+- `src/service/nodes/` (NodeBook + loader + legacy quoteRefresher + `nodes.yaml` + `NODES_CONFIG_PATH` env var) is still alive but only consumed by:
+  - `EngineAdminService.listNodes`/`getNode` (in `src/service/admin/engine.ts`)
+  - `createMetricsSampler` (in `main.ts`)
+  - `nodeClient` metrics decorator's url→id lookup (in `main.ts`)
+- `main.ts` has a `syncNodeBookQuotesToCache` periodic bridge that copies the legacy refresher's NodeBook quote-map into the new dispatcher-facing `QuoteCache`. Dispatchers no longer touch NodeBook directly — they read `QuoteCache.get(nodeId, capability)`.
+- `src/service/routing/quoteRefresher.ts` (new, registry-driven, writes to `QuoteCache`) is built and unit-tested but **not yet wired in `main.ts`**. Stage 3's workspace rewrite is the right time to swap.
+- `src/providers/serviceRegistry/grpc.ts` (real gRPC client) exists but `main.ts` still wires `createNodeBookRegistry` (the stage-1 NodeBook wrapper) as the `ServiceRegistryClient` impl. Switching to the gRPC client requires a registry-daemon running alongside (compose entry).
+- `AdminService` is split into `engine.ts` + `shell.ts` halves with a thin composer at `index.ts`. Stage 3's `packages/bridge-core/` exports `createEngineAdminService` directly; the shell composes the two halves itself.
+
+What stage 3 needs to do, beyond what's already in this plan: retire `service/nodes/` entirely (move what's left into the shell or into engine `service/routing/`), delete the `syncNodeBookQuotesToCache` bridge, wire `createGrpcServiceRegistryClient` in `main.ts`, wire the new `quoteRefresher`, drop `nodes.yaml`/`NODES_CONFIG_PATH`. The workspace split conveniently forces all this — there's no good reason to carry `service/nodes/` into the engine package.
+
 ## Goal
 
 Stage 3 of a 4-stage extraction. With interfaces ([`0024`](../completed/0024-engine-extraction-interfaces.md)) and dispatchers ([`0025`](../completed/0025-engine-extraction-dispatchers.md)) in place, this stage performs the actual file moves: convert the repo to npm workspaces, create `packages/bridge-core/` (engine) and `packages/livepeer-openai-gateway/` (shell), split the Postgres schema into `engine.*` and `app.*` namespaces, rewrite the migration history clean (nothing is deployed; we drop `migrations/0000-0006.sql` and start fresh per package), split metric-name prefixes, set up per-package ESLint configs, and rename this repo from `openai-livepeer-bridge` to `livepeer-openai-gateway`.
