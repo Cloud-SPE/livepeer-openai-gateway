@@ -1,7 +1,7 @@
 ---
 id: 0027
 slug: engine-extraction-public-release
-title: Engine extraction stage 4 — bootstrap public Cloud-SPE/livepeer-bridge-core repo; sync packages/bridge-core/ over; ship examples/minimal-shell; CI/npm publish under @cloud-spe/bridge-core (placeholder); cut 0.1.0; this repo swaps workspace dep for npm dep
+title: Engine extraction stage 4 — bootstrap public Cloud-SPE/livepeer-gateway-core repo; sync packages/livepeer-gateway-core/ over; ship examples/minimal-shell; CI/npm publish under @cloudspe/livepeer-gateway-core (placeholder); cut 0.1.0; this repo swaps workspace dep for npm dep
 status: active
 owner: agent
 opened: 2026-04-26
@@ -9,15 +9,15 @@ opened: 2026-04-26
 
 ## Goal
 
-Stage 4 of a 4-stage extraction. With the engine isolated as a workspace package from [`0026`](../completed/0026-engine-extraction-workspace.md), this stage bootstraps the public OSS repo `Cloud-SPE/livepeer-bridge-core` on GitHub, syncs the engine package over, sets up CI to build/test/publish-on-tag, ships a runnable `examples/minimal-shell/` (using `InMemoryWallet` + a no-op `AuthResolver`) so adopters can clone-and-run in 30 seconds, cuts version `0.1.0`, and rewires this repo to consume the engine via npm dep instead of the workspace symlink.
+Stage 4 of a 4-stage extraction. With the engine isolated as a workspace package from [`0026`](../completed/0026-engine-extraction-workspace.md), this stage bootstraps the public OSS repo `Cloud-SPE/livepeer-gateway-core` on GitHub, syncs the engine package over, sets up CI to build/test/publish-on-tag, ships a runnable `examples/minimal-shell/` (using `InMemoryWallet` + a no-op `AuthResolver`) so adopters can clone-and-run in 30 seconds, cuts version `0.1.0`, and rewires this repo to consume the engine via npm dep instead of the workspace symlink.
 
 After this stage:
-- Public GitHub repo `Cloud-SPE/livepeer-bridge-core` exists, MIT-licensed, with the engine source.
-- Engine published to npm as `@cloud-spe/bridge-core@0.1.0` (placeholder scope; the published name may move to `@livepeer/*` or another org before public announcement — the placeholder is documented and swappable in one PR).
+- Public GitHub repo `Cloud-SPE/livepeer-gateway-core` exists, MIT-licensed, with the engine source.
+- Engine published to npm as `@cloudspe/livepeer-gateway-core@0.1.0` (placeholder scope; the published name may move to `@livepeer/*` or another org before public announcement — the placeholder is documented and swappable in one PR).
 - Public repo has CI: build matrix (Node 20, 22), `npm test`, `npm run lint`, `npm run typecheck`, publish-on-tag-with-`v*`-prefix.
 - `examples/minimal-shell/` is a 200-LOC runnable Fastify app using engine's `dispatchChatCompletion` + `InMemoryWallet` + a `NoopAuthResolver`. README walks through `npm install` → `node start.js` → `curl /v1/chat/completions`.
-- This repo's `packages/livepeer-openai-gateway/package.json` swaps `"@cloud-spe/bridge-core": "workspace:*"` → `"@cloud-spe/bridge-core": "^0.1.0"`.
-- This repo's `packages/bridge-core/` is removed (now lives in the public repo).
+- This repo's `packages/livepeer-openai-gateway/package.json` swaps `"@cloudspe/livepeer-gateway-core": "workspace:*"` → `"@cloudspe/livepeer-gateway-core": "^0.1.0"`.
+- This repo's `packages/livepeer-gateway-core/` is removed (now lives in the public repo).
 - This repo's CI no longer builds the engine — it only consumes the npm package.
 
 Pre-1.0 versioning rule (per stage-0 agreement): breaking changes are OK at 0.x; patch bumps may include API breaks until 1.0. 1.0 is cut on first external operator adopter.
@@ -27,7 +27,7 @@ Pre-1.0 versioning rule (per stage-0 agreement): breaking changes are OK at 0.x;
 - No transferring of git history from this repo to the public repo. The public repo starts with a clean initial commit. (If full history transfer is desired later, that's a follow-up — not blocking the release.)
 - No automated mirror tooling. After this stage, engine changes go directly to the public repo; this repo consumes via npm.
 - No promotion to 1.0. 1.0 cut is event-driven (first external adopter).
-- No swap to a different npm scope/name yet. `@cloud-spe/bridge-core` is the published placeholder; renaming to `@livepeer/*` or similar is a follow-up that updates the engine repo's `name` field, deprecates the old, publishes under the new.
+- No swap to a different npm scope/name yet. `@cloudspe/livepeer-gateway-core` is the published placeholder; renaming to `@livepeer/*` or similar is a follow-up that updates the engine repo's `name` field, deprecates the old, publishes under the new.
 - No example wallet impls beyond `InMemoryWallet` + a postpaid stub in `examples/`. Operator-specific patterns (crypto wallets, etc.) are documented in the README, not shipped.
 - No GitHub Discussions/Wiki setup. Issue + PR templates only (covered by [`0028-oss-readiness.md`](./0028-oss-readiness.md)).
 - No engine schema or interface changes — purely a release/distribution stage.
@@ -39,15 +39,15 @@ Pre-1.0 versioning rule (per stage-0 agreement): breaking changes are OK at 0.x;
 Manual ops step (gh CLI):
 
 ```bash
-gh repo create Cloud-SPE/livepeer-bridge-core --public --description "OpenAI-compatible request engine for Livepeer worker pools. Adapter-driven; bring your own billing, auth, rate-limit. MIT."
+gh repo create Cloud-SPE/livepeer-gateway-core --public --description "OpenAI-compatible request engine for Livepeer worker pools. Adapter-driven; bring your own billing, auth, rate-limit. MIT."
 ```
 
 Local clone bootstrapped via:
 
 ```bash
-git clone git@github.com:Cloud-SPE/livepeer-bridge-core.git
-cd livepeer-bridge-core
-# Copy contents of packages/bridge-core/* from this repo
+git clone git@github.com:Cloud-SPE/livepeer-gateway-core.git
+cd livepeer-gateway-core
+# Copy contents of packages/livepeer-gateway-core/* from this repo
 # git add -A; git commit -m "initial: extract from openai-livepeer-bridge@<sha>"
 ```
 
@@ -56,7 +56,7 @@ Initial commit message references the source SHA so future archeology is possibl
 ### 2. Public repo layout
 
 ```
-livepeer-bridge-core/
+livepeer-gateway-core/
 ├── .github/
 │   ├── workflows/
 │   │   ├── ci.yml              # build, test, lint, typecheck on push + PR
@@ -71,11 +71,11 @@ livepeer-bridge-core/
 ├── examples/
 │   └── minimal-shell/
 │       ├── package.json
-│       ├── start.ts            # ~150 LOC: imports @cloud-spe/bridge-core, wires InMemoryWallet + NoopAuthResolver, registers Fastify routes
+│       ├── start.ts            # ~150 LOC: imports @cloudspe/livepeer-gateway-core, wires InMemoryWallet + NoopAuthResolver, registers Fastify routes
 │       ├── nodes.example.yaml
 │       └── README.md
 ├── migrations/                 # engine schema only
-├── src/                        # engine source (was packages/bridge-core/src/)
+├── src/                        # engine source (was packages/livepeer-gateway-core/src/)
 ├── tests/
 ├── AGENTS.md                   # engine-scoped agent guide (carved from this repo's AGENTS.md)
 ├── DESIGN.md                   # engine design (carved)
@@ -87,7 +87,7 @@ livepeer-bridge-core/
 ├── SECURITY.md                 # 0028
 ├── GOVERNANCE.md               # 0028
 ├── LICENSE                     # MIT, per stage-0
-├── package.json                # name: @cloud-spe/bridge-core, version: 0.1.0
+├── package.json                # name: @cloudspe/livepeer-gateway-core, version: 0.1.0
 ├── tsconfig.json
 ├── vitest.config.ts
 └── eslint.config.js
@@ -116,8 +116,8 @@ import {
   loadPayerDaemonConfig,
   loadServiceRegistryConfig,
   loadPricingConfig,
-} from '@cloud-spe/bridge-core';
-import { registerChatCompletionsRoute } from '@cloud-spe/bridge-core/fastify';
+} from '@cloudspe/livepeer-gateway-core';
+import { registerChatCompletionsRoute } from '@cloudspe/livepeer-gateway-core/fastify';
 
 const wallet = new InMemoryWallet();
 const authResolver = createNoopAuthResolver({ defaultTier: 'free' });
@@ -188,12 +188,12 @@ jobs:
         env: { NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} }
 ```
 
-`NPM_TOKEN` is a repo secret with publish rights to the `@cloud-spe` scope. Manual ops step.
+`NPM_TOKEN` is a repo secret with publish rights to the `@cloudspe` scope. Manual ops step.
 
 ### 5. npm publish
 
 ```bash
-cd livepeer-bridge-core
+cd livepeer-gateway-core
 npm version 0.1.0
 git push origin main --tags
 # CI publishes
@@ -207,11 +207,11 @@ After publish, in this repo (now `livepeer-openai-gateway`):
 
 - Edit `packages/livepeer-openai-gateway/package.json`:
   ```json
-  "@cloud-spe/bridge-core": "^0.1.0"
+  "@cloudspe/livepeer-gateway-core": "^0.1.0"
   ```
   (was `"workspace:*"`)
-- `git rm -r packages/bridge-core/`
-- Root `package.json` workspaces no longer include `packages/bridge-core` (only `packages/livepeer-openai-gateway` and `bridge-ui/*`).
+- `git rm -r packages/livepeer-gateway-core/`
+- Root `package.json` workspaces no longer include `packages/livepeer-gateway-core` (only `packages/livepeer-openai-gateway` and `bridge-ui/*`).
 - `npm install` resolves the engine from the registry.
 - All tests, lint, typecheck pass. The shell now consumes the published engine.
 
@@ -229,7 +229,7 @@ This repo's policy: pin to `^0.1.0` style range; bump explicitly. No auto-update
 
 `README.md` must:
 - One-paragraph elevator pitch (OpenAI-compatible engine fronting Livepeer worker pools; bring your own billing/auth/rate-limit via adapters).
-- Quickstart (`npm install @cloud-spe/bridge-core` → minimal-shell example).
+- Quickstart (`npm install @cloudspe/livepeer-gateway-core` → minimal-shell example).
 - Adapter overview (Wallet, AuthResolver, RateLimiter, Logger, AdminAuthResolver).
 - Architecture diagram (engine vs. operator-supplied adapters).
 - **Ecosystem integration section** (must appear prominently):
@@ -268,8 +268,8 @@ The historical record of HOW the engine was extracted lives in this repo's `docs
 
 ## Steps
 
-- [ ] Manual: `gh repo create Cloud-SPE/livepeer-bridge-core --public ...`
-- [ ] Local: clone the empty repo, copy `packages/bridge-core/*` content over, prune workspace-specific config (root package.json reference)
+- [ ] Manual: `gh repo create Cloud-SPE/livepeer-gateway-core --public ...`
+- [ ] Local: clone the empty repo, copy `packages/livepeer-gateway-core/*` content over, prune workspace-specific config (root package.json reference)
 - [ ] Add MIT `LICENSE`, placeholder OSS-readiness files (real content from [`0028`](./0028-oss-readiness.md))
 - [ ] Carve engine-side design-docs into the public repo's `docs/`
 - [ ] Build `examples/minimal-shell/` (start script, package.json, `compose.yaml` bringing up payment-daemon + service-registry-daemon as sidecars, `service-registry-config.yaml`, `payment-daemon-config.yaml`, README walkthrough)
@@ -277,10 +277,10 @@ The historical record of HOW the engine was extracted lives in this repo's `docs
 - [ ] Add `.github/workflows/ci.yml` + `publish.yml`
 - [ ] Manual: configure `NPM_TOKEN` secret in the public repo
 - [ ] Smoke: `npm pack` locally → install into a temp directory → run `examples/minimal-shell/start.ts`
-- [ ] Initial commit + push to `Cloud-SPE/livepeer-bridge-core`
+- [ ] Initial commit + push to `Cloud-SPE/livepeer-gateway-core`
 - [ ] Tag `v0.1.0`, push tag, observe CI publish
 - [ ] In this repo: edit `packages/livepeer-openai-gateway/package.json` to swap workspace dep for `^0.1.0`
-- [ ] In this repo: `git rm -r packages/bridge-core/`; update root `package.json` workspaces array
+- [ ] In this repo: `git rm -r packages/livepeer-gateway-core/`; update root `package.json` workspaces array
 - [ ] In this repo: `npm install` → confirm tests/lint/typecheck pass against the published engine
 - [ ] Update this repo's `README.md` to link the public engine repo
 - [ ] Move stages 0024–0027 from `docs/exec-plans/active/` → `docs/exec-plans/completed/`

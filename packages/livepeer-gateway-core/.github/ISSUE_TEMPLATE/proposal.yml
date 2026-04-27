@@ -1,0 +1,38 @@
+name: Feature proposal
+description: Propose a new feature or behavior change
+labels: [proposal, triage]
+body:
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: "What problem does this solve? Who's affected?"
+    validations:
+      required: true
+  - type: textarea
+    id: shape
+    attributes:
+      label: Proposed shape
+      description: "API/interface sketch (TypeScript signatures preferred). What does the diff look like?"
+      render: typescript
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: "What else did you weigh? Why is this the right cut?"
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope flags
+      options:
+        - label: This is a breaking change to a public adapter interface (Wallet, AuthResolver, RateLimiter, Logger, AdminAuthResolver)
+        - label: This requires a database schema migration
+        - label: This adds or changes a public export path under `@cloudspe/livepeer-gateway-core/*`
+        - label: This changes the engine metric surface (`livepeer_bridge_*` prefix)
+        - label: This changes the `ServiceRegistryClient` engine-internal contract
+  - type: markdown
+    attributes:
+      value: |
+        Non-trivial proposals (anything checked above) need an exec-plan
+        in `docs/exec-plans/active/` before code lands. Maintainers will
+        respond within 7 days with feedback or an ack.

@@ -1,0 +1,54 @@
+name: Bug report
+description: Something is broken or behaves unexpectedly
+labels: [bug, triage]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: "@cloudspe/livepeer-gateway-core version (run `npm ls @cloudspe/livepeer-gateway-core`)"
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: node
+    attributes:
+      label: Node version
+      description: "node --version output"
+      placeholder: "v20.10.0"
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: "Smallest code that triggers the bug. A failing test against InMemoryWallet is best."
+      render: typescript
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / stack trace
+      description: "Paste any relevant output from the failing run."
+      render: shell
+  - type: checkboxes
+    id: environment
+    attributes:
+      label: Environment context
+      options:
+        - label: I'm using the Fastify adapter (`@cloudspe/livepeer-gateway-core/runtime/http/*`)
+        - label: I'm using a custom AuthResolver / Wallet / RateLimiter / Logger / AdminAuthResolver
+        - label: The bug also reproduces against the InMemoryWallet

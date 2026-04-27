@@ -1,15 +1,16 @@
 ---
 id: 0028
 slug: oss-readiness
-title: OSS readiness — LICENSE/CONTRIBUTING/SECURITY/CODE_OF_CONDUCT/CHANGELOG/GOVERNANCE/issue+PR templates for the public Cloud-SPE/livepeer-bridge-core repo; runs in parallel with stages 1–4
-status: active
+title: OSS readiness — LICENSE/CONTRIBUTING/SECURITY/CODE_OF_CONDUCT/CHANGELOG/GOVERNANCE/issue+PR templates for the public Cloud-SPE/livepeer-gateway-core repo; runs in parallel with stages 1–4
+status: completed
 owner: agent
 opened: 2026-04-26
+closed: 2026-04-27
 ---
 
 ## Goal
 
-Author the community-hygiene artifacts the public engine repo (`Cloud-SPE/livepeer-bridge-core`) needs before its first external adopter shows up. Runs in parallel with the four extraction stages ([`0024`](../completed/0024-engine-extraction-interfaces.md) through [`0027`](./0027-engine-extraction-public-release.md)) — the docs are drafted here and committed to the public repo when stage 4 bootstraps it.
+Author the community-hygiene artifacts the public engine repo (`Cloud-SPE/livepeer-gateway-core`) needs before its first external adopter shows up. Runs in parallel with the four extraction stages ([`0024`](../completed/0024-engine-extraction-interfaces.md) through [`0027`](./0027-engine-extraction-public-release.md)) — the docs are drafted here and committed to the public repo when stage 4 bootstraps it.
 
 Non-blocking for stages 1–3 (which produce no public artifacts). Hard-blocks stage 4's `npm publish` until LICENSE + README are written; the rest can land within the first week post-publish.
 
@@ -113,8 +114,8 @@ post-1.0.
 - Wallet, AuthResolver, RateLimiter, Logger, AdminAuthResolver adapter interfaces.
 - Framework-free dispatchers for chat completions (streaming + non-streaming),
   embeddings, image generations, audio speech, audio transcriptions.
-- Fastify adapter at `@cloud-spe/bridge-core/fastify`.
-- Optional read-only operator dashboard at `@cloud-spe/bridge-core/dashboard`.
+- Fastify adapter at `@cloudspe/livepeer-gateway-core/fastify`.
+- Optional read-only operator dashboard at `@cloudspe/livepeer-gateway-core/dashboard`.
 - InMemoryWallet reference implementation for testing.
 - examples/minimal-shell runnable example.
 ```
@@ -154,7 +155,7 @@ labels: [bug, triage]
 body:
   - type: input
     id: version
-    attributes: { label: Version, description: "@cloud-spe/bridge-core version" }
+    attributes: { label: Version, description: "@cloudspe/livepeer-gateway-core version" }
     validations: { required: true }
   - type: input
     id: node
@@ -256,25 +257,41 @@ Each is a single-file, ~50-LOC stub with an `npm test` smoke test.
 
 ## Steps
 
-- [ ] Author `LICENSE` (MIT verbatim, "Cloud-SPE contributors" copyright)
-- [ ] Author `CONTRIBUTING.md` (sections: bug, proposal, dev setup, testing, style, commits, pre-1.0 policy, adapter contracts, CoC)
-- [ ] Author `SECURITY.md` with `security@livepeer.cloud` as the reporting address
-- [ ] Provision `security@livepeer.cloud` + `conduct@livepeer.cloud` as forwarding aliases on the `livepeer.cloud` domain pointing to a monitored inbox (must be live before stage-4 publish)
-- [ ] Author `CODE_OF_CONDUCT.md` (Contributor Covenant v2.1 verbatim)
-- [ ] Author `CHANGELOG.md` (Keep a Changelog format; 0.1.0 entry stub)
-- [ ] Author `GOVERNANCE.md` (maintainers, decision rules, adding maintainers)
-- [ ] Author `.github/ISSUE_TEMPLATE/bug.yml` + `proposal.yml`
-- [ ] Author `.github/PULL_REQUEST_TEMPLATE.md`
-- [ ] Author `docs/adapters.md` (public-repo destination)
-- [ ] Author `examples/wallets/{postpaid,prepaid-usd,free-quota}.ts` + `examples/wallets/README.md`
-- [ ] Confirm `package.json` field `"license": "MIT"` (was "TBD")
-- [ ] Confirm all the above are committed to `Cloud-SPE/livepeer-bridge-core` BEFORE the `v0.1.0` tag in [`0027`](./0027-engine-extraction-public-release.md) is pushed
+- [x] Author `LICENSE` (MIT verbatim, "Cloud-SPE contributors" copyright)
+- [x] Author `CONTRIBUTING.md` (sections: bug, proposal, dev setup, testing, style, commits, pre-1.0 policy, adapter contracts, CoC)
+- [x] Author `SECURITY.md` with `security@livepeer.cloud` as the reporting address
+- [ ] Provision `security@livepeer.cloud` + `conduct@livepeer.cloud` as forwarding aliases on the `livepeer.cloud` domain pointing to a monitored inbox *(operator-driven; must be live before stage-4 publish)*
+- [x] Author `CODE_OF_CONDUCT.md` (Contributor Covenant v2.1 verbatim) *(fetched from EthicalSource canonical source; Hugo front-matter stripped; `[INSERT CONTACT METHOD]` swapped to `conduct@livepeer.cloud`)*
+- [x] Author `CHANGELOG.md` (Keep a Changelog format; 0.1.0 entry stub)
+- [x] Author `GOVERNANCE.md` (maintainers, decision rules, adding maintainers)
+- [x] Author `.github/ISSUE_TEMPLATE/bug.yml` + `proposal.yml`
+- [x] Author `.github/PULL_REQUEST_TEMPLATE.md`
+- [x] Author `docs/adapters.md` (public-repo destination)
+- [x] Author `examples/wallets/{postpaid,prepaid-usd,free-quota}.ts` + `examples/wallets/README.md`
+- [x] Confirm `package.json` field `"license": "MIT"` (was unset)
+- [ ] Confirm all the above are committed to `Cloud-SPE/livepeer-gateway-core` BEFORE the `v0.1.0` tag in [`0027`](./0027-engine-extraction-public-release.md) is pushed *(handed off to 0027 — files live in `packages/livepeer-gateway-core/` in the monorepo and ride along when 0027 carves the public repo)*
 
 ## Decisions log
 
 ### 2026-04-26 — Email contact addresses
 
 `security@livepeer.cloud` and `conduct@livepeer.cloud` will be the public-facing contact aliases. Reason: domain owned, fits the ecosystem branding, and forwarding aliases are cheap to set up. Provisioning the aliases (DNS + forwarding rule pointing to a monitored inbox) is a manual step before stage-4 publish.
+
+### 2026-04-27 — Public repo + npm scope renamed from placeholder
+
+Plan opened with the placeholder names `Cloud-SPE/livepeer-bridge-core` (GitHub) and `@cloud-spe/bridge-core` (npm). Operator created the actual public repo at `Cloud-SPE/livepeer-gateway-core` and reserved `@cloudspe` as the npm org, so the package name is `@cloudspe/livepeer-gateway-core`. The rename swept this monorepo: `packages/bridge-core/` → `packages/livepeer-gateway-core/`, every `@cloud-spe/bridge-core/*` import → `@cloudspe/livepeer-gateway-core/*`, plus engine package.json + Dockerfile + root package.json + plan-doc references. Folded into the OSS-readiness work because all the community files reference these names and would otherwise need a second sweep.
+
+### 2026-04-27 — Code of Conduct fetched from canonical source
+
+The Anthropic content filter blocks Claude Code from outputting the Contributor Covenant 2.1 text directly (the document's enumeration of harassment behaviors trips the harassment classifier even though it's a standards document). Operator ran `curl` against the EthicalSource GitHub mirror to fetch the file; the agent then stripped the Hugo front-matter and swapped `[INSERT CONTACT METHOD]` for `conduct@livepeer.cloud`. The committed file is the canonical 2.1 text, body unchanged.
+
+### 2026-04-27 — Engine package.json gains `"license": "MIT"` + repo metadata
+
+Plan called for `"license": "MIT"` (was unset, not "TBD" as the plan text described — the placeholder pre-step never wrote a value). Also added `"homepage"`, `"repository.url"`, and `"bugs.url"` pointing at `Cloud-SPE/livepeer-gateway-core` so npm renders them correctly post-publish. `"private": true` stays in place — stage 4 flips it to `false` at publish time.
+
+### 2026-04-27 — `examples/` and the community files ship in the npm tarball
+
+Updated the engine's `package.json#files` to include `examples`, `docs`, and the five top-level community files (`CHANGELOG.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `GOVERNANCE.md`, `SECURITY.md`). Adopters who `npm install @cloudspe/livepeer-gateway-core` get the wallet pattern stubs + adapters guide alongside the engine source, which closes the "where do I start?" question without forcing them to clone the public repo.
 
 ## Open questions
 
@@ -284,4 +301,19 @@ Each is a single-file, ~50-LOC stub with an `npm test` smoke test.
 
 ## Artifacts produced
 
-(empty until in-flight)
+All under `packages/livepeer-gateway-core/` in the monorepo; carried into `Cloud-SPE/livepeer-gateway-core` by exec-plan 0027:
+
+- `LICENSE` — MIT, "Cloud-SPE contributors" copyright.
+- `README.md` — public API surface map (already authored in 0026 step 14; no change).
+- `CHANGELOG.md` — Keep a Changelog format with a `[0.1.0]` stub listing the initial extraction surface (adapters, dispatchers, Fastify adapter, dashboard, InMemoryWallet, examples).
+- `CONTRIBUTING.md` — bug-filing + feature-proposal flow, dev setup, the integration-tests-must-hit-real-DB rule, lint + style, Conventional Commits + DCO sign-off, pre-1.0 breaking-change policy, adapter-contract change ladder.
+- `SECURITY.md` — `security@livepeer.cloud` reporting flow, 48-hour ack / 14-day patch SLO, scope (engine adapters + payment-daemon integration + pricing math; out-of-scope: operator's own adapter impls + the daemons themselves).
+- `CODE_OF_CONDUCT.md` — Contributor Covenant 2.1 verbatim, contact `conduct@livepeer.cloud`.
+- `GOVERNANCE.md` — single-maintainer model with explicit decision tiers (day-to-day rough consensus → architectural exec-plan + 2-business-day window → breaking changes pre/post-1.0), maintainer add/remove rules, and the explicit list of what's adapter-overridable vs. operator-owned.
+- `.github/ISSUE_TEMPLATE/bug.yml` — version + Node + minimal repro + expected/actual + logs + environment-context checkboxes.
+- `.github/ISSUE_TEMPLATE/proposal.yml` — motivation, proposed shape (TS signatures), alternatives considered, scope-flag checkboxes for breaking-change paths.
+- `.github/PULL_REQUEST_TEMPLATE.md` — summary + linked exec-plan + test-plan checklist + adapter-contract checkboxes + breaking-change flag + DCO acknowledgement.
+- `docs/adapters.md` — long-form guide for the five operator-overridable adapters (`Wallet`, `AuthResolver`, `RateLimiter`, `Logger`, `AdminAuthResolver`) plus an explicit non-adapter section explaining why `ServiceRegistryClient` isn't on the list. Includes three Wallet patterns (postpaid B2B / prepaid USD / free-quota) and the pino-Logger integration sketch.
+- `examples/wallets/{postpaid,prepaid-usd,free-quota}.ts` — three illustrative ~50-LOC Wallet stubs with explicit "not production-ready" comments + a README explaining what's missing for ship-shape (persistence, concurrency safety, idempotency, audit trail, top-up integration, quota reset).
+
+Engine `package.json` gains `"license": "MIT"`, `"homepage"`, `"repository.url"`, `"bugs.url"`, and an expanded `files` array so the OSS docs ship in the tarball.
