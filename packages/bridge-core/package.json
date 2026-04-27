@@ -8,12 +8,11 @@
     "node": ">=20"
   },
   "exports": {
-    ".": "./dist/index.js",
-    "./fastify": "./dist/adapters/fastify/index.js",
-    "./dashboard": "./dist/dashboard/index.js"
+    ".": "./src/index.ts",
+    "./*": "./src/*"
   },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "files": [
     "dist",
     "migrations",
