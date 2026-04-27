@@ -76,10 +76,12 @@ describe('PrometheusRecorder', () => {
     r.incTopup(OUTCOME_OK);
     r.addRevenueUsdCents('chat.completions', 'gpt-4', 'pro', 1000);
     r.setBuildInfo('1.2.3', 'production', 'v20');
+    r.setShellBuildInfo('1.2.3', 'production', 'v20');
     const text = await r.metricsText();
-    expect(text).toContain('livepeer_bridge_topups_total');
+    expect(text).toContain('cloudspe_topups_total');
     expect(text).toContain('livepeer_bridge_revenue_usd_cents_total');
-    expect(text).toMatch(/livepeer_bridge_build_info\{[^}]*version="1.2.3"[^}]*\} 1/);
+    expect(text).toMatch(/livepeer_bridge_engine_build_info\{[^}]*version="1.2.3"[^}]*\} 1/);
+    expect(text).toMatch(/cloudspe_app_build_info\{[^}]*version="1.2.3"[^}]*\} 1/);
   });
 
   it('default Node.js process_* and nodejs_* collectors register against the private registry', async () => {

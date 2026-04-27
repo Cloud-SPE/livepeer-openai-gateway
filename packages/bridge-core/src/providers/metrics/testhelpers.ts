@@ -179,6 +179,11 @@ export class CounterRecorder implements Recorder, MetricsSink {
     this.buildInfoSets += 1;
   }
 
+  setShellBuildInfo(_version: string, _nodeEnv: string, _nodeVersion: string): void {
+    this.shellBuildInfoSets += 1;
+  }
+  shellBuildInfoSets = 0;
+
   metricsContentType(): string {
     return 'text/plain; version=0.0.4; charset=utf-8';
   }

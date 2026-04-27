@@ -53,8 +53,19 @@ export interface PrometheusConfig {
   readonly onCapExceeded?: (metricName: string, observed: number, cap: number) => void;
 }
 
-/** Metric prefix. Mirrors `livepeer_registry_` in the Go reference. */
+/**
+ * Metric prefix for engine-emitted metrics. Mirrors `livepeer_registry_`
+ * in the Go reference; engine consumers (request lifecycle, node-pool
+ * state, payer-daemon, rate-limit) all live under this prefix.
+ */
 const NS = 'livepeer_bridge';
+
+/**
+ * Metric prefix for shell-emitted metrics (Stripe API/webhooks, top-ups,
+ * shell build_info). Set by exec-plan 0026 step 9; rename if the Cloud
+ * SPE product takes a different brand.
+ */
+const SHELL_NS = 'cloudspe';
 
 /** Default histogram buckets — match prom-client's default. */
 const DEFAULT_BUCKETS = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10] as const;
@@ -134,6 +145,7 @@ export class PrometheusRecorder implements Recorder, MetricsSink {
 
   // ----- Build info -----
   private readonly buildInfo: PromGauge<string>;
+  private readonly shellBuildInfo: PromGauge<string>;
 
   constructor(cfg: PrometheusConfig) {
     this.registry = new Registry();
@@ -169,6 +181,40 @@ export class PrometheusRecorder implements Recorder, MetricsSink {
         name,
         new Histogram({
           name: `${NS}_${name}`,
+          help,
+          labelNames: labels,
+          buckets: [...buckets],
+          registers: [reg],
+        }),
+        cap,
+        onExceed,
+      );
+
+    // Shell-prefixed helper variants for metrics emitted by shell-side
+    // code paths (Stripe, top-ups, reservations). Per exec-plan 0026
+    // step 9: engine = livepeer_bridge_*, shell = cloudspe_*.
+    const shellCounterVec = (name: string, help: string, labels: string[]) =>
+      new CapVec(
+        name,
+        new Counter({
+          name: `${SHELL_NS}_${name}`,
+          help,
+          labelNames: labels,
+          registers: [reg],
+        }),
+        cap,
+        onExceed,
+      );
+    const shellHistVec = (
+      name: string,
+      help: string,
+      labels: string[],
+      buckets: readonly number[] = DEFAULT_BUCKETS,
+    ) =>
+      new CapVec(
+        name,
+        new Histogram({
+          name: `${SHELL_NS}_${name}`,
           help,
           labelNames: labels,
           buckets: [...buckets],
@@ -215,34 +261,35 @@ export class PrometheusRecorder implements Recorder, MetricsSink {
       'Total cost paid to nodes in wei, labeled by capability/model/node_id.',
       ['capability', 'model', 'node_id'],
     );
-    this.topups = counterVec(
+    // ----- Money / ledger (shell-emitted) -----
+    this.topups = shellCounterVec(
       'topups_total',
       'Stripe top-up attempts, labeled by outcome.',
       ['outcome'],
     );
     this.reservationsOpen = new Gauge({
-      name: `${NS}_reservations_open`,
+      name: `${SHELL_NS}_reservations_open`,
       help: 'Current count of open reservations.',
       registers: [reg],
     });
     this.reservationOldestSec = new Gauge({
-      name: `${NS}_reservation_open_oldest_seconds`,
+      name: `${SHELL_NS}_reservation_open_oldest_seconds`,
       help: 'Age in seconds of the oldest currently-open reservation.',
       registers: [reg],
     });
 
-    // ----- Stripe -----
-    this.stripeWebhooks = counterVec(
+    // ----- Stripe (shell-emitted) -----
+    this.stripeWebhooks = shellCounterVec(
       'stripe_webhooks_total',
       'Stripe webhook deliveries, labeled by event type and outcome.',
       ['event_type', 'outcome'],
     );
-    this.stripeWebhookDuration = histVec(
+    this.stripeWebhookDuration = shellHistVec(
       'stripe_webhook_duration_seconds',
       'Stripe webhook handler duration in seconds, labeled by event type.',
       ['event_type'],
     );
-    this.stripeApiCalls = counterVec(
+    this.stripeApiCalls = shellCounterVec(
       'stripe_api_calls_total',
       'Outbound Stripe API calls, labeled by op and outcome.',
       ['op', 'outcome'],
@@ -323,8 +370,14 @@ export class PrometheusRecorder implements Recorder, MetricsSink {
 
     // ----- Build info -----
     this.buildInfo = new Gauge({
-      name: `${NS}_build_info`,
-      help: 'Constant-1 gauge labeled with bridge build metadata.',
+      name: `${NS}_engine_build_info`,
+      help: 'Constant-1 gauge labeled with engine build metadata.',
+      labelNames: ['version', 'node_env', 'node_version'],
+      registers: [reg],
+    });
+    this.shellBuildInfo = new Gauge({
+      name: `${SHELL_NS}_app_build_info`,
+      help: 'Constant-1 gauge labeled with shell (gateway app) build metadata.',
       labelNames: ['version', 'node_env', 'node_version'],
       registers: [reg],
     });
@@ -450,6 +503,10 @@ export class PrometheusRecorder implements Recorder, MetricsSink {
 
   setBuildInfo(version: string, nodeEnv: string, nodeVersion: string): void {
     this.buildInfo.labels(version, nodeEnv, nodeVersion).set(1);
+  }
+
+  setShellBuildInfo(version: string, nodeEnv: string, nodeVersion: string): void {
+    this.shellBuildInfo.labels(version, nodeEnv, nodeVersion).set(1);
   }
 
   // ----- Recorder: exposition -----

@@ -212,8 +212,18 @@ export interface Recorder {
 
   // ----- Build info -----
 
-  /** Sets a constant-1 gauge labeled with build metadata. */
+  /**
+   * Sets a constant-1 gauge labeled with engine build metadata
+   * (livepeer_bridge_engine_build_info).
+   */
   setBuildInfo(version: string, nodeEnv: string, nodeVersion: string): void;
+
+  /**
+   * Sets a constant-1 gauge labeled with shell build metadata
+   * (cloudspe_app_build_info). Only the shell composition root is
+   * expected to call this; engine code emits via setBuildInfo.
+   */
+  setShellBuildInfo(version: string, nodeEnv: string, nodeVersion: string): void;
 
   // ----- Exposition -----
 

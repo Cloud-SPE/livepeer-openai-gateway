@@ -109,6 +109,7 @@ function exercise(r: Recorder): void {
 
   // Build info.
   r.setBuildInfo('1.0.0', 'production', 'v20.10.0');
+  r.setShellBuildInfo('1.0.0', 'production', 'v20.10.0');
 }
 
 describe('Recorder contract', () => {
@@ -142,6 +143,7 @@ describe('Recorder contract', () => {
     const text = await r.metricsText();
     expect(text).toContain('livepeer_bridge_requests_total');
     expect(text).toContain('livepeer_bridge_payer_daemon_calls_total');
-    expect(text).toContain('livepeer_bridge_build_info');
+    expect(text).toContain('livepeer_bridge_engine_build_info');
+    expect(text).toContain('cloudspe_app_build_info');
   });
 });

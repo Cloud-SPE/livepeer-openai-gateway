@@ -86,6 +86,8 @@ export class NoopRecorder implements Recorder, MetricsSink {
 
   setBuildInfo(_version: string, _nodeEnv: string, _nodeVersion: string): void {}
 
+  setShellBuildInfo(_version: string, _nodeEnv: string, _nodeVersion: string): void {}
+
   metricsContentType(): string {
     return 'text/plain; version=0.0.4; charset=utf-8';
   }

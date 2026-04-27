@@ -106,9 +106,14 @@ async function main(): Promise<void> {
         },
       })
     : new NoopRecorder();
-  // Build-info gauge: constant-1 series with version + env labels. Set once.
+  // Build-info gauges: constant-1 series with version + env labels.
+  // Engine surface (livepeer_bridge_engine_build_info) and shell surface
+  // (cloudspe_app_build_info) both get set from the same pkg version
+  // here — the shell process is one binary embedding both layers.
   const pkgVersion = process.env.BRIDGE_VERSION ?? '0.0.0';
-  recorder.setBuildInfo(pkgVersion, process.env.NODE_ENV ?? 'development', process.versions.node);
+  const nodeEnv = process.env.NODE_ENV ?? 'development';
+  recorder.setBuildInfo(pkgVersion, nodeEnv, process.versions.node);
+  recorder.setShellBuildInfo(pkgVersion, nodeEnv, process.versions.node);
 
   // Providers.
   const database = createPgDatabase(dbConfig);
