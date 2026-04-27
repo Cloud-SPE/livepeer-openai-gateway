@@ -3,15 +3,12 @@
 // happy-path test (admin-search.test.ts) doesn't exercise.
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { mkdtempSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
 import { sql } from 'drizzle-orm';
 import { startTestPg, type TestPg } from '../../../service/billing/testPg.js';
 import * as customersRepo from '../../../repo/customers.js';
 import * as topupsRepo from '../../../repo/topups.js';
-import { createNodesLoader } from '../../../service/nodes/loader.js';
-import { NodeBook } from '../../../service/nodes/nodebook.js';
+import { CircuitBreaker } from '../../../service/routing/circuitBreaker.js';
+import { createNodeIndex } from '../../../service/routing/nodeIndex.js';
 import { createFastifyServer } from '../../../providers/http/fastify.js';
 import { createAdminService } from '../../../service/admin/index.js';
 import { registerAdminRoutes } from './routes.js';
@@ -19,7 +16,6 @@ import type { PayerDaemonClient } from '../../../providers/payerDaemon.js';
 
 let pg: TestPg;
 const ADMIN_TOKEN = 'a'.repeat(40);
-let nodesYamlPath: string;
 
 function mockPayerDaemon(): PayerDaemonClient {
   return {
@@ -34,23 +30,16 @@ function mockPayerDaemon(): PayerDaemonClient {
   };
 }
 
-function mkNodeBook(): NodeBook {
-  const dir = mkdtempSync(path.join(tmpdir(), 'admin-branches-'));
-  nodesYamlPath = path.join(dir, 'nodes.yaml');
-  writeFileSync(
-    nodesYamlPath,
-    `nodes:\n  - id: node-b\n    url: http://127.0.0.1:9999\n    ethAddress: "0x${'aa'.repeat(20)}"\n    supportedModels: ["model-small"]\n    enabled: true\n    tierAllowed: ["free", "prepaid"]\n    weight: 100\n`,
-  );
-  const nb = new NodeBook();
-  createNodesLoader({ db: pg.db, nodeBook: nb, configPath: nodesYamlPath }).load();
-  return nb;
-}
-
 async function buildServer() {
+  const nodeIndex = createNodeIndex([
+    { id: 'node-b', url: 'http://127.0.0.1:9999', capabilities: ['chat'], weight: 100 },
+  ]);
+  const circuitBreaker = new CircuitBreaker({ failureThreshold: 3, coolDownSeconds: 60 });
   const adminService = createAdminService({
     db: pg.db,
     payerDaemon: mockPayerDaemon(),
-    nodeBook: mkNodeBook(),
+    nodeIndex,
+    circuitBreaker,
   });
   const server = await createFastifyServer({ logger: false });
   registerAdminRoutes(server.app, {
@@ -58,7 +47,6 @@ async function buildServer() {
     config: { token: ADMIN_TOKEN, ipAllowlist: [] },
     adminService,
     authConfig: { pepper: 'branch-pepper-000', envPrefix: 'test', cacheTtlMs: 60_000 },
-    nodesConfigPath: nodesYamlPath,
   });
   await server.app.ready();
   return server;
@@ -233,29 +221,6 @@ describe('admin routes — validation rejections', () => {
     } finally { await server.close(); }
   });
 
-  it('GET /admin/config/nodes returns 500 when nodes.yaml does not exist', async () => {
-    // Build a server with a nonexistent path
-    const server = await createFastifyServer({ logger: false });
-    const adminService = createAdminService({
-      db: pg.db, payerDaemon: mockPayerDaemon(), nodeBook: mkNodeBook(),
-    });
-    registerAdminRoutes(server.app, {
-      db: pg.db,
-      config: { token: ADMIN_TOKEN, ipAllowlist: [] },
-      adminService,
-      authConfig: { pepper: 'p'.repeat(20), envPrefix: 'test', cacheTtlMs: 60_000 },
-      nodesConfigPath: '/tmp/this-does-not-exist-12345.yaml',
-    });
-    await server.app.ready();
-    try {
-      const res = await server.app.inject({
-        method: 'GET', url: '/admin/config/nodes', headers: auth('admin'),
-      });
-      expect(res.statusCode).toBe(500);
-      const body = res.json() as { error: { code: string } };
-      expect(body.error.code).toBe('config_unreadable');
-    } finally { await server.close(); }
-  });
 });
 
 describe('admin routes — repo branch coverage', () => {

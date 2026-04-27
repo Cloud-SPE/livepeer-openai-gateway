@@ -1,4 +1,6 @@
-import type { CircuitBreakerConfig } from '../../config/nodes.js';
+import type { CircuitBreakerConfig } from '../../config/routing.js';
+
+export type { CircuitBreakerConfig };
 
 export type CircuitStatus = 'healthy' | 'degraded' | 'circuit_broken';
 
@@ -143,9 +145,7 @@ export function shouldProbe(
  * Stateful circuit-breaker keyed by `nodeId`. Wraps the pure-policy
  * functions above and owns the per-node state map. Used by the
  * dispatchers (via `currentExclusions`) and by `quoteRefresher` (via
- * `onSuccess`/`onFailure`/`shouldProbe`) once the migration to
- * service-registry-daemon-driven node identity completes — until then
- * the legacy NodeBook still owns CircuitState per NodeEntry.
+ * `onSuccess`/`onFailure`/`shouldProbe`).
  *
  * Per exec-plan 0025.
  */

@@ -82,10 +82,9 @@ services:
       ADMIN_TOKEN: smoke-admin-token-1234567890ABCDEFGHIJ
       ADMIN_IP_ALLOWLIST: ''
 
-      NODES_CONFIG_PATH: /app/nodes.yaml
       BRIDGE_AUTO_MIGRATE: 'true'
-    volumes:
-      - ./nodes.yaml:/app/nodes.yaml:ro
+      # service-registry-daemon socket — daemon sidecar lands in stage-3 step 12.
+      SERVICE_REGISTRY_SOCKET: /var/run/livepeer/service-registry.sock
     ports:
       - '8080:8080'
     healthcheck:

@@ -5,7 +5,6 @@ import {
   BillingError,
   QuotaExceededError,
 } from '../../service/billing/errors.js';
-import { NoHealthyNodesError, NodesError } from '../../service/nodes/errors.js';
 import {
   PayerDaemonError,
   PayerDaemonUnavailableError,
@@ -15,7 +14,12 @@ import {
   PaymentsError,
   QuoteExpiredError,
 } from '../../service/payments/errors.js';
-import { ModelNotFoundError, RoutingError } from '../../service/routing/errors.js';
+import {
+  ModelNotFoundError,
+  NoHealthyNodesError,
+  NodesError,
+  RoutingError,
+} from '../../service/routing/errors.js';
 import { RateLimitExceededError } from '../../service/rateLimit/errors.js';
 import type { ErrorEnvelope } from '../../types/error.js';
 

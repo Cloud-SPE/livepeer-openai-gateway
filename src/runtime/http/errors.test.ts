@@ -2,8 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ZodError, z } from 'zod';
 import { InvalidApiKeyError } from '../../service/auth/errors.js';
 import { BalanceInsufficientError, QuotaExceededError } from '../../service/billing/errors.js';
-import { ModelNotFoundError } from '../../service/routing/errors.js';
-import { NoHealthyNodesError } from '../../service/nodes/errors.js';
+import { ModelNotFoundError, NoHealthyNodesError } from '../../service/routing/errors.js';
 import { PayerDaemonUnavailableError } from '../../providers/payerDaemon/errors.js';
 import { toHttpError, MissingUsageError, UpstreamNodeError } from './errors.js';
 

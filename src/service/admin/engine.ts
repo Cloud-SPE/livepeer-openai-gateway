@@ -2,21 +2,25 @@ import { desc, eq, sql } from 'drizzle-orm';
 import type { Db } from '../../repo/db.js';
 import type { PayerDaemonClient } from '../../providers/payerDaemon.js';
 import type { RedisClient } from '../../providers/redis.js';
-import type { NodeBook, NodeEntry } from '../nodes/nodebook.js';
+import type { CircuitBreaker, CircuitStatus } from '../routing/circuitBreaker.js';
+import type { NodeIndex } from '../routing/nodeIndex.js';
+import type { NodeRef } from '../../providers/serviceRegistry.js';
 import { nodeHealthEvents } from '../../repo/schema.js';
 
 /**
  * Engine half of the admin service. Owns node and payment-daemon
  * operations: health, node listing, node detail, escrow info. Stage 3
- * will extract this into the OSS engine package alongside its shell
+ * extracts this into the OSS engine package alongside its shell
  * counterpart.
  *
- * Stage-2 note: still backed by NodeBook for listNodes/getNode (since
- * NodeBook still owns per-node CircuitState here). Retiring NodeBook
- * for the admin path requires also wiring CircuitBreaker into the
- * admin layer — deferred to a follow-up that retires NodeBook entirely.
+ * Sources of truth (post stage-2 carry-over):
+ *   - identity (id, url, capabilities, weight): registry-daemon snapshot
+ *     surfaced via NodeIndex
+ *   - circuit state (status, consecutiveFailures, lastSuccessAt, ...):
+ *     CircuitBreaker keyed by node id
+ *   - history: nodeHealthEvents table
  *
- * Per exec-plan 0025.
+ * Per exec-plan 0026.
  */
 export interface HealthReport {
   ok: boolean;
@@ -31,7 +35,7 @@ export interface NodeSummary {
   id: string;
   url: string;
   enabled: boolean;
-  status: 'healthy' | 'degraded' | 'circuit_broken';
+  status: CircuitStatus;
   tierAllowed: readonly ('free' | 'prepaid')[];
   supportedModels: readonly string[];
   weight: number;
@@ -62,7 +66,8 @@ export interface EngineAdminServiceDeps {
   db: Db;
   payerDaemon: PayerDaemonClient;
   redis?: RedisClient;
-  nodeBook: NodeBook;
+  nodeIndex: NodeIndex;
+  circuitBreaker: CircuitBreaker;
 }
 
 export interface EngineAdminService {
@@ -73,6 +78,18 @@ export interface EngineAdminService {
 }
 
 export function createEngineAdminService(deps: EngineAdminServiceDeps): EngineAdminService {
+  function summarize(ref: NodeRef): NodeSummary {
+    return {
+      id: ref.id,
+      url: ref.url,
+      enabled: true,
+      status: deps.circuitBreaker.state(ref.id).status,
+      tierAllowed: [],
+      supportedModels: [],
+      weight: ref.weight ?? 0,
+    };
+  }
+
   return {
     async getHealth(): Promise<HealthReport> {
       let dbOk = true;
@@ -90,25 +107,28 @@ export function createEngineAdminService(deps: EngineAdminServiceDeps): EngineAd
           redisOk = false;
         }
       }
-      const nodes = deps.nodeBook.list();
-      const healthy = nodes.filter((n) => n.circuit.status === 'healthy').length;
+      const refs = deps.nodeIndex.list();
+      const healthy = refs.filter(
+        (r) => deps.circuitBreaker.state(r.id).status === 'healthy',
+      ).length;
       return {
         ok: dbOk && redisOk && deps.payerDaemon.isHealthy(),
         payerDaemonHealthy: deps.payerDaemon.isHealthy(),
         dbOk,
         redisOk,
-        nodeCount: nodes.length,
+        nodeCount: refs.length,
         nodesHealthy: healthy,
       };
     },
 
     listNodes(): NodeSummary[] {
-      return deps.nodeBook.list().map(toSummary);
+      return deps.nodeIndex.list().map(summarize);
     },
 
     async getNode(id: string): Promise<NodeDetail | null> {
-      const entry = deps.nodeBook.get(id);
-      if (!entry) return null;
+      const ref = deps.nodeIndex.get(id);
+      if (!ref) return null;
+      const state = deps.circuitBreaker.state(id);
       const events = await deps.db
         .select()
         .from(nodeHealthEvents)
@@ -116,12 +136,12 @@ export function createEngineAdminService(deps: EngineAdminServiceDeps): EngineAd
         .orderBy(desc(nodeHealthEvents.occurredAt))
         .limit(20);
       return {
-        ...toSummary(entry),
+        ...summarize(ref),
         circuit: {
-          consecutiveFailures: entry.circuit.consecutiveFailures,
-          lastSuccessAt: entry.circuit.lastSuccessAt,
-          lastFailureAt: entry.circuit.lastFailureAt,
-          circuitOpenedAt: entry.circuit.circuitOpenedAt,
+          consecutiveFailures: state.consecutiveFailures,
+          lastSuccessAt: state.lastSuccessAt,
+          lastFailureAt: state.lastFailureAt,
+          circuitOpenedAt: state.circuitOpenedAt,
         },
         recentEvents: events.map((e) => ({
           kind: e.kind,
@@ -140,17 +160,5 @@ export function createEngineAdminService(deps: EngineAdminServiceDeps): EngineAd
         source: 'payer_daemon',
       };
     },
-  };
-}
-
-function toSummary(entry: NodeEntry): NodeSummary {
-  return {
-    id: entry.config.id,
-    url: entry.config.url,
-    enabled: entry.config.enabled,
-    status: entry.circuit.status,
-    tierAllowed: entry.config.tierAllowed,
-    supportedModels: entry.config.supportedModels,
-    weight: entry.config.weight,
   };
 }

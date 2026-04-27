@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { sql } from 'drizzle-orm';
@@ -11,10 +11,8 @@ import * as customersRepo from '../../../repo/customers.js';
 import { createAuthService, issueKey } from '../../../service/auth/index.js';
 import { createAuthResolver } from '../../../service/auth/authResolver.js';
 import { createPrepaidQuotaWallet } from '../../../service/billing/wallet.js';
-import { createNodesLoader } from '../../../service/nodes/loader.js';
-import { createQuoteRefresher } from '../../../service/nodes/quoteRefresher.js';
-import { NodeBook } from '../../../service/nodes/nodebook.js';
-import { createNodeBookRegistry } from '../../../service/nodes/nodebookRegistry.js';
+import { createFakeServiceRegistry } from '../../../providers/serviceRegistry/fake.js';
+import { createQuoteRefresher } from '../../../service/routing/quoteRefresher.js';
 import { CircuitBreaker } from '../../../service/routing/circuitBreaker.js';
 import { QuoteCache } from '../../../service/routing/quoteCache.js';
 import { ManualScheduler } from '../../../service/routing/scheduler.js';
@@ -207,41 +205,41 @@ async function startBridge(balanceCents = 10_000n): Promise<RunningBridge> {
     pepper,
   });
 
-  const dir = mkdtempSync(path.join(tmpdir(), 'str-nodes-'));
-  writeFileSync(
-    path.join(dir, 'nodes.yaml'),
-    `
-nodes:
-  - id: node-str
-    url: http://127.0.0.1:${worker.port}
-    ethAddress: "0x${'aa'.repeat(20)}"
-    supportedModels: ["model-small"]
-    enabled: true
-    tierAllowed: ["prepaid"]
-    weight: 100
-`,
-  );
+  const workerUrl = `http://127.0.0.1:${worker.port}`;
+  const serviceRegistry = createFakeServiceRegistry({
+    nodes: [
+      {
+        id: 'node-str',
+        url: workerUrl,
+        capabilities: ['chat'],
+        weight: 100,
+        supportedModels: ['model-small'],
+        tierAllowed: ['prepaid'],
+      },
+    ],
+  });
 
-  const nodeBook = new NodeBook();
-  createNodesLoader({ db: pg.db, nodeBook, configPath: path.join(dir, 'nodes.yaml') }).load();
   const scheduler = new ManualScheduler();
   scheduler.setNow(new Date());
   const nodeClient = createFetchNodeClient();
-  const refresher = createQuoteRefresher({
-    db: pg.db,
-    nodeBook,
-    nodeClient,
-    scheduler,
-    bridgeEthAddress: TEST_BRIDGE_ETH,
-  });
-  await refresher.tickNode('node-str');
-
-  const serviceRegistry = createNodeBookRegistry({ nodeBook });
   const circuitBreaker = new CircuitBreaker({ failureThreshold: 3, coolDownSeconds: 60 });
   const quoteCache = new QuoteCache();
-  for (const entry of nodeBook.list()) {
-    quoteCache.replaceNode(entry.config.id, entry.quotes);
-  }
+  const refresher = createQuoteRefresher({
+    db: pg.db,
+    serviceRegistry,
+    nodeClient,
+    circuitBreaker,
+    quoteCache,
+    scheduler,
+    config: {
+      quoteRefreshSeconds: 30,
+      healthTimeoutMs: 5_000,
+      quoteTimeoutMs: 10_000,
+      circuitBreaker: { failureThreshold: 3, coolDownSeconds: 60 },
+    },
+    bridgeEthAddress: TEST_BRIDGE_ETH,
+  });
+  await refresher.tickNode('node-str', workerUrl, ['openai:/v1/chat/completions']);
 
   const payerDaemon = createGrpcPayerDaemonClient({
     config: {

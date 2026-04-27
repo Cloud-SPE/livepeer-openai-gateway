@@ -2,11 +2,11 @@
 // counter+histogram pair through the Recorder. Mirrors the
 // service-registry `WithMetrics` pattern.
 //
-// Pass A constraint: NodeClient methods take a `url`, not a `nodeId`. The
-// counter/histogram are labeled by nodeId, so the decorator accepts an
-// optional `resolveNodeId(url)` callback. The composition root in Pass B will
-// supply this callback (typically a NodeBook lookup keyed by base URL). When
-// the callback is absent or returns undefined, the emission falls back to
+// NodeClient methods take a `url`, not a `nodeId`. The counter/histogram
+// are labeled by nodeId, so the decorator accepts an optional
+// `resolveNodeId(url)` callback. The composition root supplies a
+// NodeIndex-backed lookup keyed by base URL. When the callback is
+// absent or returns undefined, the emission falls back to
 // LABEL_UNSET — the prom impl already tolerates that label value.
 //
 // outcome bucketing matches the spec: `2xx` on a successful response (status
@@ -45,7 +45,7 @@ import {
   type RequestOutcome,
 } from '../metrics/recorder.js';
 
-/** Optional URL-to-nodeId resolver. Pass B wires a NodeBook-backed lookup. */
+/** Optional URL-to-nodeId resolver. The composition root wires a NodeIndex-backed lookup. */
 export type ResolveNodeId = (url: string) => string | undefined;
 
 function bucket(status: number): RequestOutcome {

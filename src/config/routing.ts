@@ -1,11 +1,14 @@
 import { z } from 'zod';
-import type { CircuitBreakerConfig } from './nodes.js';
 
 /**
- * Bridge-local routing config. Replaces the per-node refresh + breaker
- * tuning that lived in `nodes.yaml` (since the registry-daemon is the
- * source of node identity now, per-node tuning collapses to global).
+ * Bridge-local routing config. Per-node refresh + breaker tuning is
+ * global now that the registry-daemon owns node identity.
  */
+export interface CircuitBreakerConfig {
+  failureThreshold: number;
+  coolDownSeconds: number;
+}
+
 export interface RoutingConfig {
   /** Seconds between scheduled `/quotes` polls per node. */
   readonly quoteRefreshSeconds: number;

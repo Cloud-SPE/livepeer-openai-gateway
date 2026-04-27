@@ -2,36 +2,32 @@
 // timer rather than at the moment of an event. Mirrors the
 // service-registry's `internal/service/metrics/sampler.go` shape.
 //
-// Pass A: this file is created but NOT started by the composition root —
-// Pass B wires `start()` from main.ts so the sampler ticks alongside the
-// HTTP server.
-//
 // Per tick the sampler:
 //   1. SELECTs (count, oldest-age) of `state='open'` reservations and feeds
 //      `setReservationsOpen` / `setReservationOpenOldestSeconds`.
-//   2. Walks the in-memory NodeBook and emits `setNodesState(state, n)` for
-//      each of the four states ({healthy, degraded, circuit_broken,
-//      disabled}). disabled = `config.enabled === false`; the other three
-//      come from `circuit.status`.
+//   2. Walks the registry-driven NodeIndex + CircuitBreaker and emits
+//      `setNodesState(state, n)` for each of the three live states
+//      (healthy, degraded, circuit_broken). There is no "disabled"
+//      bucket — the registry-daemon owns membership and only surfaces
+//      nodes it considers eligible.
 //   3. Reads the cached deposit-info via the supplied DepositInfoSource and
 //      sets `setPayerDaemonDepositWei` + `setPayerDaemonReserveWei`. The
 //      source is supplied by the composition root so the sampler does NOT
 //      issue a fresh RPC — it reads whatever the existing health-loop has
 //      already populated.
 //
-// All db / NodeBook / DepositInfoSource calls are wrapped in try/catch so a
+// All db / NodeIndex / DepositInfoSource calls are wrapped in try/catch so a
 // single failing source doesn't break the rest of the tick.
 
 import { sql } from 'drizzle-orm';
 import type { Db } from '../../repo/db.js';
-import type { NodeBook } from '../nodes/nodebook.js';
+import type { CircuitBreaker } from '../routing/circuitBreaker.js';
+import type { NodeIndex } from '../routing/nodeIndex.js';
 import type { DepositInfo } from '../../providers/payerDaemon.js';
 import {
   NODE_STATE_CIRCUIT_BROKEN,
   NODE_STATE_DEGRADED,
-  NODE_STATE_DISABLED,
   NODE_STATE_HEALTHY,
-  type NodeState,
   type Recorder,
 } from '../../providers/metrics/recorder.js';
 
@@ -44,7 +40,8 @@ export type DepositInfoSource = () => DepositInfo | null;
 
 export interface MetricsSamplerDeps {
   db: Db;
-  nodeBook: NodeBook;
+  nodeIndex: NodeIndex;
+  circuitBreaker: CircuitBreaker;
   depositInfoSource: DepositInfoSource;
   recorder: Recorder;
   intervalMs?: number;
@@ -90,28 +87,18 @@ export function createMetricsSampler(deps: MetricsSamplerDeps): MetricsSampler {
 
   function sampleNodes(): void {
     try {
-      const counts: Record<NodeState, number> = {
-        [NODE_STATE_HEALTHY]: 0,
-        [NODE_STATE_DEGRADED]: 0,
-        [NODE_STATE_CIRCUIT_BROKEN]: 0,
-        [NODE_STATE_DISABLED]: 0,
-      };
-      for (const entry of deps.nodeBook.list()) {
-        if (!entry.config.enabled) {
-          counts[NODE_STATE_DISABLED] += 1;
-          continue;
-        }
-        // circuit.status is one of healthy / degraded / circuit_broken — same
-        // string values as the metric label so we can index directly.
-        counts[entry.circuit.status] += 1;
+      let healthy = 0;
+      let degraded = 0;
+      let circuitBroken = 0;
+      for (const ref of deps.nodeIndex.list()) {
+        const status = deps.circuitBreaker.state(ref.id).status;
+        if (status === 'healthy') healthy += 1;
+        else if (status === 'degraded') degraded += 1;
+        else if (status === 'circuit_broken') circuitBroken += 1;
       }
-      deps.recorder.setNodesState(NODE_STATE_HEALTHY, counts[NODE_STATE_HEALTHY]);
-      deps.recorder.setNodesState(NODE_STATE_DEGRADED, counts[NODE_STATE_DEGRADED]);
-      deps.recorder.setNodesState(
-        NODE_STATE_CIRCUIT_BROKEN,
-        counts[NODE_STATE_CIRCUIT_BROKEN],
-      );
-      deps.recorder.setNodesState(NODE_STATE_DISABLED, counts[NODE_STATE_DISABLED]);
+      deps.recorder.setNodesState(NODE_STATE_HEALTHY, healthy);
+      deps.recorder.setNodesState(NODE_STATE_DEGRADED, degraded);
+      deps.recorder.setNodesState(NODE_STATE_CIRCUIT_BROKEN, circuitBroken);
     } catch (err) {
       onError('nodes', err);
     }

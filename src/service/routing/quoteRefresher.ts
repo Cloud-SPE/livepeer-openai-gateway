@@ -49,8 +49,7 @@ export interface QuoteRefresher {
 }
 
 /**
- * service-registry-driven quote-refresh loop. Replaces the legacy
- * NodeBook-driven refresher in src/service/nodes/quoteRefresher.ts.
+ * service-registry-driven quote-refresh loop.
  *
  * Lifecycle:
  *   start() → enumerate `serviceRegistry.listKnown()` once, schedule a

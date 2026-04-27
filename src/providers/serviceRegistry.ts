@@ -4,10 +4,9 @@ import type { NodeCapability } from '../types/node.js';
  * Engine-internal provider interface for node discovery and selection.
  * NOT operator-overridable — the engine commits to
  * `livepeer-modules-project/service-registry-daemon` as the canonical
- * source of node identity (per exec-plan 0024 / 0025). This interface
- * exists so stage 1 can refactor existing NodeBook callers behind a
- * registry-shaped API; stage 2 swaps the NodeBook-backed impl for a real
- * gRPC client to the daemon.
+ * source of node identity (per exec-plan 0024 / 0025). The production
+ * implementation is `createGrpcServiceRegistryClient` in
+ * `serviceRegistry/grpc.ts`; tests fake this surface directly.
  */
 export interface ServiceRegistryClient {
   /**
@@ -17,8 +16,8 @@ export interface ServiceRegistryClient {
    * `excludeIds`. The bridge does the final pick (weighted random or
    * top-N) over the returned slice.
    *
-   * Stage-1 NodeBook impl returns nodes sorted by weight desc; stage-2
-   * gRPC impl returns whatever the daemon's `Select` RPC returns.
+   * gRPC impl returns whatever the daemon's `Select` RPC returns; the
+   * bridge applies its bridge-local circuit-breaker exclusion afterward.
    */
   select(query: SelectQuery): Promise<NodeRef[]>;
 
@@ -44,10 +43,8 @@ export interface NodeRef {
   capabilities: NodeCapability[];
   weight?: number;
   /**
-   * Stage-1 carries the full NodeBook NodeEntry here so callers reaching
-   * for circuit state or cached quotes can narrow via metadata. Stage-2
-   * gRPC impl populates with daemon-reported fields (lat/lon, region,
-   * operator address, signature_status).
+   * Daemon-reported fields (the proto Node, with eth_address, geo, etc.).
+   * Callers narrow via the proto type when they need them.
    */
   metadata?: unknown;
 }

@@ -1,7 +1,8 @@
 import type { Db } from '../../repo/db.js';
 import type { PayerDaemonClient } from '../../providers/payerDaemon.js';
 import type { RedisClient } from '../../providers/redis.js';
-import type { NodeBook } from '../nodes/nodebook.js';
+import type { CircuitBreaker } from '../routing/circuitBreaker.js';
+import type { NodeIndex } from '../routing/nodeIndex.js';
 import {
   createEngineAdminService,
   type EngineAdminService,
@@ -34,7 +35,8 @@ export interface AdminServiceDeps {
   db: Db;
   payerDaemon: PayerDaemonClient;
   redis?: RedisClient;
-  nodeBook: NodeBook;
+  nodeIndex: NodeIndex;
+  circuitBreaker: CircuitBreaker;
 }
 
 export function createAdminService(deps: AdminServiceDeps): AdminService {

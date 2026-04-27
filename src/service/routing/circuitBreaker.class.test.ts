@@ -1,11 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { CircuitBreakerConfig } from '../../config/nodes.js';
-import { CircuitBreaker } from './circuitBreaker.js';
+import { CircuitBreaker, type CircuitBreakerConfig } from './circuitBreaker.js';
 
 const config: CircuitBreakerConfig = {
   failureThreshold: 3,
   coolDownSeconds: 60,
-  halfOpenProbeTimeoutMs: 5_000,
 };
 
 describe('CircuitBreaker (stateful wrapper)', () => {

@@ -1,5 +1,3 @@
-import { createHash } from 'node:crypto';
-import { readFile, stat } from 'node:fs/promises';
 import { z } from 'zod';
 import type { FastifyInstance } from 'fastify';
 import type { AuthConfig } from '../../../config/auth.js';
@@ -17,7 +15,6 @@ import * as topupsRepo from '../../../repo/topups.js';
 export interface AdminRoutesDeps extends AdminAuthDeps {
   adminService: AdminService;
   authConfig: AuthConfig;
-  nodesConfigPath: string;
 }
 
 const RefundBodySchema = z.object({
@@ -400,31 +397,6 @@ export function registerAdminRoutes(app: FastifyInstance, deps: AdminRoutesDeps)
     },
   );
 
-  app.get('/admin/config/nodes', { preHandler }, async (_req, reply) => {
-    try {
-      const [contents, info] = await Promise.all([
-        readFile(deps.nodesConfigPath, 'utf8'),
-        stat(deps.nodesConfigPath),
-      ]);
-      const sha256 = createHash('sha256').update(contents).digest('hex');
-      return {
-        path: deps.nodesConfigPath,
-        sha256,
-        mtime: info.mtime.toISOString(),
-        size_bytes: info.size,
-        contents,
-        loaded_nodes: deps.adminService.listNodes(),
-      };
-    } catch (err) {
-      await reply.code(500).send({
-        error: {
-          code: 'config_unreadable',
-          type: 'ConfigError',
-          message: err instanceof Error ? err.message : 'failed to read nodes.yaml',
-        },
-      });
-    }
-  });
 }
 
 // ── helpers ─────────────────────────────────────────────────────────────────

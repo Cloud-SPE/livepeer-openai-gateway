@@ -29,9 +29,6 @@ coverage/
 *.key
 *.pem
 
-# Local operator-authored files (not checked in)
-nodes.yaml
-
 # Data / local state
 data/
 *.db

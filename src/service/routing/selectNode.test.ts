@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { NodeRef, ServiceRegistryClient } from '../../providers/serviceRegistry.js';
 import { CircuitBreaker } from './circuitBreaker.js';
 import { selectNode } from './router.js';
-import { NoHealthyNodesError } from '../nodes/errors.js';
+import { NoHealthyNodesError } from './errors.js';
 
 const cbConfig = { failureThreshold: 3, coolDownSeconds: 60 };
 

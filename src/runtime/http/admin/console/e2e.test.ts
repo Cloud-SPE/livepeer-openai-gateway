@@ -1,25 +1,24 @@
 // Operator admin end-to-end test.
 //
-// Boots the bridge with TestPg + a mocked PayerDaemon + an in-memory NodeBook
-// on a real port, builds (or reuses) the admin SPA, and drives a real
-// Chromium via Playwright through the operator sign-in + customer-detail
-// suspend flow. Verifies that the X-Admin-Actor handle ends up in the
-// admin_audit_event row that the action produces.
+// Boots the bridge with TestPg + a mocked PayerDaemon + a stub
+// ServiceRegistry on a real port, builds (or reuses) the admin SPA, and
+// drives a real Chromium via Playwright through the operator sign-in +
+// customer-detail suspend flow. Verifies that the X-Admin-Actor handle
+// ends up in the admin_audit_event row that the action produces.
 //
 // Skips gracefully if `bridge-ui/admin/dist/` is missing (fresh checkouts
 // haven't built the UI yet).
 
-import { existsSync, mkdtempSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path, { resolve } from 'node:path';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
 import { chromium, type Browser } from 'playwright';
 import { startTestPg, type TestPg } from '../../../../service/billing/testPg.js';
 import * as customersRepo from '../../../../repo/customers.js';
 import * as adminAuditEventsRepo from '../../../../repo/adminAuditEvents.js';
-import { createNodesLoader } from '../../../../service/nodes/loader.js';
-import { NodeBook } from '../../../../service/nodes/nodebook.js';
+import { CircuitBreaker } from '../../../../service/routing/circuitBreaker.js';
+import { createNodeIndex } from '../../../../service/routing/nodeIndex.js';
 import { createFastifyServer } from '../../../../providers/http/fastify.js';
 import { createAdminService } from '../../../../service/admin/index.js';
 import { registerAdminRoutes } from '../routes.js';
@@ -34,7 +33,6 @@ const ADMIN_TOKEN = 'a'.repeat(40);
 let pg: TestPg;
 let browser: Browser;
 let bridge: { close(): Promise<void>; baseUrl: string } | null = null;
-let nodesYamlPath = '';
 
 beforeAll(async () => {
   if (!HAS_DIST) return;
@@ -61,24 +59,16 @@ function mockPayerDaemon(): PayerDaemonClient {
   };
 }
 
-function mkNodeBook(): NodeBook {
-  const dir = mkdtempSync(path.join(tmpdir(), 'admin-e2e-'));
-  nodesYamlPath = path.join(dir, 'nodes.yaml');
-  writeFileSync(
-    nodesYamlPath,
-    `nodes:\n  - id: node-e2e\n    url: http://127.0.0.1:9999\n    ethAddress: "0x${'aa'.repeat(20)}"\n    supportedModels: ["model-small"]\n    enabled: true\n    tierAllowed: ["free", "prepaid"]\n    weight: 100\n`,
-  );
-  const nb = new NodeBook();
-  createNodesLoader({ db: pg.db, nodeBook: nb, configPath: nodesYamlPath }).load();
-  return nb;
-}
-
 async function buildBridge() {
-  const nodeBook = mkNodeBook();
+  const nodeIndex = createNodeIndex([
+    { id: 'node-e2e', url: 'http://127.0.0.1:9999', capabilities: ['chat'], weight: 100 },
+  ]);
+  const circuitBreaker = new CircuitBreaker({ failureThreshold: 3, coolDownSeconds: 60 });
   const adminService = createAdminService({
     db: pg.db,
     payerDaemon: mockPayerDaemon(),
-    nodeBook,
+    nodeIndex,
+    circuitBreaker,
   });
   const server = await createFastifyServer({ logger: false });
   registerAdminRoutes(server.app, {
@@ -86,7 +76,6 @@ async function buildBridge() {
     config: { token: ADMIN_TOKEN, ipAllowlist: [] },
     adminService,
     authConfig: { pepper: 'admin-e2e-pepper-000', envPrefix: 'test', cacheTtlMs: 60_000 },
-    nodesConfigPath: nodesYamlPath,
   });
   await registerAdminConsoleStatic(server.app, { rootDir: ADMIN_DIST });
   const address = await server.listen({ host: '127.0.0.1', port: 0 });

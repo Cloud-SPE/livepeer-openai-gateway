@@ -1,13 +1,10 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { mkdtempSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
 import { sql } from 'drizzle-orm';
 import { startTestPg, type TestPg } from '../../../service/billing/testPg.js';
 import * as customersRepo from '../../../repo/customers.js';
 import { creditTopup } from '../../../service/billing/topups.js';
-import { createNodesLoader } from '../../../service/nodes/loader.js';
-import { NodeBook } from '../../../service/nodes/nodebook.js';
+import { CircuitBreaker } from '../../../service/routing/circuitBreaker.js';
+import { createNodeIndex } from '../../../service/routing/nodeIndex.js';
 import { createFastifyServer } from '../../../providers/http/fastify.js';
 import { createAdminService } from '../../../service/admin/index.js';
 import { registerAdminRoutes } from './routes.js';
@@ -40,32 +37,16 @@ function mockPayerDaemon(opts: { healthy?: boolean } = {}): PayerDaemonClient {
   };
 }
 
-function mkNodeBook(): NodeBook {
-  const dir = mkdtempSync(path.join(tmpdir(), 'admin-nodes-'));
-  writeFileSync(
-    path.join(dir, 'nodes.yaml'),
-    `
-nodes:
-  - id: node-admin
-    url: http://127.0.0.1:9999
-    ethAddress: "0x${'aa'.repeat(20)}"
-    supportedModels: ["model-small"]
-    enabled: true
-    tierAllowed: ["free", "prepaid"]
-    weight: 100
-`,
-  );
-  const nb = new NodeBook();
-  createNodesLoader({ db: pg.db, nodeBook: nb, configPath: path.join(dir, 'nodes.yaml') }).load();
-  return nb;
-}
-
 async function buildServer(opts: { ipAllowlist?: string[] } = {}) {
-  const nodeBook = mkNodeBook();
+  const nodeIndex = createNodeIndex([
+    { id: 'node-admin', url: 'http://127.0.0.1:9999', capabilities: ['chat'], weight: 100 },
+  ]);
+  const circuitBreaker = new CircuitBreaker({ failureThreshold: 3, coolDownSeconds: 60 });
   const adminService = createAdminService({
     db: pg.db,
     payerDaemon: mockPayerDaemon(),
-    nodeBook,
+    nodeIndex,
+    circuitBreaker,
   });
   const server = await createFastifyServer({ logger: false });
   registerAdminRoutes(server.app, {
@@ -73,7 +54,6 @@ async function buildServer(opts: { ipAllowlist?: string[] } = {}) {
     config: { token: ADMIN_TOKEN, ipAllowlist: opts.ipAllowlist ?? [] },
     adminService,
     authConfig: { pepper: 'admin-test-pepper-000', envPrefix: 'test', cacheTtlMs: 60_000 },
-    nodesConfigPath: '/dev/null',
   });
   await server.app.ready();
   return server;

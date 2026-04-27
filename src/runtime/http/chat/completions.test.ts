@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { sql } from 'drizzle-orm';
@@ -12,10 +12,8 @@ import * as apiKeysRepo from '../../../repo/apiKeys.js';
 import { createAuthService, issueKey } from '../../../service/auth/index.js';
 import { createAuthResolver } from '../../../service/auth/authResolver.js';
 import { createPrepaidQuotaWallet } from '../../../service/billing/wallet.js';
-import { createNodesLoader } from '../../../service/nodes/loader.js';
-import { createQuoteRefresher } from '../../../service/nodes/quoteRefresher.js';
-import { NodeBook } from '../../../service/nodes/nodebook.js';
-import { createNodeBookRegistry } from '../../../service/nodes/nodebookRegistry.js';
+import { createFakeServiceRegistry } from '../../../providers/serviceRegistry/fake.js';
+import { createQuoteRefresher } from '../../../service/routing/quoteRefresher.js';
 import { CircuitBreaker } from '../../../service/routing/circuitBreaker.js';
 import { QuoteCache } from '../../../service/routing/quoteCache.js';
 import { ManualScheduler } from '../../../service/routing/scheduler.js';
@@ -193,46 +191,41 @@ async function startBridge(opts: {
     pepper,
   });
 
-  // nodes.yaml pointing at the fake worker.
-  const dir = mkdtempSync(path.join(tmpdir(), 'e2e-nodes-'));
-  writeFileSync(
-    path.join(dir, 'nodes.yaml'),
-    `
-nodes:
-  - id: node-e2e
-    url: http://127.0.0.1:${worker.port}
-    ethAddress: "0x${'aa'.repeat(20)}"
-    supportedModels: ["model-small"]
-    enabled: true
-    tierAllowed: ["free", "prepaid"]
-    weight: 100
-`,
-  );
-
-  const nodeBook = new NodeBook();
-  createNodesLoader({ db: pg.db, nodeBook, configPath: path.join(dir, 'nodes.yaml') }).load();
+  const workerUrl = `http://127.0.0.1:${worker.port}`;
+  const serviceRegistry = createFakeServiceRegistry({
+    nodes: [
+      {
+        id: 'node-e2e',
+        url: workerUrl,
+        capabilities: ['chat'],
+        weight: 100,
+        supportedModels: ['model-small'],
+        tierAllowed: ['free', 'prepaid'],
+      },
+    ],
+  });
 
   const scheduler = new ManualScheduler();
   scheduler.setNow(new Date());
   const nodeClient = createFetchNodeClient();
-  const refresher = createQuoteRefresher({
-    db: pg.db,
-    nodeBook,
-    nodeClient,
-    scheduler,
-    bridgeEthAddress: TEST_BRIDGE_ETH,
-  });
-  await refresher.tickNode('node-e2e');
-
-  // Bridge the legacy NodeBook quote setup into the new registry-shaped
-  // contract: dispatchers read quotes from QuoteCache, select nodes via
-  // ServiceRegistryClient, and exclude via CircuitBreaker. Stage 2 task 18.7.
-  const serviceRegistry = createNodeBookRegistry({ nodeBook });
   const circuitBreaker = new CircuitBreaker({ failureThreshold: 3, coolDownSeconds: 60 });
   const quoteCache = new QuoteCache();
-  for (const entry of nodeBook.list()) {
-    quoteCache.replaceNode(entry.config.id, entry.quotes);
-  }
+  const refresher = createQuoteRefresher({
+    db: pg.db,
+    serviceRegistry,
+    nodeClient,
+    circuitBreaker,
+    quoteCache,
+    scheduler,
+    config: {
+      quoteRefreshSeconds: 30,
+      healthTimeoutMs: 5_000,
+      quoteTimeoutMs: 10_000,
+      circuitBreaker: { failureThreshold: 3, coolDownSeconds: 60 },
+    },
+    bridgeEthAddress: TEST_BRIDGE_ETH,
+  });
+  await refresher.tickNode('node-e2e', workerUrl, ['openai:/v1/chat/completions']);
 
   const payerDaemon = createGrpcPayerDaemonClient({
     config: {

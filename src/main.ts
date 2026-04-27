@@ -7,6 +7,8 @@ import { loadPayerDaemonConfig } from './config/payerDaemon.js';
 import { loadPricingConfig } from './config/pricing.js';
 import { defaultRateLimitConfig } from './config/rateLimit.js';
 import { loadRedisConfig } from './config/redis.js';
+import { loadRoutingConfig } from './config/routing.js';
+import { loadServiceRegistryConfig } from './config/serviceRegistry.js';
 import { loadStripeConfig } from './config/stripe.js';
 import { knownEncodings } from './config/tokenizer.js';
 import { createPgDatabase } from './providers/database/pg/index.js';
@@ -20,6 +22,7 @@ import { withMetrics as withStripeMetrics } from './providers/stripe/metered.js'
 import { createFetchNodeClient } from './providers/nodeClient/fetch.js';
 import { createGrpcPayerDaemonClient } from './providers/payerDaemon/grpc.js';
 import { createIoRedisClient } from './providers/redis/ioredis.js';
+import { createGrpcServiceRegistryClient } from './providers/serviceRegistry/grpc.js';
 import { createSdkStripeClient } from './providers/stripe/sdk.js';
 import { createTiktokenProvider } from './providers/tokenizer/tiktoken.js';
 import { createConsoleLogger } from './providers/logger/console.js';
@@ -49,21 +52,17 @@ import { createPrepaidQuotaWallet } from './service/billing/wallet.js';
 import { createMetricsSampler } from './service/metrics/sampler.js';
 import { createPaymentsService } from './service/payments/createPayment.js';
 import { createSessionCache } from './service/payments/sessions.js';
-import { createNodesLoader } from './service/nodes/loader.js';
-import { NodeBook } from './service/nodes/nodebook.js';
-import { createNodeBookRegistry } from './service/nodes/nodebookRegistry.js';
-import { createQuoteRefresher } from './service/nodes/quoteRefresher.js';
 import { CircuitBreaker } from './service/routing/circuitBreaker.js';
+import { createNodeIndex } from './service/routing/nodeIndex.js';
 import { QuoteCache } from './service/routing/quoteCache.js';
+import { createQuoteRefresher } from './service/routing/quoteRefresher.js';
 import { realScheduler } from './service/routing/scheduler.js';
-import { loadRoutingConfig } from './config/routing.js';
 import { createRateLimiter } from './service/rateLimit/index.js';
 import { createTokenAuditService } from './service/tokenAudit/index.js';
 
 const MainEnvSchema = z.object({
   HOST: z.string().default('0.0.0.0'),
   PORT: z.coerce.number().int().positive().default(8080),
-  NODES_CONFIG_PATH: z.string().default('./nodes.yaml'),
   BRIDGE_AUTO_MIGRATE: z
     .union([z.literal('true'), z.literal('false')])
     .transform((v) => v === 'true')
@@ -92,6 +91,7 @@ async function main(): Promise<void> {
   const rateLimitConfig = defaultRateLimitConfig();
   const metricsConfig = loadMetricsConfig();
   const routingConfig = loadRoutingConfig();
+  const serviceRegistryConfig = loadServiceRegistryConfig();
 
   // Recorder. METRICS_LISTEN unset => Noop everywhere; metrics server is a
   // no-op shell, hook + sampler skip registration. METRICS_LISTEN set =>
@@ -122,13 +122,19 @@ async function main(): Promise<void> {
   const redis = createIoRedisClient(redisConfig);
   const scheduler = realScheduler();
 
-  // NodeBook is constructed before the nodeClient decorator because the
-  // decorator's resolveNodeId callback closes over it.
-  const nodeBook = new NodeBook();
+  // Registry-daemon gRPC client + node-id index. The index is populated
+  // once at startup from listKnown(); the metered nodeClient resolves
+  // outbound URLs to ids via this index. v1 is start-time-static — node
+  // membership churn surfaces only via process restart.
+  const serviceRegistry = createGrpcServiceRegistryClient({
+    config: serviceRegistryConfig,
+    scheduler,
+  });
+  const nodeIndex = createNodeIndex();
 
   const rawNodeClient = createFetchNodeClient();
   const nodeClient = withNodeClientMetrics(rawNodeClient, recorder, (url) =>
-    nodeBook.findIdByUrl(url),
+    nodeIndex.findIdByUrl(url),
   );
   const rawPayerDaemon = createGrpcPayerDaemonClient({
     config: payerDaemonConfig,
@@ -143,55 +149,43 @@ async function main(): Promise<void> {
   const tokenizer = createTiktokenProvider();
   tokenizer.preload(knownEncodings());
 
-  // NodeBook population + background refresh.
-  createNodesLoader({ db, nodeBook, configPath: env.NODES_CONFIG_PATH }).load();
+  serviceRegistry.startHealthLoop();
+  payerDaemon.startHealthLoop();
+
+  // Initial node-pool enumeration. A failure here is non-fatal — the
+  // pool stays empty until a successful enumeration, which the caller
+  // can trigger via process restart. Dispatchers fail fast with
+  // NoHealthyNodesError when the registry returns nothing for a query.
+  try {
+    const initial = await serviceRegistry.listKnown();
+    nodeIndex.replaceAll(initial);
+    logger.info(`registry: enumerated ${initial.length} known nodes`);
+  } catch (err) {
+    logger.warn('registry: initial listKnown failed; node pool starts empty', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+
+  // Routing primitives.
+  const circuitBreaker = new CircuitBreaker(routingConfig.circuitBreaker);
+  const quoteCache = new QuoteCache();
   const refresher = createQuoteRefresher({
     db,
-    nodeBook,
+    serviceRegistry,
     nodeClient,
+    circuitBreaker,
+    quoteCache,
     scheduler,
+    config: routingConfig,
     bridgeEthAddress: payerDaemonConfig.bridgeEthAddress,
     recorder,
   });
-  refresher.start();
-  // Bootstrap an initial QuoteCache fill once the legacy refresher has
-  // had a chance to populate NodeBook. Subsequent ticks re-sync via the
-  // setInterval below until task 18 wires the new registry-driven
-  // refresher (which writes to QuoteCache directly).
-  setTimeout(syncNodeBookQuotesToCache, 1_000);
-  const quoteSyncInterval = setInterval(
-    syncNodeBookQuotesToCache,
-    routingConfig.quoteRefreshSeconds * 1000,
-  );
-  quoteSyncInterval.unref();
-  payerDaemon.startHealthLoop();
+  await refresher.start();
 
   // Services.
   const authService = createAuthService({ db, config: authConfig });
   const authResolver = createAuthResolver({ authService });
   const wallet = createPrepaidQuotaWallet({ db, recorder });
-  // ServiceRegistryClient — stage-1 NodeBook-backed wrapper. Stage-2 swaps
-  // for a gRPC client to livepeer-modules-project/service-registry-daemon
-  // and threads serviceRegistry through dispatchers + quoteRefresher;
-  // route handlers don't consume it yet.
-  // ServiceRegistryClient — currently NodeBook-backed via the stage-1
-  // wrapper; task 18 swaps to createGrpcServiceRegistryClient when the
-  // daemon-side wiring + quote-cache sync are mature enough to retire
-  // NodeBook entirely. Until then, NodeBook stays as the data source for
-  // both this wrapper AND the legacy adminService/metricsSampler.
-  const serviceRegistry = createNodeBookRegistry({ nodeBook });
-  const circuitBreaker = new CircuitBreaker(routingConfig.circuitBreaker);
-  const quoteCache = new QuoteCache();
-  // Legacy quoteRefresher writes quotes to NodeBook; sync them into the
-  // QuoteCache that dispatchers now read from. After each refresh tick,
-  // copy the snapshot in. Out of scope for stage 2: writing the new
-  // quoteRefresher in service/routing/quoteRefresher.ts which writes
-  // directly to QuoteCache (it exists; main.ts just doesn't use it yet).
-  function syncNodeBookQuotesToCache(): void {
-    for (const entry of nodeBook.list()) {
-      quoteCache.replaceNode(entry.config.id, entry.quotes);
-    }
-  }
   const sessionCache = createSessionCache({ payerDaemon });
   const paymentsService = createPaymentsService({ payerDaemon, sessions: sessionCache });
   const rateLimiter = createRateLimiter({ redis, config: rateLimitConfig, recorder });
@@ -202,7 +196,13 @@ async function main(): Promise<void> {
   // emissions; until then both surfaces stay live.
   const recorderAsSink = recorder as unknown as import('./providers/metrics.js').MetricsSink;
   const tokenAudit = createTokenAuditService({ tokenizer, metrics: recorderAsSink, recorder });
-  const adminService = createAdminService({ db, payerDaemon, redis, nodeBook });
+  const adminService = createAdminService({
+    db,
+    payerDaemon,
+    redis,
+    nodeIndex,
+    circuitBreaker,
+  });
 
   // Metrics HTTP server (separate Fastify instance — port + listener distinct
   // from the customer-facing one). Returns a no-op when METRICS_LISTEN is
@@ -222,7 +222,8 @@ async function main(): Promise<void> {
   // pointless DB query every 30s.
   const sampler = createMetricsSampler({
     db,
-    nodeBook,
+    nodeIndex,
+    circuitBreaker,
     depositInfoSource: () => null,
     recorder,
     intervalMs: 30_000,
@@ -314,7 +315,6 @@ async function main(): Promise<void> {
     config: adminConfig,
     adminService,
     authConfig,
-    nodesConfigPath: env.NODES_CONFIG_PATH,
   });
   await registerPortalStatic(server.app);
   await registerAdminConsoleStatic(server.app);
@@ -334,7 +334,13 @@ async function main(): Promise<void> {
         user: env.BRIDGE_OPS_USER,
         pass: env.BRIDGE_OPS_PASS,
       }),
-      engineAdminService: createEngineAdminService({ db, payerDaemon, redis, nodeBook }),
+      engineAdminService: createEngineAdminService({
+        db,
+        payerDaemon,
+        redis,
+        nodeIndex,
+        circuitBreaker,
+      }),
       buildInfo: {
         version: pkgVersion,
         nodeVersion: process.versions.node,
@@ -344,7 +350,6 @@ async function main(): Promise<void> {
   }
 
   // Graceful shutdown.
-  void quoteCache;
   let shuttingDown = false;
   const shutdown = async (signal: string): Promise<void> => {
     if (shuttingDown) return;
@@ -359,6 +364,7 @@ async function main(): Promise<void> {
       sampler.stop();
       refresher.stop();
       payerDaemon.stopHealthLoop();
+      serviceRegistry.close();
       await server.close();
       await metricsServer.stop();
       await payerDaemon.close();

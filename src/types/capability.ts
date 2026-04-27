@@ -3,10 +3,10 @@ import type { NodeCapability } from './node.js';
 
 /**
  * Single source of truth for the bridge's mapping between the
- * `NodeCapability` short-form enum (used in nodes.yaml + internal
- * routing) and the canonical capability strings the worker emits
- * (used in /capabilities, /quote, /quotes, and as the key in
- * `NodeEntry.quotes`).
+ * `NodeCapability` short-form enum (used in internal routing and on
+ * `NodeRef.capabilities`) and the canonical capability strings the
+ * worker emits (used in /capabilities, /quote, /quotes, and as the
+ * key in `QuoteCache`).
  *
  * Worker contract: see livepeer-payment-library/docs/design-docs/shared-yaml.md
  * for the canonical-string convention `<domain>:<uri-path>`.
@@ -39,8 +39,8 @@ export type CapabilityString = z.infer<typeof CapabilityStringSchema>;
 
 /**
  * Maps a short-form capability to its canonical worker-emitted string.
- * Use everywhere the bridge needs to look up a NodeEntry's quote for
- * a specific capability (`node.quotes.get(capabilityString('chat'))`).
+ * Use everywhere the bridge needs to look up a cached quote for a
+ * specific capability (`quoteCache.get(nodeId, capabilityString('chat'))`).
  */
 export function capabilityString(cap: NodeCapability): CapabilityString {
   return CAPABILITY_STRINGS[cap];

@@ -12,7 +12,6 @@ import {
   ImagesGenerationRequestSchema,
   ImagesRateCardSchema,
   ImagesResponseSchema,
-  NodeConfigSchema,
   PricingTierSchema,
   WorkIdSchema,
   normalizeEmbeddingsInput,
@@ -131,34 +130,6 @@ describe('types/pricing', () => {
       entries: [{ model: 'x', size: '1024x1024', quality: 'ultra', usdPerImage: 0.01 }],
     });
     expect(r.success).toBe(false);
-  });
-});
-
-describe('types/node', () => {
-  it('validates a minimal NodeConfig', () => {
-    const cfg = NodeConfigSchema.parse({
-      id: 'node-a',
-      url: 'https://node-a.example.com',
-      ethAddress: '0x' + 'ab'.repeat(20),
-      supportedModels: ['model-small'],
-      enabled: true,
-      tierAllowed: ['free', 'prepaid'],
-      weight: 100,
-    });
-    expect(cfg.supportedModels).toHaveLength(1);
-  });
-
-  it('rejects a malformed eth address', () => {
-    const result = NodeConfigSchema.safeParse({
-      id: 'node-a',
-      url: 'https://node-a.example.com',
-      ethAddress: '0xNOTHEX',
-      supportedModels: ['m'],
-      enabled: true,
-      tierAllowed: ['free'],
-      weight: 1,
-    });
-    expect(result.success).toBe(false);
   });
 });
 

@@ -1,7 +1,4 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { mkdtempSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
 import { sql } from 'drizzle-orm';
 import { startTestPg, type TestPg } from '../../../service/billing/testPg.js';
 import * as adminAuditEventsRepo from '../../../repo/adminAuditEvents.js';
@@ -10,8 +7,8 @@ import * as customersRepo from '../../../repo/customers.js';
 import * as nodeHealthRepo from '../../../repo/nodeHealth.js';
 import * as reservationsRepo from '../../../repo/reservations.js';
 import * as topupsRepo from '../../../repo/topups.js';
-import { createNodesLoader } from '../../../service/nodes/loader.js';
-import { NodeBook } from '../../../service/nodes/nodebook.js';
+import { CircuitBreaker } from '../../../service/routing/circuitBreaker.js';
+import { createNodeIndex } from '../../../service/routing/nodeIndex.js';
 import { createFastifyServer } from '../../../providers/http/fastify.js';
 import { createAdminService } from '../../../service/admin/index.js';
 import { registerAdminRoutes } from './routes.js';
@@ -19,7 +16,6 @@ import type { PayerDaemonClient } from '../../../providers/payerDaemon.js';
 
 let pg: TestPg;
 const ADMIN_TOKEN = 'a'.repeat(40);
-let nodesYamlPath: string;
 
 function mockPayerDaemon(): PayerDaemonClient {
   return {
@@ -34,33 +30,16 @@ function mockPayerDaemon(): PayerDaemonClient {
   };
 }
 
-function mkNodeBook(): NodeBook {
-  const dir = mkdtempSync(path.join(tmpdir(), 'admin-search-'));
-  nodesYamlPath = path.join(dir, 'nodes.yaml');
-  writeFileSync(
-    nodesYamlPath,
-    `
-nodes:
-  - id: node-search
-    url: http://127.0.0.1:9999
-    ethAddress: "0x${'aa'.repeat(20)}"
-    supportedModels: ["model-small"]
-    enabled: true
-    tierAllowed: ["free", "prepaid"]
-    weight: 100
-`,
-  );
-  const nb = new NodeBook();
-  createNodesLoader({ db: pg.db, nodeBook: nb, configPath: nodesYamlPath }).load();
-  return nb;
-}
-
 async function buildServer() {
-  const nodeBook = mkNodeBook();
+  const nodeIndex = createNodeIndex([
+    { id: 'node-search', url: 'http://127.0.0.1:9999', capabilities: ['chat'], weight: 100 },
+  ]);
+  const circuitBreaker = new CircuitBreaker({ failureThreshold: 3, coolDownSeconds: 60 });
   const adminService = createAdminService({
     db: pg.db,
     payerDaemon: mockPayerDaemon(),
-    nodeBook,
+    nodeIndex,
+    circuitBreaker,
   });
   const server = await createFastifyServer({ logger: false });
   registerAdminRoutes(server.app, {
@@ -68,7 +47,6 @@ async function buildServer() {
     config: { token: ADMIN_TOKEN, ipAllowlist: [] },
     adminService,
     authConfig: { pepper: 'admin-search-pepper-000', envPrefix: 'test', cacheTtlMs: 60_000 },
-    nodesConfigPath: nodesYamlPath,
   });
   await server.app.ready();
   return server;
@@ -397,25 +375,3 @@ describe('GET /admin/nodes/:id/events', () => {
   });
 });
 
-// ── /admin/config/nodes ─────────────────────────────────────────────────────
-
-describe('GET /admin/config/nodes', () => {
-  it('returns the loaded nodes.yaml with mtime + sha256', async () => {
-    const server = await buildServer();
-    try {
-      const res = await server.app.inject({
-        method: 'GET', url: '/admin/config/nodes', headers: authHeaders('admin'),
-      });
-      expect(res.statusCode).toBe(200);
-      const body = res.json() as {
-        path: string; sha256: string; mtime: string; size_bytes: number;
-        contents: string; loaded_nodes: Array<{ id: string }>;
-      };
-      expect(body.sha256).toMatch(/^[0-9a-f]{64}$/);
-      expect(body.contents).toContain('node-search');
-      expect(body.loaded_nodes.some((n) => n.id === 'node-search')).toBe(true);
-    } finally {
-      await server.close();
-    }
-  });
-});

@@ -1,6 +1,4 @@
 import { z } from 'zod';
-import { CustomerTierSchema } from './customer.js';
-import { ModelIdSchema } from './pricing.js';
 
 export const NodeIdSchema = z.string().min(1).max(64);
 export type NodeId = z.infer<typeof NodeIdSchema>;
@@ -19,18 +17,6 @@ export const NodeCapabilitySchema = z.enum([
   'transcriptions',
 ]);
 export type NodeCapability = z.infer<typeof NodeCapabilitySchema>;
-
-export const NodeConfigSchema = z.object({
-  id: NodeIdSchema,
-  url: z.string().url(),
-  ethAddress: EthAddressSchema,
-  supportedModels: z.array(ModelIdSchema).min(1),
-  capabilities: z.array(NodeCapabilitySchema).min(1).default(['chat']),
-  enabled: z.boolean(),
-  tierAllowed: z.array(CustomerTierSchema).min(1),
-  weight: z.number().int().positive(),
-});
-export type NodeConfig = z.infer<typeof NodeConfigSchema>;
 
 // TicketExpirationParamsSchema mirrors the library's
 // livepeer.payments.v1.TicketExpirationParams. Both fields are
@@ -86,27 +72,3 @@ export const QuoteSchema = z.object({
 });
 export type Quote = z.infer<typeof QuoteSchema>;
 
-export const HealthStatusCodeSchema = z.enum(['healthy', 'degraded', 'circuit_broken']);
-export type HealthStatusCode = z.infer<typeof HealthStatusCodeSchema>;
-
-export const HealthStatusSchema = z.object({
-  code: HealthStatusCodeSchema,
-  consecutiveFailures: z.number().int().nonnegative(),
-  lastSuccessAt: z.coerce.date().nullable(),
-  lastFailureAt: z.coerce.date().nullable(),
-});
-export type HealthStatus = z.infer<typeof HealthStatusSchema>;
-
-export const NodeCapacitySchema = z.object({
-  inFlightRequests: z.number().int().nonnegative(),
-  maxConcurrent: z.number().int().positive(),
-});
-export type NodeCapacity = z.infer<typeof NodeCapacitySchema>;
-
-export const NodeStateSchema = z.object({
-  config: NodeConfigSchema,
-  quote: QuoteSchema.nullable(),
-  health: HealthStatusSchema,
-  capacity: NodeCapacitySchema,
-});
-export type NodeState = z.infer<typeof NodeStateSchema>;
