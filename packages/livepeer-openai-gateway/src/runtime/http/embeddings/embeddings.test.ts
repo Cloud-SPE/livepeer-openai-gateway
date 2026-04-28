@@ -29,7 +29,7 @@ import { PayerDaemonService } from '@cloudspe/livepeer-openai-gateway-core/provi
 import { bigintToBigEndianBytes } from '@cloudspe/livepeer-openai-gateway-core/providers/payerDaemon/convert.js';
 import { createPaymentsService } from '@cloudspe/livepeer-openai-gateway-core/service/payments/createPayment.js';
 import { createSessionCache } from '@cloudspe/livepeer-openai-gateway-core/service/payments/sessions.js';
-import { defaultPricingConfig } from '@cloudspe/livepeer-openai-gateway-core/config/pricing.js';
+import { testPricingProvider } from '@cloudspe/livepeer-openai-gateway-core/service/pricing/testFixtures.js';
 import { registerEmbeddingsRoute } from '@cloudspe/livepeer-openai-gateway-core/runtime/http/embeddings/index.js';
 
 let pg: TestPg;
@@ -236,7 +236,7 @@ async function startBridge(opts: {
     paymentsService,
     authResolver: createAuthResolver({ authService }),
     wallet: createPrepaidQuotaWallet({ db: pg.db }),
-    pricing: defaultPricingConfig(),
+    pricing: testPricingProvider(),
   });
   const url = await server.listen({ host: '127.0.0.1', port: 0 });
 

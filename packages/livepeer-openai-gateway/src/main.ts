@@ -4,7 +4,15 @@ import { loadAuthConfig } from './config/auth.js';
 import { loadDatabaseConfig } from '@cloudspe/livepeer-openai-gateway-core/config/database.js';
 import { loadMetricsConfig } from '@cloudspe/livepeer-openai-gateway-core/config/metrics.js';
 import { loadPayerDaemonConfig } from '@cloudspe/livepeer-openai-gateway-core/config/payerDaemon.js';
-import { loadPricingConfig } from '@cloudspe/livepeer-openai-gateway-core/config/pricing.js';
+import {
+  createPricingConfigProvider,
+  loadPricingEnvConfig,
+} from '@cloudspe/livepeer-openai-gateway-core/config/pricing.js';
+// Temporary: use the engine's test fixture as the rate-card snapshot.
+// 0030's next slice replaces this with a DB-backed RateCardService that
+// reads from app.rate_card_* (seeded by migration 0002). The shell-side
+// surface (admin SPA, /admin/pricing/* routes) follows the service.
+import { TEST_RATE_CARD_SNAPSHOT } from '@cloudspe/livepeer-openai-gateway-core/service/pricing/testFixtures.js';
 import { defaultRateLimitConfig } from '@cloudspe/livepeer-openai-gateway-core/config/rateLimit.js';
 import { loadRedisConfig } from '@cloudspe/livepeer-openai-gateway-core/config/redis.js';
 import { loadRoutingConfig } from '@cloudspe/livepeer-openai-gateway-core/config/routing.js';
@@ -87,7 +95,11 @@ async function main(): Promise<void> {
   const payerDaemonConfig = loadPayerDaemonConfig();
   const stripeConfig = loadStripeConfig();
   const adminConfig = loadAdminConfig();
-  const pricingConfig = loadPricingConfig();
+  const pricingEnvConfig = loadPricingEnvConfig();
+  const pricingConfig = createPricingConfigProvider(
+    { current: () => TEST_RATE_CARD_SNAPSHOT },
+    pricingEnvConfig,
+  );
   const rateLimitConfig = defaultRateLimitConfig();
   const metricsConfig = loadMetricsConfig();
   const routingConfig = loadRoutingConfig();
