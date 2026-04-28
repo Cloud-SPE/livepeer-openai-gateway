@@ -71,7 +71,7 @@ services:
           memory: 512m
 
   payment-daemon:
-    image: tztcloud/livepeer-payment-daemon:v0.8.10
+    image: ${PAYMENT_DAEMON_IMAGE:-tztcloud/livepeer-payment-daemon:v1.4.0}
     restart: unless-stopped
     command:
       - --mode=sender
@@ -99,7 +99,7 @@ services:
           memory: 512m
 
   service-registry-daemon:
-    image: ${SERVICE_REGISTRY_IMAGE:-tztcloud/livepeer-service-registry-daemon:v1.3.0}
+    image: ${SERVICE_REGISTRY_IMAGE:-tztcloud/livepeer-service-registry-daemon:v1.4.0}
     restart: unless-stopped
     command:
       - --mode=resolver

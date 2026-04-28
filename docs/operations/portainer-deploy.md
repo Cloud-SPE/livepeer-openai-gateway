@@ -94,7 +94,7 @@ services:
       retries: 20
 
   payment-daemon:
-    image: tztcloud/livepeer-payment-daemon:v1.2.0
+    image: tztcloud/livepeer-payment-daemon:v1.4.0
     restart: unless-stopped
     command:
       - --mode=sender
@@ -114,7 +114,7 @@ services:
       - no-new-privileges:true
 
   service-registry-daemon:
-    image: tztcloud/livepeer-service-registry-daemon:v1.3.0
+    image: tztcloud/livepeer-service-registry-daemon:v1.4.0
     restart: unless-stopped
     command:
       - --mode=resolver
