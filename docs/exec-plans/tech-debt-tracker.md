@@ -289,3 +289,68 @@ Append-only list of known debt. Strike through when resolved; include the PR or 
   3. Cross-repo markdown links in 0021 / 0022 / 0023 (six total) stripped to text-only references. Established the convention "no cross-repo markdown links in this repo's docs" — sibling-repo paths stay as backticked path text so readers can still locate them, but doc-lint no longer chases broken paths to repos that may not be colocated.
   4. Drive-by fix to doc-gardener's `plan-closed-before-opened` check, which was string-comparing JS Date `toString()` output (alphabetical, not chronological — `Fri Apr 24` < `Thu Apr 23` because `F` < `T`). Now compares via `.getTime()`.
   5. `npm run doc-lint` now passes clean.
+
+## 0030 — operator-managed rate card — follow-ups (opened 2026-04-28)
+
+### 0031-portal-pricing-page
+
+- Opened: 2026-04-28
+- Severity: low
+- Area: bridge-ui / portal
+- Description: The customer portal (`/portal/`) doesn't expose a "here is what you pay per model" page. Customers learn pricing by sending a request and observing the cost in the response. A read-only pricing page reading the operator-managed rate card would reduce support load and help conversion ("compare to OpenAI list price").
+- Remediation: dedicated exec-plan `0031-portal-pricing-page.md` when picked up. UI piggybacks on `GET /admin/pricing/*` (read-only — no auth needed for a public pricing page; expose a public mirror endpoint or have the bridge serve the data unauthenticated).
+- Resolved: _(open)_
+
+### 0032-margin-dashboard
+
+- Opened: 2026-04-28
+- Severity: medium
+- Area: bridge-ui / admin / pricing
+- Description: Operators don't have visibility into per-model margin. They charge customers via the rate card (in USD) and pay workers in wei via the registry overlay's `price_per_work_unit_wei`. Computing margin requires an ETH/USD oracle to convert wei → USD.
+- Remediation: dedicated exec-plan `0032-margin-dashboard.md`. Six design questions captured in chat 2026-04-28 (ETH oracle source, worker-cost source, SPA placement, snapshot vs time-series, capability scope, refresh cadence). On hold per operator decision.
+- Resolved: _(open)_
+
+### 0033-per-customer-rate-card-overrides
+
+- Opened: 2026-04-28
+- Severity: low
+- Area: pricing / billing
+- Description: All customers currently share one rate card. Some operators want to give specific customers different prices (custom-fine-tune model unlocks, enterprise volume discounts, free-trial promo codes). Currently impossible without a fork.
+- Remediation: dedicated exec-plan `0033-per-customer-rate-card-overrides.md` when picked up. Likely shape: `app.customer_rate_card_overrides (customer_id, model_or_pattern, tier, …)` table, resolution order in dispatch becomes per-customer-overrides → tenant rate card → null.
+- Resolved: _(open)_
+
+### operator-addable-tier-names
+
+- Opened: 2026-04-28
+- Severity: low
+- Area: engine / pricing
+- Description: Tier names (`starter`, `standard`, `pro`, `premium`) are fixed in the engine. Operators can edit tier *prices* (0030) but not add new tier names. Some operators may want a fifth tier ("enterprise", "white-label") for bespoke pricing. Today this requires an engine release.
+- Remediation: replace the `PricingTier` zod enum with a string ref + add `tier` rows in `app.rate_card_chat_tiers` to be the source of truth for what tiers exist. Schema migration + foreign-key cascade. Customer.tier and rate-limit-tier columns currently reference the enum — switch them to text + soft validation.
+- Resolved: _(open)_
+
+### asNumber-helper-cleanup
+
+- Opened: 2026-04-28
+- Severity: low
+- Area: code / pricing
+- Description: `runtime/http/admin/pricing.ts` has an `async function asNumber(v): Promise<string>` helper that's not actually async — it just returns `String(v)`. Leftover from refactor. Inline the conversion at call sites or make it a sync utility.
+- Remediation: 1-line cleanup; no behavior change. Drop the `await` calls in the route handlers too.
+- Resolved: _(open)_
+
+### admin-routes-file-size-warning
+
+- Opened: 2026-04-28
+- Severity: low
+- Area: code / admin
+- Description: `runtime/http/admin/routes.ts` is 560 lines, over the 400-line soft cap. ESLint warns. The handlers split naturally by resource (customers, nodes, escrow, audit, reservations, topups, registry-probe).
+- Remediation: split into `runtime/http/admin/routes/{customers,nodes,escrow,audit,reservations,topups,registry}.ts` + a top-level `register()` that calls each. ~30 minutes of mechanical refactor.
+- Resolved: _(open)_
+
+### admin-routes-branches-test-flake
+
+- Opened: 2026-04-28
+- Severity: low
+- Area: tests / infra
+- Description: `runtime/http/admin/admin-routes-branches.test.ts > GET /admin/audit accepts valid from/to and applies them` fails ~10 % of the time when the full test suite runs in parallel — the testcontainer Postgres pool contends. The test passes 100 % in isolation. Flake, not a bug in the code under test.
+- Remediation: switch the affected admin tests to `describe.sequential` or annotate the file's tests as `serial`. Or migrate to a per-test schema via `SET search_path` rather than shared TRUNCATE.
+- Resolved: _(open)_

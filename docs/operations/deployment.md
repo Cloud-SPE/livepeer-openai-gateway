@@ -1,12 +1,16 @@
 ---
-title: Deployment — full-stack docker compose
+title: Deployment — full-stack docker compose (reference)
 status: accepted
-last-reviewed: 2026-04-26
+last-reviewed: 2026-04-28
 ---
 
 # Deployment
 
+> **Deploying to a Portainer-managed host?** Use [**`portainer-deploy.md`**](./portainer-deploy.md) instead — focused walkthrough, current image tags, post-extraction architecture (registry-daemon overlay + admin-SPA-managed rate card + customer SPA onboarding). This document remains the comprehensive docker-compose CLI reference + dev/smoke profiles + troubleshooting.
+
 How to run the bridge + payment daemon + postgres + redis stack end-to-end, for both local development and production-shaped deploys.
+
+> **Note (2026-04-28):** sections referencing local `nodes.yaml` describe pre-extraction state. Post-engine-extraction (plans 0024–0028) the bridge consumes its node pool from the service-registry-daemon's overlay; the bridge no longer reads `nodes.yaml` directly. See [`portainer-deploy.md`](./portainer-deploy.md) for the current shape.
 
 ## Prerequisites
 

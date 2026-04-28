@@ -7,7 +7,7 @@ last-reviewed: 2026-04-26
 # Engine operator dashboard
 
 A minimal read-only dashboard scaffold the engine ships at
-`@cloud-spe/bridge-core/dashboard` (post-stage-3) so OSS adopters can
+`@cloudspe/livepeer-openai-gateway-core/dashboard` (post-stage-3) so OSS adopters can
 see node-pool health and payer-daemon status without building their
 own admin UI from scratch.
 

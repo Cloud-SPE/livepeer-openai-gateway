@@ -1,14 +1,37 @@
 ---
-title: Node lifecycle (NodeBook, QuoteRefresher, health + circuit breaker)
+title: Node lifecycle (registry-daemon, QuoteRefresher, health + circuit breaker)
 status: accepted
-last-reviewed: 2026-04-25
+last-reviewed: 2026-04-28
 ---
 
 # Node lifecycle
 
 How WorkerNodes enter, run in, and leave the bridge's routing pool.
 
-## Source of truth: `nodes.yaml`
+## Status — post-engine-extraction
+
+> **2026-04-28:** the bridge no longer reads a local `nodes.yaml`. The
+> service-registry-daemon (sibling project at
+> `livepeer-modules-project/service-registry-daemon`) owns node config
+> via its `--static-overlay=...` YAML and exposes them through gRPC
+> `Resolver.ListKnown` / `Select` over a unix socket. The bridge's
+> `serviceRegistry` provider is the gRPC client; it enumerates once at
+> startup into a start-time-static `nodeIndex`. To change the worker
+> pool, edit the daemon's overlay file and recreate the daemon
+> container — the bridge picks up the new pool on next restart.
+>
+> Live triage of "what does the daemon currently have?" is via
+> `GET /admin/registry/probe` (live `listKnown` bypassing the bridge's
+> cache) and `serviceRegistryHealthy` on `/admin/health`. See
+> [`product-specs/admin-endpoints.md`](../product-specs/admin-endpoints.md).
+>
+> The daemon's overlay schema (operator-curated `nodes.yaml`) is
+> documented in the daemon repo at `examples/static-overlay-only/` and
+> `registry.example.yaml`. Pre-extraction this doc described the
+> bridge-side config; that section is preserved below for historical
+> context but does not reflect today's routing.
+
+## (Historical) Source of truth: `nodes.yaml`
 
 Config-driven allowlist. The file path is passed to the bridge process; SIGHUP triggers a safe reload. Shape (Appendix B of `docs/references/openai-bridge-architecture.md`, extended with per-node knobs):
 

@@ -190,3 +190,86 @@ Retention is indefinite in v1. A scheduled purge is tech-debt.
 - Bulk operations (ban, mass-refund): manual one-at-a-time only.
 - CIDR support in the IP allowlist.
 - Multiple operator identities (all admin traffic shares one token in v1).
+
+## Customer creation (added in 0029)
+
+### `POST /admin/customers`
+
+Bootstraps a new customer when Stripe self-serve onboarding isn't desired. Body validated via zod:
+
+```ts
+{
+  email: string,                                          // unique, ≤ 254 chars
+  tier: "free" | "prepaid",
+  rate_limit_tier?: string,                                // optional, default 'default'
+  balance_usd_cents?: bigint | string | number,            // prepaid only; default 0
+  quota_monthly_allowance?: bigint | string | number | null  // free only; default null = unlimited
+}
+```
+
+Returns `201` with the same shape as `GET /admin/customers/:id` (the `CustomerDetail` view, including a freshly-empty `topups` and `recentUsage`). Returns `409 EmailAlreadyExists` on Postgres unique-violation; `400 InvalidRequestError` on shape problems.
+
+The audit middleware records every successful create as `POST /admin/customers` with the operator's actor handle and the sanitized body in `payload`.
+
+## Live registry probe (added 2026-04-28)
+
+### `GET /admin/registry/probe`
+
+Calls `serviceRegistry.listKnown()` against the running daemon, bypassing the bridge's start-time-static `nodeIndex` cache. Used by operators to triage "the bridge says 0 nodes but I just added one to the overlay" — answers in one round-trip whether the daemon is reachable, has the address(es), and how the cached snapshot compares.
+
+```json
+{
+  "healthy": true,            // serviceRegistry.isHealthy() — bridge's gRPC channel state
+  "cachedCount": 1,           // bridge's start-time nodeIndex.length
+  "liveCount": 1,             // current daemon-reported count
+  "durationMs": 6,
+  "live": [
+    { "id": "side-channel-1", "url": "https://...", "capabilities": ["chat"] }
+  ]
+}
+```
+
+On daemon failure: `503` with `{ healthy: false, cachedCount, liveCount: null, durationMs, error: { name, message } }`.
+
+The `/admin/health` response also includes `serviceRegistryHealthy` for at-a-glance dashboards.
+
+## Operator-managed rate card (added in 0030)
+
+The bridge's pricing — historically hardcoded in the engine's `V1_RATE_CARD` / `V1_MODEL_TO_TIER` constants — is now operator-managed via the admin SPA + the surface below. Resolution is exact-match → glob patterns by `sort_order` ascending → `null` (caller throws `ModelNotFoundError`). Pattern wildcards: `*` (zero-or-more chars), `?` (exactly one). No regex.
+
+Every write calls `rateCardService.invalidate()` so subsequent reads on this instance see the change immediately. Multi-replica convergence via the 60 s TTL refresh.
+
+### Chat — tier prices
+
+The 4 tier names (`starter`, `standard`, `pro`, `premium`) are fixed; only their prices are editable.
+
+- `GET /admin/pricing/chat/tiers` → `{ tiers: [{ tier, input_usd_per_million, output_usd_per_million, updated_at }] }`
+- `PUT /admin/pricing/chat/tiers/:tier` body `{ input_usd_per_million, output_usd_per_million }` → updated row
+
+### Chat — model rows
+
+- `GET /admin/pricing/chat/models` → `{ entries: [...] }`
+- `POST /admin/pricing/chat/models` body `{ model_or_pattern, is_pattern, tier, sort_order? }` → 201 + entry; 409 on dup
+- `DELETE /admin/pricing/chat/models/:id` → 204; 404 on miss
+
+### Embeddings, speech, transcriptions (per-model price)
+
+Same shape, different price field:
+
+| Capability | POST body | Path |
+|---|---|---|
+| Embeddings | `{ model_or_pattern, is_pattern, usd_per_million_tokens, sort_order? }` | `/admin/pricing/embeddings` |
+| Speech | `{ model_or_pattern, is_pattern, usd_per_million_chars, sort_order? }` | `/admin/pricing/speech` |
+| Transcriptions | `{ model_or_pattern, is_pattern, usd_per_minute, sort_order? }` | `/admin/pricing/transcriptions` |
+
+GET → list, POST → 201/409, DELETE `:id` → 204/404 for all three.
+
+### Images — composite (model, size, quality) key
+
+- `GET /admin/pricing/images` → list
+- `POST /admin/pricing/images` body `{ model_or_pattern, is_pattern, size, quality, usd_per_image, sort_order? }` — pattern matches model only; `size` ∈ `1024x1024 | 1024x1792 | 1792x1024`; `quality` ∈ `standard | hd`. Both stay exact match.
+- `DELETE /admin/pricing/images/:id` → 204/404
+
+### Seed defaults
+
+A fresh deploy runs migration `0002_seed_rate_card.sql` once, populating the 4 tiers and the engine's pre-0.2.0 V1 model entries. Operators edit/delete via SPA after that. Migration is idempotent through `public.bridge_schema_migrations`.
