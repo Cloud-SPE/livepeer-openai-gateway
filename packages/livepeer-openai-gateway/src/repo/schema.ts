@@ -1,11 +1,14 @@
 import {
   bigint,
+  boolean,
   index,
   integer,
+  numeric,
   pgEnum,
   pgSchema,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 
@@ -119,6 +122,111 @@ export const adminAuditEvents = appSchema.table(
   }),
 );
 
+// ── Rate-card tables (per exec-plan 0030) ───────────────────────────────────
+//
+// Operator-managed pricing. Each capability has its own table with an
+// `is_pattern` discriminator handling exact-vs-glob entries. Resolution
+// at read time: exact → patterns by sort_order ascending → null. The
+// engine's RateCardResolver consumer (rateCard.service.ts) materializes
+// these into a RateCardSnapshot and answers per-request lookups.
+
+export const rateCardChatTiers = appSchema.table('rate_card_chat_tiers', {
+  tier: text('tier').primaryKey(),
+  inputUsdPerMillion: numeric('input_usd_per_million', { precision: 20, scale: 8 }).notNull(),
+  outputUsdPerMillion: numeric('output_usd_per_million', { precision: 20, scale: 8 }).notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const rateCardChatModels = appSchema.table(
+  'rate_card_chat_models',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    modelOrPattern: text('model_or_pattern').notNull(),
+    isPattern: boolean('is_pattern').notNull(),
+    tier: text('tier')
+      .notNull()
+      .references(() => rateCardChatTiers.tier),
+    sortOrder: integer('sort_order').notNull().default(100),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    uniq: uniqueIndex('rate_card_chat_models_uniq').on(t.modelOrPattern, t.isPattern),
+  }),
+);
+
+export const rateCardEmbeddings = appSchema.table(
+  'rate_card_embeddings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    modelOrPattern: text('model_or_pattern').notNull(),
+    isPattern: boolean('is_pattern').notNull(),
+    usdPerMillionTokens: numeric('usd_per_million_tokens', {
+      precision: 20,
+      scale: 8,
+    }).notNull(),
+    sortOrder: integer('sort_order').notNull().default(100),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    uniq: uniqueIndex('rate_card_embeddings_uniq').on(t.modelOrPattern, t.isPattern),
+  }),
+);
+
+export const rateCardImages = appSchema.table(
+  'rate_card_images',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    modelOrPattern: text('model_or_pattern').notNull(),
+    isPattern: boolean('is_pattern').notNull(),
+    size: text('size').notNull(),
+    quality: text('quality').notNull(),
+    usdPerImage: numeric('usd_per_image', { precision: 20, scale: 8 }).notNull(),
+    sortOrder: integer('sort_order').notNull().default(100),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    uniq: uniqueIndex('rate_card_images_uniq').on(t.modelOrPattern, t.isPattern, t.size, t.quality),
+  }),
+);
+
+export const rateCardSpeech = appSchema.table(
+  'rate_card_speech',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    modelOrPattern: text('model_or_pattern').notNull(),
+    isPattern: boolean('is_pattern').notNull(),
+    usdPerMillionChars: numeric('usd_per_million_chars', {
+      precision: 20,
+      scale: 8,
+    }).notNull(),
+    sortOrder: integer('sort_order').notNull().default(100),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    uniq: uniqueIndex('rate_card_speech_uniq').on(t.modelOrPattern, t.isPattern),
+  }),
+);
+
+export const rateCardTranscriptions = appSchema.table(
+  'rate_card_transcriptions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    modelOrPattern: text('model_or_pattern').notNull(),
+    isPattern: boolean('is_pattern').notNull(),
+    usdPerMinute: numeric('usd_per_minute', { precision: 20, scale: 8 }).notNull(),
+    sortOrder: integer('sort_order').notNull().default(100),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    uniq: uniqueIndex('rate_card_transcriptions_uniq').on(t.modelOrPattern, t.isPattern),
+  }),
+);
+
 export const schema = {
   customers,
   apiKeys,
@@ -126,6 +234,12 @@ export const schema = {
   topups,
   stripeWebhookEvents,
   adminAuditEvents,
+  rateCardChatTiers,
+  rateCardChatModels,
+  rateCardEmbeddings,
+  rateCardImages,
+  rateCardSpeech,
+  rateCardTranscriptions,
   customerTier,
   customerStatus,
   topupStatus,
