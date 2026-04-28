@@ -8,11 +8,7 @@ import {
   createPricingConfigProvider,
   loadPricingEnvConfig,
 } from '@cloudspe/livepeer-openai-gateway-core/config/pricing.js';
-// Temporary: use the engine's test fixture as the rate-card snapshot.
-// 0030's next slice replaces this with a DB-backed RateCardService that
-// reads from app.rate_card_* (seeded by migration 0002). The shell-side
-// surface (admin SPA, /admin/pricing/* routes) follows the service.
-import { TEST_RATE_CARD_SNAPSHOT } from '@cloudspe/livepeer-openai-gateway-core/service/pricing/testFixtures.js';
+import { createRateCardService } from './service/pricing/rateCard.js';
 import { defaultRateLimitConfig } from '@cloudspe/livepeer-openai-gateway-core/config/rateLimit.js';
 import { loadRedisConfig } from '@cloudspe/livepeer-openai-gateway-core/config/redis.js';
 import { loadRoutingConfig } from '@cloudspe/livepeer-openai-gateway-core/config/routing.js';
@@ -96,10 +92,6 @@ async function main(): Promise<void> {
   const stripeConfig = loadStripeConfig();
   const adminConfig = loadAdminConfig();
   const pricingEnvConfig = loadPricingEnvConfig();
-  const pricingConfig = createPricingConfigProvider(
-    { current: () => TEST_RATE_CARD_SNAPSHOT },
-    pricingEnvConfig,
-  );
   const rateLimitConfig = defaultRateLimitConfig();
   const metricsConfig = loadMetricsConfig();
   const routingConfig = loadRoutingConfig();
@@ -135,6 +127,15 @@ async function main(): Promise<void> {
     await runMigrations(db);
     logger.info('migrations complete');
   }
+
+  // Rate-card service — DB-backed RateCardResolver (per 0030). warmUp
+  // loads the seeded snapshot eagerly so the first chat / embeddings /
+  // etc. request doesn't pay the DB-load latency. Admin write routes
+  // call rateCardService.invalidate() after every insert/update/delete
+  // so subsequent reads see the change.
+  const rateCardService = createRateCardService({ db });
+  await rateCardService.warmUp();
+  const pricingConfig = createPricingConfigProvider(rateCardService, pricingEnvConfig);
 
   const redis = createIoRedisClient(redisConfig);
   const scheduler = realScheduler();
