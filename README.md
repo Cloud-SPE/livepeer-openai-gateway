@@ -97,11 +97,12 @@ ESLint rules [`livepeer-bridge/layer-check`](lint/eslint-plugin-livepeer-bridge/
 cp .env.example .env
 # fill the REQUIRED values: CHAIN_RPC, API_KEY_PEPPER, STRIPE_*, ADMIN_TOKEN
 # drop keystore.json + keystore-password alongside compose.yaml (see .env.example)
-# author your own nodes.yaml — see docs/design-docs/node-lifecycle.md
+# author your own service-registry-config.yaml (the daemon's static-overlay)
+# — see livepeer-modules-project/service-registry-daemon/registry.example.yaml
 docker compose up --build
 ```
 
-Stands up `postgres:16-alpine` + `redis:7-alpine` + `tztcloud/livepeer-payment-daemon:v0.8.10` (sender mode) + the bridge (built from `Dockerfile`). All four services share a `payment-socket` named volume at `/var/run/livepeer/` so the bridge can reach the daemon over its unix socket.
+Stands up `postgres:16-alpine` + `redis:7-alpine` + `tztcloud/livepeer-payment-daemon:v1.4.0` (sender mode) + `tztcloud/livepeer-service-registry-daemon:v1.4.0` (resolver mode, overlay-only) + the bridge (built from `Dockerfile`). All five services share a `socket-dir` (or `payment-socket`) named volume at `/var/run/livepeer/` so the bridge can reach both daemons over their unix sockets.
 
 See [`docs/operations/deployment.md`](docs/operations/deployment.md) for the full walkthrough including the production override (`compose.prod.yaml`) with pinned image, restart policies, log rotation, resource limits, read-only hardening, and the one-shot migration job.
 

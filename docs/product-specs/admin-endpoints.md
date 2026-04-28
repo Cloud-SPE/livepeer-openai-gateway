@@ -151,20 +151,20 @@ Cross-customer top-up search for the "customer says they were charged X but it s
 
 ### `GET /admin/config/nodes`
 
-Read-only view of the loaded `nodes.yaml`:
+Synthetic file-shaped view of the worker pool. Post-engine-extraction the bridge no longer reads a local `nodes.yaml`; the service-registry-daemon owns node config via its `--static-overlay` YAML. The endpoint preserves the original SPA contract by wrapping the live `Resolver.ListKnown` snapshot in the legacy file-envelope shape:
 
 ```json
 {
-  "path": "/etc/bridge/nodes.yaml",
-  "sha256": "<64 hex>",
-  "mtime": "...",
-  "size_bytes": 512,
-  "contents": "<raw yaml>",
-  "loaded_nodes": [{ "id": "...", "url": "...", ... }]
+  "path": "<service-registry-daemon>",
+  "sha256": "",
+  "mtime": "<bridge process start time, ISO>",
+  "size_bytes": 0,
+  "contents": "# Managed by service-registry-daemon. The bridge no longer maintains a\n# local nodes.yaml — edit the daemon's config to change the worker\n# pool, then restart the bridge to refresh its cached snapshot.\n",
+  "loaded_nodes": [{ "id": "...", "url": "...", "capabilities": [...], ... }]
 }
 ```
 
-The `sha256` lets operators verify that what's loaded matches what's checked in. Editing `nodes.yaml` from the UI is **out of scope in v1** — operators edit the file and `kubectl apply` / `docker compose up -d`; the QuoteRefresher hot-reloads. 500 with `code: config_unreadable` if the file is missing.
+Editing the worker pool from the UI is **out of scope in v1** — operators edit the daemon's overlay YAML on the host and recreate the daemon container; the bridge re-enumerates on its next startup. For live-vs-cached comparison, use [`GET /admin/registry/probe`](#get-adminregistryprobe) which calls `Resolver.ListKnown` directly bypassing the bridge's cache.
 
 ## Audit log
 

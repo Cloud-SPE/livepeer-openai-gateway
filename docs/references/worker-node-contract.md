@@ -4,13 +4,13 @@
 >
 > **Scope.** OpenAI-compatible inference endpoints served by the node. The payment-layer contract (TicketParams, PriceInfo, `/quote`) is defined in `docs/references/openai-bridge-architecture.md` and the payments-abstraction doc; this document covers only the inference surface.
 >
-> **Why the contract is authoritative.** The bridge is a thin router. It does not post-process responses, re-tokenize outputs, truncate vectors, or convert encodings. OpenAI-compatibility is owned by the node. A node that cannot meet a capability's obligations must not advertise that capability in the bridge's `nodes.yaml`.
+> **Why the contract is authoritative.** The bridge is a thin router. It does not post-process responses, re-tokenize outputs, truncate vectors, or convert encodings. OpenAI-compatibility is owned by the node. A node that cannot meet a capability's obligations must not advertise that capability in the operator-curated overlay (post-engine-extraction: the service-registry-daemon's static-overlay YAML; pre-stage-3 this was the bridge's local `nodes.yaml`).
 
 ---
 
 ## 1. Capabilities
 
-A WorkerNode advertises one or more capabilities in `nodes.yaml`:
+A WorkerNode is enrolled in the operator-curated overlay with one or more capabilities (post-engine-extraction: `service-registry-daemon/registry.example.yaml`; pre-stage-3: the bridge's local `nodes.yaml`):
 
 ```yaml
 - id: node-a
@@ -28,7 +28,7 @@ Each capability maps to one OpenAI endpoint and a distinct set of contract oblig
 | `embeddings` | `/v1/embeddings`         | input tokens only      | no      |
 | `images`     | `/v1/images/generations` | per-image × size × quality | no  |
 
-If `capabilities` is omitted for a node, the bridge defaults to `['chat']` (backwards-compatibility for `nodes.yaml` entries authored before this contract existed).
+If `capabilities` is omitted for a node, the bridge defaults to `['chat']` (backwards-compatibility for overlay entries authored before this contract existed).
 
 ## 2. Universal obligations
 
@@ -157,7 +157,7 @@ The node is responsible for MIME validation. The bridge does NOT maintain a code
 
 If ops discovers a node that cannot meet the obligations for a capability it has advertised:
 
-1. **First response:** Drop that capability from the node's `nodes.yaml` entry and SIGHUP reload. The node keeps serving the capabilities it *can* meet.
+1. **First response:** Drop that capability from the node's overlay entry and reload (post-engine-extraction: edit the service-registry-daemon's overlay YAML and recreate the daemon container; pre-stage-3 this was a SIGHUP on the bridge's local `nodes.yaml`). The node keeps serving the capabilities it *can* meet.
 2. **If the node breaks multiple capabilities repeatedly:** Set `enabled: false` and open a ticket with the operator.
 
 The bridge does NOT add per-node compatibility shims. Shims accumulate, drift, and erode the drop-in OpenAI-compatibility promise that customers rely on.

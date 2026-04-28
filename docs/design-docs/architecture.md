@@ -42,7 +42,7 @@ The TypeScript server lives under `src/`. Browser UIs (customer portal, operator
 │    ├─ auth/                                             │
 │    ├─ billing/        (incl. inMemoryWallet for tests)  │
 │    ├─ routing/        (router, retry, circuitBreaker class, quoteCache, scheduler, quoteRefresher)
-│    ├─ nodes/          (legacy NodeBook + nodes.yaml — being retired in stage 3)
+│    ├─ (NodeBook + nodes.yaml retired in stage 3 — see node-lifecycle.md)
 │    ├─ pricing/                                          │
 │    ├─ tokenAudit/                                       │
 │    ├─ rateLimit/                                        │

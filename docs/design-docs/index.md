@@ -42,7 +42,8 @@ Cross-repo:
 
 - [`../../../livepeer-modules-conventions/metrics-conventions.md`](../../../livepeer-modules-conventions/metrics-conventions.md) — authoritative naming, label, bucket, cardinality, and provider-boundary rules shared across all repos in the fleet
 - [`../../../livepeer-service-registry/docs/design-docs/observability.md`](../../../livepeer-service-registry/docs/design-docs/observability.md) — reference implementation of the Recorder pattern this repo's metrics.md mirrors
-- [`../../../livepeer-payment-library/docs/design-docs/shared-yaml.md`](../../../livepeer-payment-library/docs/design-docs/shared-yaml.md) — the `worker.yaml` cross-repo contract the bridge consumes via `nodes.yaml` per-node references and via the worker's `/capabilities` advertisement.
+- `livepeer-modules-project/service-registry-daemon/registry.example.yaml` — operator-curated worker pool overlay; the bridge resolves nodes from this via the daemon's `Resolver.ListKnown` over a unix socket (post-engine-extraction; pre-stage-3 the bridge owned a local `nodes.yaml`).
+- `livepeer-modules-project/payment-daemon/docs/design-docs/wire-compat.md` — pm-ticket signature wire-compat (EIP-191 + v ∈ {27,28}); the bridge's payer-daemon must match this format for any worker to validate its tickets.
 
 ## Conventions
 

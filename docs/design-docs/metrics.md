@@ -26,7 +26,7 @@ The cross-repo conventions doc covers: prefix (`livepeer_bridge_*`), bucket pres
 
 Bridge-specific:
 
-- **Allowed labels (this repo)**: `capability`, `model`, `tier`, `node_id`, `outcome`, `reason`, `state`, `kind`, `method`, `event_type`. `tier` ∈ {free, starter, standard, pro, premium}; `node_id` is allowlisted in `nodes.yaml`.
+- **Allowed labels (this repo)**: `capability`, `model`, `tier`, `node_id`, `outcome`, `reason`, `state`, `kind`, `method`, `event_type`. `tier` ∈ {free, starter, standard, pro, premium}; `node_id` is sourced from the service-registry-daemon's static-overlay (post-engine-extraction; pre-stage-3 it came from a local `nodes.yaml`).
 - **Per-entity drilldown**: `usage_record` SQL table for per-request history; `admin_audit_event` for operator-action history. Never label by `customer_id`, `api_key_id`, `work_id`, `stripe_session_id`, `email`, IP.
 - **Endpoint**: `METRICS_LISTEN` env (e.g. `127.0.0.1:9602`, port `:9602` per [`port-allocation.md`](../../../livepeer-modules-conventions/port-allocation.md)). Off by default. Separate Fastify instance from the customer-facing API — never expose `/metrics` to the public internet.
 - **Legacy unprefixed metrics from `0011-local-tokenizer-metric.md`**: Phase 1 emits both `tokens_drift_percent` (deprecated) and `livepeer_bridge_token_drift_percent` for one release window. Phase 2 deletes the unprefixed name.

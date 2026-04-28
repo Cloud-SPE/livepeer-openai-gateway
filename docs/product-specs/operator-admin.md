@@ -48,7 +48,7 @@ Table sorted by `circuit-broken → degraded → healthy` so operators see probl
 
 ### `#nodes/<id>`
 
-Single-node detail. Top card: URL, status badge, enabled, tier allowed, supported models, weight, consecutive failures, last success / failure / circuit-opened timestamps. Below: chronological event timeline (newest first) sourced from `GET /admin/nodes/:id/events`. Each row shows formatted timestamp + event kind (`circuit_opened` / `circuit_half_opened` / `circuit_closed` / `config_reloaded` / `eth_address_changed_rejected`) + optional `detail`. **No state-changing actions in v1** — operators edit `nodes.yaml` and reload.
+Single-node detail. Top card: URL, status badge, enabled, tier allowed, supported models, weight, consecutive failures, last success / failure / circuit-opened timestamps. Below: chronological event timeline (newest first) sourced from `GET /admin/nodes/:id/events`. Each row shows formatted timestamp + event kind (`circuit_opened` / `circuit_half_opened` / `circuit_closed` / `config_reloaded` / `eth_address_changed_rejected`) + optional `detail`. **No state-changing actions in v1** — operators edit the service-registry-daemon's overlay YAML and recreate the daemon container (post-engine-extraction; pre-stage-3 this was a local `nodes.yaml` reload).
 
 ### `#customers`
 
@@ -87,9 +87,9 @@ Audit feed with two debounced inputs: actor (exact match) and action (substring)
 
 ### `#config`
 
-Read-only `nodes.yaml` view from `GET /admin/config/nodes`. Top card: path, sha256 (full 64 hex), modified time, size. Below: loaded-nodes table + raw-yaml `<pre>` block (whitespace-preserved). A `Reload` button re-fetches.
+Read-only worker-pool view from `GET /admin/config/nodes`. Top card: path (sentinel `<service-registry-daemon>` post-engine-extraction), sha256, mtime (process start time when synthetic), size. Below: loaded-nodes table from the daemon's `Resolver.ListKnown` snapshot. A `Reload` button re-fetches.
 
-Editing `nodes.yaml` from the UI is **out of scope in v1** — operators edit on disk and `kubectl apply` / `docker compose up -d`. The QuoteRefresher hot-reloads.
+Editing the worker pool from the UI is **out of scope in v1** — operators edit the service-registry-daemon's overlay YAML on the host and recreate the daemon container (post-engine-extraction; pre-stage-3 the bridge owned a local `nodes.yaml` and the QuoteRefresher hot-reloaded).
 
 ## Confirmation rules
 
@@ -99,7 +99,7 @@ Editing `nodes.yaml` from the UI is **out of scope in v1** — operators edit on
 | Suspend     | Type-to-confirm email | Halts API access immediately; fat-finger has cost.                                          |
 | Unsuspend   | Single-click confirm | Restores service; the worst case is restoring an account someone wanted re-suspended.       |
 | Issue key   | Single-click submit  | Does not affect existing keys; cleartext returned once, customer can revoke if unwanted.    |
-| (no action) | `nodes/<id>` detail  | All v1 node mutations happen via `nodes.yaml` on disk.                                      |
+| (no action) | `nodes/<id>` detail  | All v1 node mutations happen via the service-registry-daemon overlay on the host.            |
 
 ## Polling
 
@@ -108,7 +108,7 @@ The admin services do **not** auto-poll in v1. Each page fetches once on mount; 
 ## Out of scope (v1)
 
 - Multi-operator RBAC.
-- "Edit `nodes.yaml`" UI (read-only `GET /admin/config/nodes` only).
+- "Edit worker pool" UI (read-only `GET /admin/config/nodes` only; mutations go through the daemon's overlay YAML).
 - Manually closing stuck reservations (Invariant 5 violation; investigation-only).
 - Per-operator audit retention / archive policy (full table exposed; partition + archive is tech-debt).
 - Re-rendering Grafana panels in-app or embedding via `<iframe>` (link-out only).

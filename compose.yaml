@@ -35,7 +35,7 @@ services:
       retries: 20
 
   payment-daemon:
-    image: tztcloud/livepeer-payment-daemon:v0.8.10
+    image: ${PAYMENT_DAEMON_IMAGE:-tztcloud/livepeer-payment-daemon:v1.4.0}
     command:
       - --mode=sender
       - --socket=/var/run/livepeer/payment.sock
@@ -57,13 +57,14 @@ services:
 
   service-registry-daemon:
     # Resolver-mode daemon that the bridge calls via gRPC to discover
-    # WorkerNodes. The image is a placeholder pin until the daemon repo
-    # publishes a stable tag — set $SERVICE_REGISTRY_IMAGE to override.
-    image: ${SERVICE_REGISTRY_IMAGE:-ghcr.io/livepeer-modules-project/service-registry-daemon:dev}
+    # WorkerNodes. Public Docker Hub image; override SERVICE_REGISTRY_IMAGE
+    # if you publish your own.
+    image: ${SERVICE_REGISTRY_IMAGE:-tztcloud/livepeer-service-registry-daemon:v1.4.0}
     command:
       - --mode=resolver
+      - --discovery=overlay-only
       - --socket=/var/run/livepeer/service-registry.sock
-      - --config=/etc/livepeer/service-registry.yaml
+      - --static-overlay=/etc/livepeer/service-registry.yaml
     volumes:
       - ${SERVICE_REGISTRY_CONFIG_PATH:-./service-registry-config.yaml}:/etc/livepeer/service-registry.yaml:ro
       - payment-socket:/var/run/livepeer

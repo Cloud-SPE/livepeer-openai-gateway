@@ -21,7 +21,7 @@ How to run the bridge + payment daemon + postgres + redis stack end-to-end, for 
 
 ## Layout
 
-- `compose.yaml` — dev stack: bridge (inline build), postgres, redis, `tztcloud/livepeer-payment-daemon:v0.8.10`.
+- `compose.yaml` — dev stack: bridge (inline build), postgres, redis, `tztcloud/livepeer-payment-daemon:v1.4.0`, `tztcloud/livepeer-service-registry-daemon:v1.4.0`.
 - `compose.prod.yaml` — prod override: pinned bridge image, restart policies, log rotation, resource limits, read-only hardening on the daemon, one-shot migration job.
 - `compose.smoke.yaml` — minimum-deps standalone smoke: postgres + redis + bridge only. No payment daemon, dummy Stripe values, all secrets inline. Use to verify the image + UIs + non-payment HTTP surface without standing up an EVM keystore / RPC / Stripe account. See "Smoke a built image" below.
 
