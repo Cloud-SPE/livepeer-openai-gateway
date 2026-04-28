@@ -37,7 +37,21 @@ function mockPayerDaemon(opts: { healthy?: boolean } = {}): PayerDaemonClient {
   };
 }
 
-async function buildServer(opts: { ipAllowlist?: string[] } = {}) {
+function mockServiceRegistry(opts: {
+  healthy?: boolean;
+  listKnown?: () => Promise<Array<{ id: string; url: string; capabilities: ('chat' | 'embeddings' | 'images' | 'imagesEdits' | 'speech' | 'transcriptions')[]; weight?: number }>>;
+} = {}) {
+  return {
+    async select() { return []; },
+    listKnown: opts.listKnown ?? (async () => []),
+    isHealthy: () => opts.healthy ?? true,
+  };
+}
+
+async function buildServer(opts: {
+  ipAllowlist?: string[];
+  serviceRegistry?: ReturnType<typeof mockServiceRegistry>;
+} = {}) {
   const nodeIndex = createNodeIndex([
     { id: 'node-admin', url: 'http://127.0.0.1:9999', capabilities: ['chat'], weight: 100 },
   ]);
@@ -54,6 +68,7 @@ async function buildServer(opts: { ipAllowlist?: string[] } = {}) {
     config: { token: ADMIN_TOKEN, ipAllowlist: opts.ipAllowlist ?? [] },
     adminService,
     authConfig: { pepper: 'admin-test-pepper-000', envPrefix: 'test', cacheTtlMs: 60_000 },
+    serviceRegistry: opts.serviceRegistry ?? mockServiceRegistry(),
   });
   await server.app.ready();
   return server;
@@ -416,6 +431,82 @@ describe('admin endpoints', () => {
         payload: JSON.stringify({ email: 'not-an-email', tier: 'prepaid' }),
       });
       expect(res.statusCode).toBe(400);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('GET /admin/health includes serviceRegistryHealthy', async () => {
+    const server = await buildServer({
+      serviceRegistry: mockServiceRegistry({ healthy: false }),
+    });
+    try {
+      const res = await server.app.inject({
+        method: 'GET',
+        url: '/admin/health',
+        headers: { 'x-admin-token': ADMIN_TOKEN },
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json() as { serviceRegistryHealthy: boolean };
+      expect(body.serviceRegistryHealthy).toBe(false);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('GET /admin/registry/probe returns live listKnown + cached delta', async () => {
+    const server = await buildServer({
+      serviceRegistry: mockServiceRegistry({
+        listKnown: async () => [
+          { id: 'live-1', url: 'http://10.0.0.1:8935', capabilities: ['chat'], weight: 1 },
+          { id: 'live-2', url: 'http://10.0.0.2:8935', capabilities: ['chat'], weight: 1 },
+        ],
+      }),
+    });
+    try {
+      const res = await server.app.inject({
+        method: 'GET',
+        url: '/admin/registry/probe',
+        headers: { 'x-admin-token': ADMIN_TOKEN },
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json() as {
+        healthy: boolean;
+        cachedCount: number;
+        liveCount: number;
+        durationMs: number;
+        live: Array<{ id: string }>;
+      };
+      expect(body.healthy).toBe(true);
+      expect(body.cachedCount).toBe(1); // node-admin from buildServer's nodeIndex
+      expect(body.liveCount).toBe(2);
+      expect(body.live.map((n) => n.id)).toEqual(['live-1', 'live-2']);
+      expect(body.durationMs).toBeGreaterThanOrEqual(0);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('GET /admin/registry/probe returns 503 when listKnown throws', async () => {
+    const server = await buildServer({
+      serviceRegistry: mockServiceRegistry({
+        healthy: false,
+        listKnown: async () => {
+          throw new Error('UNAVAILABLE: socket connect failed');
+        },
+      }),
+    });
+    try {
+      const res = await server.app.inject({
+        method: 'GET',
+        url: '/admin/registry/probe',
+        headers: { 'x-admin-token': ADMIN_TOKEN },
+      });
+      expect(res.statusCode).toBe(503);
+      const body = res.json() as { healthy: boolean; liveCount: null; error: { message: string } };
+      expect(body.healthy).toBe(false);
+      expect(body.liveCount).toBe(null);
+      expect(body.error.message).toContain('socket connect failed');
     } finally {
       await server.close();
     }

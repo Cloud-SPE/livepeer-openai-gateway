@@ -47,6 +47,11 @@ async function buildServer() {
     config: { token: ADMIN_TOKEN, ipAllowlist: [] },
     adminService,
     authConfig: { pepper: 'admin-search-pepper-000', envPrefix: 'test', cacheTtlMs: 60_000 },
+    serviceRegistry: {
+      async select() { return []; },
+      async listKnown() { return []; },
+      isHealthy: () => true,
+    },
   });
   await server.app.ready();
   return server;

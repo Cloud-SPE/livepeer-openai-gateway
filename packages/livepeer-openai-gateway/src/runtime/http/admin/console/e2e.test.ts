@@ -76,6 +76,11 @@ async function buildBridge() {
     config: { token: ADMIN_TOKEN, ipAllowlist: [] },
     adminService,
     authConfig: { pepper: 'admin-e2e-pepper-000', envPrefix: 'test', cacheTtlMs: 60_000 },
+    serviceRegistry: {
+      async select() { return []; },
+      async listKnown() { return []; },
+      isHealthy: () => true,
+    },
   });
   await registerAdminConsoleStatic(server.app, { rootDir: ADMIN_DIST });
   const address = await server.listen({ host: '127.0.0.1', port: 0 });

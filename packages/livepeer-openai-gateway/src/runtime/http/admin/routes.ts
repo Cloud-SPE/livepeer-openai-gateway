@@ -11,10 +11,23 @@ import * as customersRepo from '../../../repo/customers.js';
 import * as nodeHealthRepo from '@cloudspe/livepeer-openai-gateway-core/repo/nodeHealth.js';
 import * as reservationsRepo from '../../../repo/reservations.js';
 import * as topupsRepo from '../../../repo/topups.js';
+import type { ServiceRegistryClient } from '@cloudspe/livepeer-openai-gateway-core/providers/serviceRegistry.js';
+
+/**
+ * Operator-facing probe of the live registry. The bridge's nodeIndex is
+ * start-time-static (populated once via listKnown() at boot), so it can't
+ * tell operators "what does the daemon currently have?" — only "what did
+ * we cache when we started." This shape reaches through the cache to ask
+ * the daemon directly. Used by the probe route + future watch-loop.
+ */
+export interface ServiceRegistryProbe extends ServiceRegistryClient {
+  isHealthy(): boolean;
+}
 
 export interface AdminRoutesDeps extends AdminAuthDeps {
   adminService: AdminService;
   authConfig: AuthConfig;
+  serviceRegistry: ServiceRegistryProbe;
 }
 
 const RefundBodySchema = z.object({
@@ -79,7 +92,47 @@ const PROCESS_START = new Date();
 export function registerAdminRoutes(app: FastifyInstance, deps: AdminRoutesDeps): void {
   const preHandler = adminAuthPreHandler(deps);
 
-  app.get('/admin/health', { preHandler }, async () => deps.adminService.getHealth());
+  app.get('/admin/health', { preHandler }, async () => {
+    const engineHealth = await deps.adminService.getHealth();
+    return {
+      ...engineHealth,
+      serviceRegistryHealthy: deps.serviceRegistry.isHealthy(),
+    };
+  });
+
+  // Live probe of the service-registry-daemon. Bypasses the bridge's
+  // start-time-static nodeIndex cache and asks the daemon directly via
+  // listKnown(). Returns timing + a delta vs. the cached snapshot so
+  // operators can see immediately whether (a) the daemon is reachable,
+  // (b) the daemon has nodes, (c) the bridge's cache is stale relative
+  // to the daemon's current view.
+  app.get('/admin/registry/probe', { preHandler }, async (req, reply) => {
+    const cachedCount = deps.adminService.listNodes().length;
+    const startedAt = process.hrtime.bigint();
+    try {
+      const live = await deps.serviceRegistry.listKnown();
+      const durationMs = Number((process.hrtime.bigint() - startedAt) / 1_000_000n);
+      return {
+        healthy: deps.serviceRegistry.isHealthy(),
+        cachedCount,
+        liveCount: live.length,
+        durationMs,
+        live: live.map((n) => ({ id: n.id, url: n.url, capabilities: n.capabilities })),
+      };
+    } catch (err) {
+      const durationMs = Number((process.hrtime.bigint() - startedAt) / 1_000_000n);
+      await reply.code(503).send({
+        healthy: deps.serviceRegistry.isHealthy(),
+        cachedCount,
+        liveCount: null,
+        durationMs,
+        error: {
+          message: err instanceof Error ? err.message : String(err),
+          name: err instanceof Error ? err.name : 'Unknown',
+        },
+      });
+    }
+  });
 
   app.get('/admin/nodes', { preHandler }, async () => ({
     nodes: deps.adminService.listNodes(),

@@ -320,6 +320,7 @@ async function main(): Promise<void> {
     config: adminConfig,
     adminService,
     authConfig,
+    serviceRegistry,
   });
   await registerPortalStatic(server.app);
   await registerAdminConsoleStatic(server.app);
