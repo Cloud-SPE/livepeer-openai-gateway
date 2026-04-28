@@ -26,6 +26,14 @@ const CreateKeyBodySchema = z.object({
   label: z.string().min(1).max(64),
 });
 
+const CreateCustomerBodySchema = z.object({
+  email: z.string().email().max(254),
+  tier: z.enum(['free', 'prepaid']),
+  rate_limit_tier: z.string().min(1).max(64).optional(),
+  balance_usd_cents: z.coerce.bigint().nonnegative().optional(),
+  quota_monthly_allowance: z.coerce.bigint().nonnegative().nullable().optional(),
+});
+
 const CustomerSearchQuerySchema = z.object({
   q: z.string().optional(),
   tier: z.enum(['free', 'prepaid']).optional(),
@@ -63,6 +71,11 @@ const NodeEventsQuerySchema = z.object({
   cursor: z.string().optional(),
 });
 
+// Process start time captured at module load. Used as the synthetic
+// `mtime` for /admin/config/nodes — the SPA expects an ISO-date there
+// even though no on-disk file exists post-engine-extraction.
+const PROCESS_START = new Date();
+
 export function registerAdminRoutes(app: FastifyInstance, deps: AdminRoutesDeps): void {
   const preHandler = adminAuthPreHandler(deps);
 
@@ -71,6 +84,26 @@ export function registerAdminRoutes(app: FastifyInstance, deps: AdminRoutesDeps)
   app.get('/admin/nodes', { preHandler }, async () => ({
     nodes: deps.adminService.listNodes(),
   }));
+
+  // Synthetic config-view. Pre-extraction the bridge owned a local
+  // `nodes.yaml`; today the service-registry-daemon owns node config and
+  // the bridge just consumes its `listKnown()` snapshot. The SPA still has
+  // a "config" tab that expects a file-shaped envelope, so we return the
+  // live node list framed in the legacy schema.
+  app.get('/admin/config/nodes', { preHandler }, async () => {
+    const nodes = deps.adminService.listNodes();
+    return {
+      path: '<service-registry-daemon>',
+      sha256: '',
+      mtime: PROCESS_START.toISOString(),
+      size_bytes: 0,
+      contents:
+        '# Managed by service-registry-daemon. The bridge no longer maintains a\n' +
+        '# local nodes.yaml — edit the daemon\'s config to change the worker\n' +
+        '# pool, then restart the bridge to refresh its cached snapshot.\n',
+      loaded_nodes: nodes,
+    };
+  });
 
   app.get<{ Params: { id: string } }>('/admin/nodes/:id', { preHandler }, async (req, reply) => {
     const detail = await deps.adminService.getNode(req.params.id);
@@ -164,6 +197,47 @@ export function registerAdminRoutes(app: FastifyInstance, deps: AdminRoutesDeps)
   app.get('/admin/escrow', { preHandler }, async () => deps.adminService.getEscrow());
 
   // ── New (0023) ────────────────────────────────────────────────────────────
+
+  app.post('/admin/customers', { preHandler }, async (req, reply) => {
+    const parsed = CreateCustomerBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      await reply.code(400).send(badRequest(parsed.error));
+      return;
+    }
+    try {
+      const detail = await deps.adminService.createCustomer({
+        email: parsed.data.email,
+        tier: parsed.data.tier,
+        ...(parsed.data.rate_limit_tier ? { rateLimitTier: parsed.data.rate_limit_tier } : {}),
+        ...(parsed.data.balance_usd_cents !== undefined
+          ? { balanceUsdCents: parsed.data.balance_usd_cents }
+          : {}),
+        ...(parsed.data.quota_monthly_allowance !== undefined
+          ? { quotaMonthlyAllowance: parsed.data.quota_monthly_allowance }
+          : {}),
+      });
+      await reply.code(201).send(detail);
+    } catch (err) {
+      // Postgres unique_violation on email — surface as 409 with a stable shape
+      // the SPA can branch on.
+      if (
+        err &&
+        typeof err === 'object' &&
+        'code' in err &&
+        (err as { code?: unknown }).code === '23505'
+      ) {
+        await reply.code(409).send({
+          error: {
+            code: 'duplicate',
+            type: 'EmailAlreadyExists',
+            message: 'a customer with this email already exists',
+          },
+        });
+        return;
+      }
+      throw err;
+    }
+  });
 
   app.get('/admin/customers', { preHandler }, async (req, reply) => {
     const parsed = CustomerSearchQuerySchema.safeParse(req.query);

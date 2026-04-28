@@ -55,5 +55,18 @@ export const customersService = {
     return api.post(`/admin/customers/${encodeURIComponent(id)}/api-keys`, { label });
   },
 
+  /**
+   * @param {{
+   *   email: string,
+   *   tier: 'free' | 'prepaid',
+   *   rate_limit_tier?: string,
+   *   balance_usd_cents?: string,
+   *   quota_monthly_allowance?: string | null,
+   * }} input
+   */
+  async create(input) {
+    return api.post('/admin/customers', input);
+  },
+
   reset() { _results.next(null); _selected.next(null); },
 };

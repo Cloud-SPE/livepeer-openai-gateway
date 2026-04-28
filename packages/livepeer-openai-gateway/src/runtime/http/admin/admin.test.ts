@@ -322,4 +322,131 @@ describe('admin endpoints', () => {
       await server.close();
     }
   });
+
+  it('POST /admin/customers creates a prepaid customer + returns detail shape', async () => {
+    const server = await buildServer();
+    try {
+      const res = await server.app.inject({
+        method: 'POST',
+        url: '/admin/customers',
+        headers: { 'x-admin-token': ADMIN_TOKEN, 'content-type': 'application/json' },
+        payload: JSON.stringify({
+          email: 'create@x.io',
+          tier: 'prepaid',
+          balance_usd_cents: '5000',
+        }),
+      });
+      expect(res.statusCode).toBe(201);
+      const body = res.json() as {
+        id: string;
+        email: string;
+        tier: string;
+        status: string;
+        balanceUsdCents: string;
+        rateLimitTier: string;
+      };
+      expect(body.email).toBe('create@x.io');
+      expect(body.tier).toBe('prepaid');
+      expect(body.status).toBe('active');
+      expect(body.balanceUsdCents).toBe('5000');
+      expect(body.rateLimitTier).toBe('default');
+
+      // Persistence check.
+      const row = await customersRepo.findById(pg.db, body.id);
+      expect(row?.email).toBe('create@x.io');
+      expect(row?.balanceUsdCents).toBe(5000n);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('POST /admin/customers seeds quota_monthly_allowance + tokens_remaining for free tier', async () => {
+    const server = await buildServer();
+    try {
+      const res = await server.app.inject({
+        method: 'POST',
+        url: '/admin/customers',
+        headers: { 'x-admin-token': ADMIN_TOKEN, 'content-type': 'application/json' },
+        payload: JSON.stringify({
+          email: 'free@x.io',
+          tier: 'free',
+          quota_monthly_allowance: '1000000',
+        }),
+      });
+      expect(res.statusCode).toBe(201);
+      const body = res.json() as { id: string; quotaMonthlyAllowance: string | null; quotaTokensRemaining: string | null };
+      expect(body.quotaMonthlyAllowance).toBe('1000000');
+      expect(body.quotaTokensRemaining).toBe('1000000');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('POST /admin/customers returns 409 on duplicate email', async () => {
+    await customersRepo.insertCustomer(pg.db, {
+      email: 'dupe@x.io',
+      tier: 'prepaid',
+      balanceUsdCents: 0n,
+      reservedUsdCents: 0n,
+      quotaReservedTokens: 0n,
+    });
+    const server = await buildServer();
+    try {
+      const res = await server.app.inject({
+        method: 'POST',
+        url: '/admin/customers',
+        headers: { 'x-admin-token': ADMIN_TOKEN, 'content-type': 'application/json' },
+        payload: JSON.stringify({ email: 'dupe@x.io', tier: 'prepaid' }),
+      });
+      expect(res.statusCode).toBe(409);
+      const body = res.json() as { error: { type: string } };
+      expect(body.error.type).toBe('EmailAlreadyExists');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('POST /admin/customers returns 400 on invalid body', async () => {
+    const server = await buildServer();
+    try {
+      const res = await server.app.inject({
+        method: 'POST',
+        url: '/admin/customers',
+        headers: { 'x-admin-token': ADMIN_TOKEN, 'content-type': 'application/json' },
+        payload: JSON.stringify({ email: 'not-an-email', tier: 'prepaid' }),
+      });
+      expect(res.statusCode).toBe(400);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('GET /admin/config/nodes returns the synthetic config-view envelope', async () => {
+    const server = await buildServer();
+    try {
+      const res = await server.app.inject({
+        method: 'GET',
+        url: '/admin/config/nodes',
+        headers: { 'x-admin-token': ADMIN_TOKEN },
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json() as {
+        path: string;
+        sha256: string;
+        mtime: string;
+        size_bytes: number;
+        contents: string;
+        loaded_nodes: Array<{ id: string; url: string }>;
+      };
+      expect(body.path).toBe('<service-registry-daemon>');
+      expect(body.sha256).toBe('');
+      expect(body.size_bytes).toBe(0);
+      expect(typeof body.mtime).toBe('string');
+      expect(body.contents).toContain('service-registry-daemon');
+      expect(body.loaded_nodes).toHaveLength(1);
+      expect(body.loaded_nodes[0]?.id).toBe('node-admin');
+    } finally {
+      await server.close();
+    }
+  });
 });

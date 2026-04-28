@@ -175,6 +175,7 @@ export function parseResponse(method, path, body) {
   if (m === 'GET' && p.match(/^\/admin\/nodes\/[^/]+\/events$/)) return nodeEventsList(body);
   if (m === 'GET' && p.match(/^\/admin\/nodes\/[^/]+$/)) return body; // node detail shape returned by adminService is rich; pass through
   if (m === 'GET' && p === '/admin/customers') return customersList(body);
+  if (m === 'POST' && p === '/admin/customers') return customerDetail(body);
   if (m === 'GET' && p.match(/^\/admin\/customers\/[^/]+\/api-keys$/)) return adminApiKeyList(body);
   if (m === 'POST' && p.match(/^\/admin\/customers\/[^/]+\/api-keys$/)) return adminApiKeyCreated(body);
   if (m === 'GET' && p.match(/^\/admin\/customers\/[^/]+$/)) return customerDetail(body);
