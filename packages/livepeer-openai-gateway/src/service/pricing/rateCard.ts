@@ -9,7 +9,7 @@
 // discriminator + sort_order for pattern resolution. Chat additionally
 // has a tier-prices table.
 
-import { asc, eq } from 'drizzle-orm';
+import { asc } from 'drizzle-orm';
 import type { Db } from '../../repo/db.js';
 import {
   rateCardChatModels,

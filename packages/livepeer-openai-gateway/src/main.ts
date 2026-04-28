@@ -35,6 +35,7 @@ import { runMigrations } from './repo/migrate.js';
 import { registerAccountRoutes } from './runtime/http/account/routes.js';
 import { registerAdminConsoleStatic } from './runtime/http/admin/console/static.js';
 import { registerAdminRoutes } from './runtime/http/admin/routes.js';
+import { registerAdminPricingRoutes } from './runtime/http/admin/pricing.js';
 import { registerTopupRoute } from './runtime/http/billing/topup.js';
 import { registerPortalStatic } from './runtime/http/portal/static.js';
 import { registerChatCompletionsRoute } from '@cloudspe/livepeer-openai-gateway-core/runtime/http/chat/completions.js';
@@ -334,6 +335,11 @@ async function main(): Promise<void> {
     adminService,
     authConfig,
     serviceRegistry,
+  });
+  registerAdminPricingRoutes(server.app, {
+    db,
+    config: adminConfig,
+    rateCardService,
   });
   await registerPortalStatic(server.app);
   await registerAdminConsoleStatic(server.app);
