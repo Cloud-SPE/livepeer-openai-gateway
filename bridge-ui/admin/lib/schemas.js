@@ -185,6 +185,9 @@ export function parseResponse(method, path, body) {
   if (m === 'GET' && p === '/admin/topups') return adminTopupsList(body);
   if (m === 'GET' && p === '/admin/escrow') return escrow(body);
   if (m === 'GET' && p === '/admin/config/nodes') return nodesConfigView(body);
+  // 0030: rate-card surfaces. Pass-through validation — the backend
+  // enforces shape via zod and the SPA handles whatever JSON comes back.
+  if (p.startsWith('/admin/pricing/')) return body;
 
   return body;
 }

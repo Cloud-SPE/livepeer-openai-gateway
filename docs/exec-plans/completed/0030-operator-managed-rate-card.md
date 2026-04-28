@@ -2,9 +2,10 @@
 id: 0030
 slug: operator-managed-rate-card
 title: Operator-managed rate card — admin-SPA-driven pricing for all 5 capabilities, with pattern rules + glob wildcards
-status: active
+status: completed
 owner: agent
 opened: 2026-04-28
+closed: 2026-04-28
 ---
 
 ## Goal

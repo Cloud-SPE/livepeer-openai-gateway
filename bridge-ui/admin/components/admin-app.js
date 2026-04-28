@@ -20,8 +20,9 @@ import './admin-reservations.js';
 import './admin-topups.js';
 import './admin-audit.js';
 import './admin-config.js';
+import './admin-rate-card.js';
 
-const TOP_VIEWS = ['health', 'nodes', 'customers', 'reservations', 'topups', 'audit', 'config'];
+const TOP_VIEWS = ['health', 'nodes', 'customers', 'reservations', 'topups', 'rate-card', 'audit', 'config'];
 const ALL_PREFIXES = TOP_VIEWS;
 
 function viewFromHash() {
@@ -113,6 +114,7 @@ export class AdminApp extends LitElement {
       case 'topups': return html`<admin-topups></admin-topups>`;
       case 'audit': return html`<admin-audit></admin-audit>`;
       case 'config': return html`<admin-config></admin-config>`;
+      case 'rate-card': return html`<admin-rate-card .tab=${parts[1] ?? 'chat'}></admin-rate-card>`;
       case 'health':
       default:
         return html`<admin-health></admin-health>`;
@@ -133,6 +135,9 @@ export class AdminApp extends LitElement {
   }
 }
 
-function labelFor(v) { return v.charAt(0).toUpperCase() + v.slice(1); }
+function labelFor(v) {
+  if (v === 'rate-card') return 'Rate card';
+  return v.charAt(0).toUpperCase() + v.slice(1);
+}
 
 if (!customElements.get('admin-app')) customElements.define('admin-app', AdminApp);
