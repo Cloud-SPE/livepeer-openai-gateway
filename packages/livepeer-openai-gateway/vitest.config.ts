@@ -18,12 +18,6 @@ export default defineConfig({
         'src/**/index.ts',
         'src/main.ts',
         'src/scripts/**',
-        // 0030 in-flight: rate-card surface ships without unit tests in
-        // this slice. The follow-up SPA slice adds happy-path tests for
-        // the admin routes + a testPg-backed test for RateCardService;
-        // remove these excludes when those land.
-        'src/service/pricing/rateCard.ts',
-        'src/runtime/http/admin/pricing.ts',
       ],
       thresholds: {
         lines: 75,
