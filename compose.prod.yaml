@@ -99,16 +99,23 @@ services:
           memory: 512m
 
   service-registry-daemon:
-    image: ${SERVICE_REGISTRY_IMAGE:-ghcr.io/livepeer-modules-project/service-registry-daemon:v0.1.0}
+    image: ${SERVICE_REGISTRY_IMAGE:-tztcloud/livepeer-service-registry-daemon:v1.2.0}
     restart: unless-stopped
     command:
       - --mode=resolver
+      # Static-overlay-only: skip chain discovery; pool comes solely from
+      # the YAML below. Drop this flag (and add --chain-rpc) once you
+      # want orchestrators auto-discovered from the BondingManager.
+      - --discovery=overlay-only
       - --socket=/var/run/livepeer/service-registry.sock
-      - --config=/etc/livepeer/service-registry.yaml
+      - --static-overlay=/etc/livepeer/service-registry.yaml
       - --log-level=${DAEMON_LOG_LEVEL:-info}
     volumes:
       - ${SERVICE_REGISTRY_CONFIG_PATH:-./service-registry-config.yaml}:/etc/livepeer/service-registry.yaml:ro
       - payment-socket:/var/run/livepeer
+      # Daemon writes its BoltDB cache here — needs a writable mount
+      # because the container root FS is read-only.
+      - service-registry-state:/var/lib/livepeer
     read_only: true
     security_opt:
       - no-new-privileges:true
@@ -236,6 +243,7 @@ services:
 volumes:
   pgdata:
   payment-socket:
+  service-registry-state:
 
 networks:
   default:
