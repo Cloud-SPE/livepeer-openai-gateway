@@ -99,7 +99,7 @@ services:
           memory: 512m
 
   service-registry-daemon:
-    image: ${SERVICE_REGISTRY_IMAGE:-tztcloud/livepeer-service-registry-daemon:v1.2.0}
+    image: ${SERVICE_REGISTRY_IMAGE:-tztcloud/livepeer-service-registry-daemon:v1.3.0}
     restart: unless-stopped
     command:
       - --mode=resolver
