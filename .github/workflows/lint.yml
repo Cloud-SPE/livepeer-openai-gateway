@@ -55,13 +55,9 @@ jobs:
   # proto-drift CI in that repo. Bridge consumers pin via package-lock
   # against a published version.
 
-  secret-scan:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # secret-scan (gitleaks) removed in v3.0.0: gitleaks-action requires a
+  # paid commercial license for org accounts (`GITLEAKS_LICENSE`).
+  # GitHub's native push-protection already covers the same scan-on-push
+  # use case at the platform level — gitleaks-action's only added value
+  # was branch-content scanning beyond what push-protection covers,
+  # which we accept losing.

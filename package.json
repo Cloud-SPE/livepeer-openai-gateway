@@ -3,6 +3,7 @@
   "version": "3.0.0",
   "private": true,
   "description": "Monorepo root for the livepeer-openai-gateway shell (built on @cloudspe/livepeer-openai-gateway-core) + bridge-ui SPAs.",
+  "license": "MIT",
   "type": "module",
   "engines": {
     "node": ">=20"
