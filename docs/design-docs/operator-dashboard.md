@@ -77,7 +77,7 @@ When `resolve()` returns null, the dashboard sends 401 with a
   set up should use that. The bridge's `livepeer_bridge_*` metrics emit
   to whatever scraper is configured per
   [`metrics.md`](metrics.md) and
-  [`livepeer-modules-conventions/metrics-conventions.md`](../../../livepeer-modules-conventions/metrics-conventions.md).
+  [`livepeer-modules-conventions/metrics-conventions.md`](https://github.com/Cloud-SPE/livepeer-modules/blob/main/docs/conventions/metrics.md).
 - It is **not** a place for action surfaces in v1.
 
 ## Cross-references

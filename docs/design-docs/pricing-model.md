@@ -217,7 +217,7 @@ The probabilistic ticket protocol has a hard floor independent of the rate cards
 2. **Accept the slight overpayment for tiny requests** as the cost of the protocol's granularity. This is the v1 stance.
 3. **Batch payments across multiple requests per session.** The daemon's session model permits this (one session, many `CreatePayment` calls), but the bridge currently bills per-request via the worker's middleware. A bridge-side change to defer ticket creation across N requests would amortize at the cost of more bookkeeping and stronger session-affinity guarantees.
 
-Tracked as `per-ticket-ev-vs-request-size` in the library tech-debt tracker. Cross-reference: `--receiver-ev-wei` flag in [livepeer-payment-library/docs/operations/running-the-daemon.md](../../../livepeer-payment-library/docs/operations/running-the-daemon.md).
+Tracked as `per-ticket-ev-vs-request-size` in the library tech-debt tracker. Cross-reference: `--receiver-ev-wei` flag in [livepeer-payment-library/docs/operations/running-the-daemon.md](https://github.com/Cloud-SPE/livepeer-modules/blob/main/payment-daemon/docs/operations/running-the-daemon.md).
 
 ## Types
 

@@ -2,7 +2,8 @@
 id: 0027
 slug: engine-extraction-public-release
 title: Engine extraction stage 4 — bootstrap public Cloud-SPE/livepeer-gateway-core repo; sync packages/livepeer-gateway-core/ over; ship examples/minimal-shell; CI/npm publish under @cloudspe/livepeer-gateway-core (placeholder); cut 0.1.0; this repo swaps workspace dep for npm dep
-status: active
+status: completed
+closed: 2026-04-29
 owner: agent
 opened: 2026-04-26
 ---

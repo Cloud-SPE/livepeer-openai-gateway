@@ -58,7 +58,7 @@ All inputs and outputs use domain types (`bigint`, `0x`-prefixed hex strings). P
 
 In practice: `service/payments/sessions.ts::createSessionCache.getOrStart` reads `quote.priceInfo` (already populated by `wireQuoteToDomain`) and passes `{pricePerUnit: quote.priceInfo.pricePerUnitWei, pixelsPerUnit: quote.priceInfo.pixelsPerUnit}` on every `startSession` call. There is currently no bridge-side affordance for "free / bootstrap" sessions; the daemon expects the canonical-zero `{0, 1}` to indicate that and the bridge always passes a real price (the worker.yaml's `price_per_work_unit_wei` is the source). Tracked library-side as `bootstrap-session-explicit-price`.
 
-Cross-reference: [livepeer-payment-library wire-compat.md](../../../livepeer-payment-library/docs/design-docs/wire-compat.md#startsessionrequestprice_info-is-required-on-every-non-bootstrap-session) and [redemption-loop.md "Ticket recipientRand derivation"](../../../livepeer-payment-library/docs/design-docs/redemption-loop.md#ticket-recipientrand-derivation).
+Cross-reference: [livepeer-payment-library wire-compat.md](https://github.com/Cloud-SPE/livepeer-modules/blob/main/payment-daemon/docs/design-docs/wire-compat.md#startsessionrequestprice_info-is-required-on-every-non-bootstrap-session) and [redemption-loop.md "Ticket recipientRand derivation"](https://github.com/Cloud-SPE/livepeer-modules/blob/main/payment-daemon/docs/design-docs/redemption-loop.md#ticket-recipientrand-derivation).
 
 ## Converters
 

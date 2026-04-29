@@ -10,9 +10,9 @@ What `livepeer-openai-gateway` exposes on `/metrics` and why each metric exists.
 
 Every metric pairs to a question someone (SRE, finance, or product) will dashboard or alert on. No vanity metrics.
 
-**Cross-repo conventions**: [`../../../livepeer-modules-conventions/metrics-conventions.md`](../../../livepeer-modules-conventions/metrics-conventions.md). This doc covers bridge-specific instantiation; the conventions doc covers cross-repo rules (naming, label keys, bucket presets, cardinality cap, dual-histogram, audit-log philosophy, provider boundary).
+**Cross-repo conventions**: [`https://github.com/Cloud-SPE/livepeer-modules/blob/main/docs/conventions/metrics.md`](https://github.com/Cloud-SPE/livepeer-modules/blob/main/docs/conventions/metrics.md). This doc covers bridge-specific instantiation; the conventions doc covers cross-repo rules (naming, label keys, bucket presets, cardinality cap, dual-histogram, audit-log philosophy, provider boundary).
 
-The pattern mirrors [`livepeer-service-registry`'s observability](../../../livepeer-service-registry/docs/design-docs/observability.md) (status `verified`) — adapted for TypeScript / Fastify / `prom-client`. Same `livepeer_<repo>_*` prefix.
+The pattern mirrors [`livepeer-service-registry`'s observability](https://github.com/Cloud-SPE/livepeer-modules/blob/main/service-registry-daemon/docs/design-docs/observability.md) (status `verified`) — adapted for TypeScript / Fastify / `prom-client`. Same `livepeer_<repo>_*` prefix.
 
 Phases:
 
@@ -28,7 +28,7 @@ Bridge-specific:
 
 - **Allowed labels (this repo)**: `capability`, `model`, `tier`, `node_id`, `outcome`, `reason`, `state`, `kind`, `method`, `event_type`. `tier` ∈ {free, starter, standard, pro, premium}; `node_id` is sourced from the service-registry-daemon's static-overlay (post-engine-extraction; pre-stage-3 it came from a local `nodes.yaml`).
 - **Per-entity drilldown**: `usage_record` SQL table for per-request history; `admin_audit_event` for operator-action history. Never label by `customer_id`, `api_key_id`, `work_id`, `stripe_session_id`, `email`, IP.
-- **Endpoint**: `METRICS_LISTEN` env (e.g. `127.0.0.1:9602`, port `:9602` per [`port-allocation.md`](../../../livepeer-modules-conventions/port-allocation.md)). Off by default. Separate Fastify instance from the customer-facing API — never expose `/metrics` to the public internet.
+- **Endpoint**: `METRICS_LISTEN` env (e.g. `127.0.0.1:9602`, port `:9602` per [`port-allocation.md`](https://github.com/Cloud-SPE/livepeer-modules/blob/main/docs/conventions/ports.md)). Off by default. Separate Fastify instance from the customer-facing API — never expose `/metrics` to the public internet.
 - **Legacy unprefixed metrics from `0011-local-tokenizer-metric.md`**: Phase 1 emits both `tokens_drift_percent` (deprecated) and `livepeer_bridge_token_drift_percent` for one release window. Phase 2 deletes the unprefixed name.
 
 ## Phase 1 catalog
@@ -81,7 +81,7 @@ Bridge-specific:
 | PayerDaemon RPC latency (sub-ms detail) | `livepeer_bridge_payer_daemon_call_duration_seconds_fast` | histogram (Fast buckets) | `method` |
 | Bridge-side view of escrow | `livepeer_bridge_payer_daemon_deposit_wei`, `livepeer_bridge_payer_daemon_reserve_wei` | gauge | — |
 
-Dual-histogram per the conventions doc — both observe every gRPC call. The daemon also exposes its own server-side `livepeer_payment_grpc_*` (see [`../../../livepeer-payment-library/docs/design-docs/metrics.md`](../../../livepeer-payment-library/docs/design-docs/metrics.md)). Both views are valuable: server-side captures the daemon's view; client-side here includes socket overhead. A persistent gap means the unix-socket is slow.
+Dual-histogram per the conventions doc — both observe every gRPC call. The daemon also exposes its own server-side `livepeer_payment_grpc_*` (see [`https://github.com/Cloud-SPE/livepeer-modules/blob/main/payment-daemon/docs/design-docs/metrics.md`](https://github.com/Cloud-SPE/livepeer-modules/blob/main/payment-daemon/docs/design-docs/metrics.md)). Both views are valuable: server-side captures the daemon's view; client-side here includes socket overhead. A persistent gap means the unix-socket is slow.
 
 `method` values: `StartSession`, `CreatePayment`, `CloseSession`, `GetDepositInfo`.
 
