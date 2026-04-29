@@ -23,13 +23,21 @@ export class AdminTopups extends LitElement {
     this._debounce = null;
   }
 
-  createRenderRoot() { return this; }
+  createRenderRoot() {
+    return this;
+  }
 
   async connectedCallback() {
     super.connectedCallback();
     if (!topupsService.value) {
-      try { await topupsService.search({ limit: 100 }); }
-      catch (err) { showToast({ kind: 'error', message: err instanceof Error ? err.message : 'Failed to load top-ups.' }); }
+      try {
+        await topupsService.search({ limit: 100 });
+      } catch (err) {
+        showToast({
+          kind: 'error',
+          message: err instanceof Error ? err.message : 'Failed to load top-ups.',
+        });
+      }
     }
   }
 
@@ -43,7 +51,9 @@ export class AdminTopups extends LitElement {
     return html`
       <div class="page-header"><h1>Top-ups</h1></div>
 
-      <section style="display: flex; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-4)">
+      <section
+        style="display: flex; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-4)"
+      >
         <input
           type="text"
           placeholder="Customer ID (UUID)"
@@ -52,30 +62,55 @@ export class AdminTopups extends LitElement {
           style="width: 22rem; max-width: 100%"
         />
         <select @change=${this._onStatusChange}>
-          ${STATUS_OPTIONS.map((s) => html`
-            <option value=${s} ?selected=${this._status === s}>${s || 'any status'}</option>
-          `)}
+          ${STATUS_OPTIONS.map(
+            (s) => html`
+              <option value=${s} ?selected=${this._status === s}>${s || 'any status'}</option>
+            `,
+          )}
         </select>
         <bridge-button variant="ghost" @click=${this._clear}>Clear filters</bridge-button>
       </section>
 
-      ${s === null ? html`<bridge-spinner></bridge-spinner>` : html`
-        <bridge-table
-          .columns=${this._columns()}
-          .rows=${s.topups}
-          empty="No top-ups match these filters."
-        ></bridge-table>
-      `}
+      ${s === null
+        ? html`<bridge-spinner></bridge-spinner>`
+        : html`
+            <bridge-table
+              .columns=${this._columns()}
+              .rows=${s.topups}
+              empty="No top-ups match these filters."
+            ></bridge-table>
+          `}
     `;
   }
 
   _columns() {
     return [
-      { field: 'created_at', header: 'When', render: (t) => new Date(t.created_at).toLocaleString() },
-      { field: 'customer_id', header: 'Customer', render: (t) => html`<span class="mono text-xs">${t.customer_id.slice(0, 8)}…</span>` },
-      { field: 'amount_usd_cents', header: 'Amount', render: (t) => `$${(Number(t.amount_usd_cents) / 100).toFixed(2)}` },
-      { field: 'status', header: 'Status', render: (t) => html`<span class="badge" data-status=${badgeStatus(t.status)}>${t.status}</span>` },
-      { field: 'stripe_session_id', header: 'Stripe session', render: (t) => html`<span class="mono text-xs">${t.stripe_session_id.slice(0, 16)}…</span>` },
+      {
+        field: 'created_at',
+        header: 'When',
+        render: (t) => new Date(t.created_at).toLocaleString(),
+      },
+      {
+        field: 'customer_id',
+        header: 'Customer',
+        render: (t) => html`<span class="mono text-xs">${t.customer_id.slice(0, 8)}…</span>`,
+      },
+      {
+        field: 'amount_usd_cents',
+        header: 'Amount',
+        render: (t) => `$${(Number(t.amount_usd_cents) / 100).toFixed(2)}`,
+      },
+      {
+        field: 'status',
+        header: 'Status',
+        render: (t) =>
+          html`<span class="badge" data-status=${badgeStatus(t.status)}>${t.status}</span>`,
+      },
+      {
+        field: 'stripe_session_id',
+        header: 'Stripe session',
+        render: (t) => html`<span class="mono text-xs">${t.stripe_session_id.slice(0, 16)}…</span>`,
+      },
     ];
   }
 
@@ -99,8 +134,11 @@ export class AdminTopups extends LitElement {
     const cid = this._customerId.trim();
     if (cid) params.customer_id = cid;
     if (this._status) params.status = this._status;
-    try { await topupsService.search(params); }
-    catch (err) { showToast({ kind: 'error', message: err instanceof Error ? err.message : 'Search failed.' }); }
+    try {
+      await topupsService.search(params);
+    } catch (err) {
+      showToast({ kind: 'error', message: err instanceof Error ? err.message : 'Search failed.' });
+    }
   }
 
   async _clear() {

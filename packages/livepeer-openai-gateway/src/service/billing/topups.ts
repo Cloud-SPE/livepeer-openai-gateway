@@ -3,7 +3,10 @@ import type { Db } from '../../repo/db.js';
 import * as customersRepo from '../../repo/customers.js';
 import * as topupsRepo from '../../repo/topups.js';
 import { topups, customers } from '../../repo/schema.js';
-import { OUTCOME_OK, type Recorder } from '@cloudspe/livepeer-openai-gateway-core/providers/metrics/recorder.js';
+import {
+  OUTCOME_OK,
+  type Recorder,
+} from '@cloudspe/livepeer-openai-gateway-core/providers/metrics/recorder.js';
 import { CustomerNotFoundError } from '@cloudspe/livepeer-openai-gateway-core/service/billing/errors.js';
 
 export interface CreditTopupInput {

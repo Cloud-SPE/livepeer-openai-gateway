@@ -1,15 +1,19 @@
 import { BehaviorSubject } from 'rxjs';
 import { api } from '../api.js';
 
-const _state = new BehaviorSubject(/** @type {{ loading: boolean, data: unknown, error: string|null }} */({
-  loading: false,
-  data: null,
-  error: null,
-}));
+const _state = new BehaviorSubject(
+  /** @type {{ loading: boolean, data: unknown, error: string|null }} */ ({
+    loading: false,
+    data: null,
+    error: null,
+  }),
+);
 
 export const usageService = {
   state$: _state.asObservable(),
-  get value() { return _state.getValue(); },
+  get value() {
+    return _state.getValue();
+  },
 
   /** @param {{ from?: string, to?: string, group_by?: 'day'|'model'|'capability' }} params */
   async query(params = {}) {
@@ -24,10 +28,16 @@ export const usageService = {
       _state.next({ loading: false, data, error: null });
       return data;
     } catch (err) {
-      _state.next({ loading: false, data: _state.getValue().data, error: err instanceof Error ? err.message : 'failed' });
+      _state.next({
+        loading: false,
+        data: _state.getValue().data,
+        error: err instanceof Error ? err.message : 'failed',
+      });
       throw err;
     }
   },
 
-  reset() { _state.next({ loading: false, data: null, error: null }); },
+  reset() {
+    _state.next({ loading: false, data: null, error: null });
+  },
 };

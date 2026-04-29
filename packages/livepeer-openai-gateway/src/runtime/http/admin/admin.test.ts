@@ -37,21 +37,41 @@ function mockPayerDaemon(opts: { healthy?: boolean } = {}): PayerDaemonClient {
   };
 }
 
-function mockServiceRegistry(opts: {
-  healthy?: boolean;
-  listKnown?: () => Promise<Array<{ id: string; url: string; capabilities: ('chat' | 'embeddings' | 'images' | 'imagesEdits' | 'speech' | 'transcriptions')[]; weight?: number }>>;
-} = {}) {
+function mockServiceRegistry(
+  opts: {
+    healthy?: boolean;
+    listKnown?: () => Promise<
+      Array<{
+        id: string;
+        url: string;
+        capabilities: (
+          | 'chat'
+          | 'embeddings'
+          | 'images'
+          | 'imagesEdits'
+          | 'speech'
+          | 'transcriptions'
+        )[];
+        weight?: number;
+      }>
+    >;
+  } = {},
+) {
   return {
-    async select() { return []; },
+    async select() {
+      return [];
+    },
     listKnown: opts.listKnown ?? (async () => []),
     isHealthy: () => opts.healthy ?? true,
   };
 }
 
-async function buildServer(opts: {
-  ipAllowlist?: string[];
-  serviceRegistry?: ReturnType<typeof mockServiceRegistry>;
-} = {}) {
+async function buildServer(
+  opts: {
+    ipAllowlist?: string[];
+    serviceRegistry?: ReturnType<typeof mockServiceRegistry>;
+  } = {},
+) {
   const nodeIndex = createNodeIndex([
     { id: 'node-admin', url: 'http://127.0.0.1:9999', capabilities: ['chat'], weight: 100 },
   ]);
@@ -389,7 +409,11 @@ describe('admin endpoints', () => {
         }),
       });
       expect(res.statusCode).toBe(201);
-      const body = res.json() as { id: string; quotaMonthlyAllowance: string | null; quotaTokensRemaining: string | null };
+      const body = res.json() as {
+        id: string;
+        quotaMonthlyAllowance: string | null;
+        quotaTokensRemaining: string | null;
+      };
       expect(body.quotaMonthlyAllowance).toBe('1000000');
       expect(body.quotaTokensRemaining).toBe('1000000');
     } finally {

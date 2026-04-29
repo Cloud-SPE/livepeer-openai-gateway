@@ -64,7 +64,11 @@ export async function search(db: Db, input: CustomerSearchInput): Promise<Custom
     // Match on email substring; also match exact id when the query is a
     // UUID (PG would reject a non-uuid string cast against the id column).
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.q);
-    conds.push(isUuid ? or(ilike(customers.email, like), eq(customers.id, input.q)) : ilike(customers.email, like));
+    conds.push(
+      isUuid
+        ? or(ilike(customers.email, like), eq(customers.id, input.q))
+        : ilike(customers.email, like),
+    );
   }
   if (input.tier) conds.push(eq(customers.tier, input.tier));
   if (input.status) conds.push(eq(customers.status, input.status));

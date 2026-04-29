@@ -5,7 +5,9 @@ const _state = new BehaviorSubject(null);
 
 export const reservationsService = {
   state$: _state.asObservable(),
-  get value() { return _state.getValue(); },
+  get value() {
+    return _state.getValue();
+  },
 
   /** @param {{ state?: 'open'|'committed'|'refunded', limit?: number, cursor?: string }} params */
   async search(params = {}) {
@@ -18,5 +20,7 @@ export const reservationsService = {
     return out;
   },
 
-  reset() { _state.next(null); },
+  reset() {
+    _state.next(null);
+  },
 };

@@ -5,7 +5,9 @@ const _state = new BehaviorSubject(null);
 
 export const configService = {
   state$: _state.asObservable(),
-  get value() { return _state.getValue(); },
+  get value() {
+    return _state.getValue();
+  },
 
   async refresh() {
     const out = await api.get('/admin/config/nodes');
@@ -13,5 +15,7 @@ export const configService = {
     return out;
   },
 
-  reset() { _state.next(null); },
+  reset() {
+    _state.next(null);
+  },
 };

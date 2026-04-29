@@ -11,11 +11,7 @@ import {
   type NodeDetail,
   type EscrowReport,
 } from '@cloudspe/livepeer-openai-gateway-core/service/admin/engine.js';
-import {
-  createShellAdminService,
-  type ShellAdminService,
-  type CustomerDetail,
-} from './shell.js';
+import { createShellAdminService, type ShellAdminService, type CustomerDetail } from './shell.js';
 
 /**
  * Composed AdminService = engine half ⨁ shell half. Stage 2 splits

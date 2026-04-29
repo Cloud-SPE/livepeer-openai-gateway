@@ -6,5 +6,5 @@ export const session = createSession('bridge.portal');
 
 export function getApiKey() {
   const s = session.get();
-  return (s && typeof s === 'object' && typeof s.apiKey === 'string') ? s.apiKey : null;
+  return s && typeof s === 'object' && typeof s.apiKey === 'string' ? s.apiKey : null;
 }

@@ -1,11 +1,13 @@
 import { BehaviorSubject } from 'rxjs';
 import { api } from '../api.js';
 
-const _keys = new BehaviorSubject(/** @type {Array<unknown>|null} */(null));
+const _keys = new BehaviorSubject(/** @type {Array<unknown>|null} */ (null));
 
 export const keysService = {
   keys$: _keys.asObservable(),
-  get value() { return _keys.getValue(); },
+  get value() {
+    return _keys.getValue();
+  },
 
   async refresh() {
     const { keys } = await api.get('/v1/account/api-keys');
@@ -32,7 +34,9 @@ export const keysService = {
   async revoke(id) {
     const previous = _keys.getValue() ?? [];
     // Optimistic mark
-    _keys.next(previous.map((k) => k.id === id ? { ...k, revoked_at: new Date().toISOString() } : k));
+    _keys.next(
+      previous.map((k) => (k.id === id ? { ...k, revoked_at: new Date().toISOString() } : k)),
+    );
     try {
       await api.del(`/v1/account/api-keys/${id}`);
     } catch (err) {
@@ -41,5 +45,7 @@ export const keysService = {
     }
   },
 
-  reset() { _keys.next(null); },
+  reset() {
+    _keys.next(null);
+  },
 };

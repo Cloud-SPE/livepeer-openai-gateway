@@ -15,13 +15,25 @@ const ACTIVE_CUSTOMER = {
   rateLimitTier: 'default',
   createdAt: '2026-04-20T00:00:00.000Z',
   topups: [
-    { stripeSessionId: 'cs_first_succeeded_xxx', amountUsdCents: '2500', status: 'succeeded',
-      createdAt: '2026-04-21T00:00:00.000Z', refundedAt: null, disputedAt: null },
+    {
+      stripeSessionId: 'cs_first_succeeded_xxx',
+      amountUsdCents: '2500',
+      status: 'succeeded',
+      createdAt: '2026-04-21T00:00:00.000Z',
+      refundedAt: null,
+      disputedAt: null,
+    },
   ],
   recentUsage: [],
 };
 
-const SUSPENDED_CUSTOMER = { ...ACTIVE_CUSTOMER, id: 'c-2', email: 'bob@example.com', status: 'suspended', topups: [] };
+const SUSPENDED_CUSTOMER = {
+  ...ACTIVE_CUSTOMER,
+  id: 'c-2',
+  email: 'bob@example.com',
+  status: 'suspended',
+  topups: [],
+};
 
 let selectStub, suspendStub, unsuspendStub, refundStub, issueKeyStub;
 
@@ -73,15 +85,17 @@ describe('admin-customer-detail', () => {
 
   it('Suspend flow: opens type-to-confirm dialog; confirm disabled until email matches', async () => {
     const el = await mountWith(ACTIVE_CUSTOMER, 'c-1');
-    const suspendBtn = [...el.querySelectorAll('section.panel .actions bridge-button')]
-      .find((b) => b.textContent.trim() === 'Suspend');
+    const suspendBtn = [...el.querySelectorAll('section.panel .actions bridge-button')].find(
+      (b) => b.textContent.trim() === 'Suspend',
+    );
     suspendBtn.click();
     await aTimeout(0);
     await el.updateComplete;
 
     // The first bridge-confirm-dialog with required-text=email opens
-    const dialog = [...el.querySelectorAll('bridge-confirm-dialog')]
-      .find((d) => d.open && d.requiredText === 'alice@example.com');
+    const dialog = [...el.querySelectorAll('bridge-confirm-dialog')].find(
+      (d) => d.open && d.requiredText === 'alice@example.com',
+    );
     expect(dialog).to.exist;
 
     const buttons = dialog.querySelectorAll('bridge-button');
@@ -104,31 +118,37 @@ describe('admin-customer-detail', () => {
 
   it('Refund flow: button present only when there are succeeded top-ups', async () => {
     const el = await mountWith(ACTIVE_CUSTOMER, 'c-1');
-    const refundBtn = [...el.querySelectorAll('section.panel .actions bridge-button')]
-      .find((b) => b.textContent.includes('Refund'));
+    const refundBtn = [...el.querySelectorAll('section.panel .actions bridge-button')].find((b) =>
+      b.textContent.includes('Refund'),
+    );
     expect(refundBtn).to.exist;
 
     const noTopupsCustomer = { ...ACTIVE_CUSTOMER, id: 'c-3', topups: [] };
     selectStub.resetHistory();
     selectStub.resolves(noTopupsCustomer);
-    const el2 = await fixture(html`<admin-customer-detail .customerId=${'c-3'}></admin-customer-detail>`);
+    const el2 = await fixture(
+      html`<admin-customer-detail .customerId=${'c-3'}></admin-customer-detail>`,
+    );
     await aTimeout(0);
     await el2.updateComplete;
-    const refundBtn2 = [...el2.querySelectorAll('section.panel .actions bridge-button')]
-      .find((b) => b.textContent.includes('Refund'));
+    const refundBtn2 = [...el2.querySelectorAll('section.panel .actions bridge-button')].find((b) =>
+      b.textContent.includes('Refund'),
+    );
     expect(refundBtn2).to.equal(undefined);
   });
 
   it('Refund: type-to-confirm guard, then dispatches refund with the topup session id', async () => {
     const el = await mountWith(ACTIVE_CUSTOMER, 'c-1');
-    const refundBtn = [...el.querySelectorAll('section.panel .actions bridge-button')]
-      .find((b) => b.textContent.includes('Refund'));
+    const refundBtn = [...el.querySelectorAll('section.panel .actions bridge-button')].find((b) =>
+      b.textContent.includes('Refund'),
+    );
     refundBtn.click();
     await aTimeout(0);
     await el.updateComplete;
 
-    const refundDialog = [...el.querySelectorAll('bridge-confirm-dialog')]
-      .find((d) => d.open && d.heading === 'Refund top-up?');
+    const refundDialog = [...el.querySelectorAll('bridge-confirm-dialog')].find(
+      (d) => d.open && d.heading === 'Refund top-up?',
+    );
     expect(refundDialog).to.exist;
 
     const input = refundDialog.querySelector('input.confirm-input');
@@ -151,15 +171,17 @@ describe('admin-customer-detail', () => {
 
   it('Unsuspend: single-click confirm (no type-to-confirm guard)', async () => {
     const el = await mountWith(SUSPENDED_CUSTOMER, 'c-2');
-    const unsuspendBtn = [...el.querySelectorAll('section.panel .actions bridge-button')]
-      .find((b) => b.textContent.trim() === 'Unsuspend');
+    const unsuspendBtn = [...el.querySelectorAll('section.panel .actions bridge-button')].find(
+      (b) => b.textContent.trim() === 'Unsuspend',
+    );
     unsuspendBtn.click();
     await aTimeout(0);
     await el.updateComplete;
 
     // The unsuspend uses a plain bridge-dialog (NOT type-to-confirm)
-    const dialog = [...el.querySelectorAll('bridge-dialog')]
-      .find((d) => d.open && d.heading.includes('Unsuspend'));
+    const dialog = [...el.querySelectorAll('bridge-dialog')].find(
+      (d) => d.open && d.heading.includes('Unsuspend'),
+    );
     expect(dialog).to.exist;
 
     const slot = dialog.querySelectorAll('bridge-button');
@@ -175,13 +197,15 @@ describe('admin-customer-detail', () => {
 
   it('Issue key: opens dialog, posts label, surfaces cleartext exactly once', async () => {
     const el = await mountWith(ACTIVE_CUSTOMER, 'c-1');
-    const issueBtn = [...el.querySelectorAll('section.panel .actions bridge-button')]
-      .find((b) => b.textContent.trim() === 'Issue API key');
+    const issueBtn = [...el.querySelectorAll('section.panel .actions bridge-button')].find(
+      (b) => b.textContent.trim() === 'Issue API key',
+    );
     issueBtn.click();
     await el.updateComplete;
 
-    const dialog = [...el.querySelectorAll('bridge-dialog')]
-      .find((d) => d.open && d.heading.includes('Issue API key'));
+    const dialog = [...el.querySelectorAll('bridge-dialog')].find(
+      (d) => d.open && d.heading.includes('Issue API key'),
+    );
     expect(dialog).to.exist;
 
     const labelInput = dialog.querySelector('input');
@@ -189,9 +213,15 @@ describe('admin-customer-detail', () => {
     labelInput.dispatchEvent(new Event('input', { bubbles: true }));
     await el.updateComplete;
 
-    issueKeyStub.resolves({ id: 'k-new', label: 'op-issued', key: 'sk-test-CLEAR', created_at: '2026-04-26T00:00:00.000Z' });
-    const confirmBtn = [...dialog.querySelectorAll('bridge-button')]
-      .find((b) => b.textContent.trim() === 'Issue key');
+    issueKeyStub.resolves({
+      id: 'k-new',
+      label: 'op-issued',
+      key: 'sk-test-CLEAR',
+      created_at: '2026-04-26T00:00:00.000Z',
+    });
+    const confirmBtn = [...dialog.querySelectorAll('bridge-button')].find(
+      (b) => b.textContent.trim() === 'Issue key',
+    );
     confirmBtn.click();
     await aTimeout(20);
     await el.updateComplete;

@@ -40,20 +40,20 @@ Pairing them is justified for the same reason 0017 paired embeddings + images: t
 ### Foundation (lands once, serves both endpoints)
 
 - [x] Extend `NodeCapabilitySchema` (`src/types/node.ts`) with `'speech'` and `'transcriptions'`. Existing `['chat']` default preserves backwards compatibility for legacy `nodes.yaml`.
-- [ ] Update `nodes.yaml` example to advertise the new capabilities where applicable. *(Deferred — operator example file untouched; covered by spec docs.)*
+- [ ] Update `nodes.yaml` example to advertise the new capabilities where applicable. _(Deferred — operator example file untouched; covered by spec docs.)_
 - [x] Extend pricing types (`src/types/pricing.ts`).
 - [x] Extend `src/config/pricing.ts`: `V1_SPEECH_RATE_CARD` + `V1_TRANSCRIPTIONS_RATE_CARD` + `rateForSpeechModel` / `rateForTranscriptionsModel` lookup helpers; `PricingConfig` extended.
 - [x] Extend `src/service/pricing/index.ts` with the four estimate/compute helpers.
-- [ ] Extend `src/runtime/http/errors.ts` with new typed errors. *(Decided unnecessary — generic `ZodError` + `UpstreamNodeError` + `MissingUsageError` cover every audio failure mode; adding `InvalidAudioUploadError` would be churn.)*
+- [ ] Extend `src/runtime/http/errors.ts` with new typed errors. _(Decided unnecessary — generic `ZodError` + `UpstreamNodeError` + `MissingUsageError` cover every audio failure mode; adding `InvalidAudioUploadError` would be churn.)_
 - [x] Extend `docs/references/worker-node-contract.md` (§2 amended, §6 + §7 added).
 - [x] Update `docs/design-docs/pricing-model.md` with the v1 speech + transcriptions rate tables.
 - [x] Extend the `capabilityString` helper.
 - [x] Register both routes in `src/main.ts`.
-- [ ] Coverage ≥ 75% floor. *(Pre-existing floor preserved; new audio code adds 23 unit tests but no integration coverage — see deferred follow-up below.)*
+- [ ] Coverage ≥ 75% floor. _(Pre-existing floor preserved; new audio code adds 23 unit tests but no integration coverage — see deferred follow-up below.)_
 
 ### Migration
 
-- [x] Extend `usage_record_kind` enum with `'speech'` and `'transcriptions'`. *(Implementation note: the plan's transaction-block warning was correct; the workaround is a `kind::text` cast in the rebuilt CHECK so the new enum literals are referenced as text and don't trip PG's "uncommitted enum value" rule. Migration `0006_audio_endpoints.sql` documents this inline.)*
+- [x] Extend `usage_record_kind` enum with `'speech'` and `'transcriptions'`. _(Implementation note: the plan's transaction-block warning was correct; the workaround is a `kind::text` cast in the rebuilt CHECK so the new enum literals are referenced as text and don't trip PG's "uncommitted enum value" rule. Migration `0006_audio_endpoints.sql` documents this inline.)_
 - [x] Add `char_count integer NULL` and `duration_seconds integer NULL` columns.
 - [x] Rebuild `usage_record_kind_columns_chk` to enforce `speech ⇒ char_count NOT NULL` and `transcriptions ⇒ duration_seconds NOT NULL`.
 
@@ -72,14 +72,14 @@ Pairing them is justified for the same reason 0017 paired embeddings + images: t
   - **No `usage` object from node** — this is the first endpoint where the node doesn't return `usage` on success. Worker-node-contract §6 codifies the exemption.
   - Insert `usage_record` with `kind='speech'`, `char_count = input.length`.
   - Propagate customer disconnect: on request abort, abort the upstream node fetch via `AbortSignal` chaining.
-- [ ] Integration test via the OpenAI SDK + fake node. *(Deferred — covered by unit tests on the schema + pricing surfaces. See "Test posture" in Artifacts produced.)*
+- [ ] Integration test via the OpenAI SDK + fake node. _(Deferred — covered by unit tests on the schema + pricing surfaces. See "Test posture" in Artifacts produced.)_
 
 ### /v1/audio/transcriptions (STT — multipart in, JSON or text out)
 
 - [x] `@fastify/multipart` registered route-locally inside a fastify scope; `limits.fileSize = 25 * 1024 * 1024`.
 - [x] Types in `src/types/transcriptions.ts` (`TranscriptionsFormFieldsSchema`, `TranscriptionsResponseFormatSchema`, `TranscriptionsJsonResponseSchema`, `TranscriptionsVerboseJsonResponseSchema`, `TRANSCRIPTIONS_DURATION_HEADER`, `TRANSCRIPTIONS_MAX_FILE_BYTES`).
 - [x] NodeClient extension: `createTranscription` (interface + fetch impl). Reads `x-livepeer-audio-duration-seconds` from response headers; returns `null` for missing/unparseable.
-- [x] NodeClient sends multipart via Web `ReadableStream` (`Readable.toWeb(...)` + `duplex: 'half'`). *(Note: bridge buffers the inbound multipart up to the 25 MiB cap before re-encoding the outbound multipart, so the file does materialize once in memory. Tracked as a follow-up to revisit if the upload-streaming optimization becomes load-bearing.)*
+- [x] NodeClient sends multipart via Web `ReadableStream` (`Readable.toWeb(...)` + `duplex: 'half'`). _(Note: bridge buffers the inbound multipart up to the 25 MiB cap before re-encoding the outbound multipart, so the file does materialize once in memory. Tracked as a follow-up to revisit if the upload-streaming optimization becomes load-bearing.)_
 - [x] Handler `src/runtime/http/audio/transcriptions.ts`:
   - Parse multipart body (streaming). Pull `file` as a stream, other fields as strings.
   - **MIME validation is delegated to the node** (per decisions log below). Bridge does not enforce an allowlist; node-contract §7 obligates the node to reject unsupported formats with a 400.
@@ -92,7 +92,7 @@ Pairing them is justified for the same reason 0017 paired embeddings + images: t
   - Missing / unparseable duration header → 503 + full refund (reuses 0007's rule).
   - Insert `usage_record` with `kind='transcriptions'`, `duration_seconds = reported`.
   - Pass node response through (bytes / string) with the same Content-Type the node emitted.
-- [ ] Integration test via OpenAI SDK + fake node + binary fixture. *(Deferred — see "Test posture" in Artifacts produced.)*
+- [ ] Integration test via OpenAI SDK + fake node + binary fixture. _(Deferred — see "Test posture" in Artifacts produced.)_
 
 ## Decisions log
 

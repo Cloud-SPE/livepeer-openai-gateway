@@ -5,7 +5,9 @@ const _state = new BehaviorSubject(null);
 
 export const auditService = {
   state$: _state.asObservable(),
-  get value() { return _state.getValue(); },
+  get value() {
+    return _state.getValue();
+  },
 
   /**
    * @param {{
@@ -26,5 +28,7 @@ export const auditService = {
     return out;
   },
 
-  reset() { _state.next(null); },
+  reset() {
+    _state.next(null);
+  },
 };

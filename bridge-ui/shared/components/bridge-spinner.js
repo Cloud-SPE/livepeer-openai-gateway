@@ -38,7 +38,9 @@ export class BridgeSpinner extends LitElement {
     adoptStyles('bridge-spinner', STYLES);
   }
 
-  createRenderRoot() { return this; }
+  createRenderRoot() {
+    return this;
+  }
 
   render() {
     const s = this.size;

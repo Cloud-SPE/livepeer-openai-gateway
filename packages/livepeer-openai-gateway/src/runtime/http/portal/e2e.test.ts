@@ -67,7 +67,9 @@ async function buildBridge() {
   const address = await server.listen({ host: '127.0.0.1', port: 0 });
   return {
     baseUrl: address,
-    async close() { await server.close(); },
+    async close() {
+      await server.close();
+    },
   };
 }
 
@@ -150,7 +152,9 @@ describe.skipIf(!HAS_DIST)('portal E2E', () => {
       await labelInput.fill('e2e-issued');
 
       // Click "Create key" inside the dialog
-      await page.locator('portal-keys bridge-dialog bridge-button:has-text("Create key") button').click();
+      await page
+        .locator('portal-keys bridge-dialog bridge-button:has-text("Create key") button')
+        .click();
 
       // Cleartext banner appears
       await page.waitForSelector('portal-keys .new-key', { timeout: 5_000 });
@@ -210,7 +214,5 @@ describe.skipIf(!HAS_DIST)('portal E2E', () => {
 });
 
 if (!HAS_DIST) {
-  console.warn(
-    `[portal E2E] skipping: ${PORTAL_DIST} not built. Run \`npm run build:ui\` first.`,
-  );
+  console.warn(`[portal E2E] skipping: ${PORTAL_DIST} not built. Run \`npm run build:ui\` first.`);
 }

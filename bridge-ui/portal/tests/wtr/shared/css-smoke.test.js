@@ -38,12 +38,8 @@ describe('CSS smoke: light-dark() resolution', () => {
     // Two sibling hosts that force their own color-scheme regardless of
     // the test runner's OS preference, so we can read each branch
     // independently.
-    lightHost = await fixture(html`
-      <div style="color-scheme: light"><span>x</span></div>
-    `);
-    darkHost = await fixture(html`
-      <div style="color-scheme: dark"><span>x</span></div>
-    `);
+    lightHost = await fixture(html` <div style="color-scheme: light"><span>x</span></div> `);
+    darkHost = await fixture(html` <div style="color-scheme: dark"><span>x</span></div> `);
   });
 
   function rgb(el, prop) {

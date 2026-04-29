@@ -18,7 +18,9 @@ export class PortalLogin extends LitElement {
     this._error = '';
   }
 
-  createRenderRoot() { return this; }
+  createRenderRoot() {
+    return this;
+  }
 
   render() {
     return html`
@@ -38,12 +40,12 @@ export class PortalLogin extends LitElement {
             required
             ?disabled=${this._loading}
             .value=${this._apiKey}
-            @input=${(e) => { this._apiKey = e.target.value; }}
+            @input=${(e) => {
+              this._apiKey = e.target.value;
+            }}
           />
         </div>
-        <bridge-button block type="submit" ?loading=${this._loading}>
-          Sign in
-        </bridge-button>
+        <bridge-button block type="submit" ?loading=${this._loading}> Sign in </bridge-button>
       </form>
     `;
   }

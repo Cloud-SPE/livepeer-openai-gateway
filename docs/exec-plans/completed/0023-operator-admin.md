@@ -12,9 +12,10 @@ closed: 2026-04-26
 
 Build the operator-facing admin web app at `bridge-ui/admin/`, sibling to `bridge-ui/portal/` and `bridge-ui/shared/` from [`0022-customer-portal.md`](./0022-customer-portal.md), mirroring the structural pattern in `livepeer-cloud-openai-ui/admin`. Same toolchain — Lit `LitElement` with light DOM, RxJS services as `BehaviorSubject` owners, ObservableController-bridged subscriptions, hash routing, modern CSS 2026 (`@layer`, native nesting, OKLCH + `light-dark()`, `@container`, `@scope`, View Transitions, Popover API for action dialogs, `@starting-style` for entry animations, `:user-invalid` for forms, `:has()` parent state). Auth: paste `ADMIN_TOKEN` + optional operator name → sessionStorage → `X-Admin-Token` and `X-Admin-Actor` headers on every request.
 
-**Imports from `bridge-ui/shared/` from the first commit** — no copy-and-extract-later. 0022 stood the shared module up; this plan is its second consumer and validates the `createApi(...)` factory's auth-strategy boundary by passing a different strategy (admin token + actor) than the portal's (Bearer key). Anything portal needed first that admin now also needs that *isn't* in `shared/` is a signal to move it — call those out in the Decisions log as discovered.
+**Imports from `bridge-ui/shared/` from the first commit** — no copy-and-extract-later. 0022 stood the shared module up; this plan is its second consumer and validates the `createApi(...)` factory's auth-strategy boundary by passing a different strategy (admin token + actor) than the portal's (Bearer key). Anything portal needed first that admin now also needs that _isn't_ in `shared/` is a signal to move it — call those out in the Decisions log as discovered.
 
 Reuses from `bridge-ui/shared/` (imported via relative `../shared/...` paths, not duplicated):
+
 - `shared/css/{reset,tokens,base,utilities}.css` via `@import url(...) layer(...)` in `admin.css`.
 - `shared/controllers/observable-controller.js`.
 - `shared/lib/api-base.js` — wrapped by `admin/lib/api.js` with the admin auth strategy.
@@ -22,6 +23,7 @@ Reuses from `bridge-ui/shared/` (imported via relative `../shared/...` paths, no
 - `shared/components/*` — `bridge-button`, `bridge-dialog`, `bridge-confirm-dialog`, `bridge-table`, `bridge-toast`, `bridge-spinner`, `bridge-popover-menu`.
 
 Reuses from 0022's plan-level decisions:
+
 - `bridge-ui/` sibling-of-`src/` layout.
 - Per-module `package.json`, plain JS, Vite, no shadow DOM, no UI TypeScript.
 - Cascade layer order, OKLCH + `light-dark()`, `@scope` blocks per page component.
@@ -29,7 +31,7 @@ Reuses from 0022's plan-level decisions:
 
 Backend fills gaps in `/admin/*` to support **list / search / feed** views (existing routes cover single-record reads and the three state-changing actions: refund / suspend / unsuspend). State-changing routes gain an optional `X-Admin-Actor` header that is written into `admin_audit_events.actor` so the audit feed can attribute the human (today every row writes a constant `"admin"`). Full RBAC stays Phase 2.
 
-The pitch: today an on-call operator opening a node investigation has to `curl /admin/nodes/:id`, parse JSON, and SQL the `node_health_events` timeline that explains *why* the circuit opened. The admin makes that one click. Same for "customer X says they were charged twice": today is `psql topups` + manual refund script + manual `admin_audit_events` insert; admin is search → detail → refund button → audit row appears in the feed. Live fleet metrics come from the existing 37-panel Grafana dashboard ([`0021-metrics-phase-1.md`](../completed/0021-metrics-phase-1.md)) **embedded as an iframe** on the Health page — the admin does not re-render counters / histograms.
+The pitch: today an on-call operator opening a node investigation has to `curl /admin/nodes/:id`, parse JSON, and SQL the `node_health_events` timeline that explains _why_ the circuit opened. The admin makes that one click. Same for "customer X says they were charged twice": today is `psql topups` + manual refund script + manual `admin_audit_events` insert; admin is search → detail → refund button → audit row appears in the feed. Live fleet metrics come from the existing 37-panel Grafana dashboard ([`0021-metrics-phase-1.md`](../completed/0021-metrics-phase-1.md)) **embedded as an iframe** on the Health page — the admin does not re-render counters / histograms.
 
 ## Non-goals
 
@@ -86,6 +88,7 @@ bridge-ui/
 Notably **absent** vs. 0022's portal tree: no `controllers/observable-controller.js` (in shared), no separate `bridge-confirm-dialog` component (the generic one in `shared/components/` is parameterized — admin passes `targetLabel` for refund/suspend, portal passes the API-key-prefix for revoke-self), no per-module reset/tokens/base/utilities CSS.
 
 Tasks:
+
 - [x] `bridge-ui/admin/package.json` — `lit ^3.3`, `rxjs ^7.8`, `vite ^8`. Versions exactly match `bridge-ui/shared/`'s `peerDependencies`.
 - [x] `vite.config.js` — dev `5174`, build to `bridge-ui/admin/dist/`, base `/admin/console/`, dev proxy `/admin` → bridge. No alias config.
 - [x] Top-level `package.json` `build` script extends to `tsc && (cd bridge-ui/portal && npm ci && npm run build) && (cd bridge-ui/admin && npm ci && npm run build)`.
@@ -148,6 +151,7 @@ Existing: `GET /admin/health`, `GET /admin/nodes`, `GET /admin/nodes/:id`, `GET 
 - [x] `GET /admin/config/nodes` — Zod-validated current `nodes.yaml` view, including file `mtime` and SHA-256 hash.
 
 Files:
+
 - [x] `src/runtime/http/admin/routes.ts` (extend) — register the seven new routes.
 - [x] `src/runtime/http/admin/actor.ts` — middleware reads `X-Admin-Actor`, validates `^[a-z0-9._-]{1,64}$`, attaches to `request.adminActor`. Reads default to `"unknown"`; writes (refund / suspend / unsuspend / key issue) require it.
 - [x] `src/repo/admin/search.ts` — search SQL for customers / audit / reservations / topups / node-events. Cursor-encoding helper.
@@ -170,7 +174,7 @@ Files:
 
 - [x] **Backend unit + integration**: each new admin route — happy / sad; cursor round-trip; search filter combinations; cursor stability under inserts mid-page; `X-Admin-Actor` propagation into `admin_audit_events`.
 - [x] **UI service tests** (vitest + jsdom): polling start/stop on host connect/disconnect; debounce on customer search; visibility-pause on `health$`.
-- [x] **UI component tests** (`@open-wc/testing` + `@web/test-runner`): admin pages mount with stubbed services; `bridge-confirm-dialog` (already tested in 0022's shared-module suite) is exercised by admin in a refund-flow integration test that asserts the email-match guard blocks submission. Refund button disabled when topup status ≠ `succeeded`; node detail timeline rendering. Shared components are *not* re-tested here — covered once in 0022's shared suite.
+- [x] **UI component tests** (`@open-wc/testing` + `@web/test-runner`): admin pages mount with stubbed services; `bridge-confirm-dialog` (already tested in 0022's shared-module suite) is exercised by admin in a refund-flow integration test that asserts the email-match guard blocks submission. Refund button disabled when topup status ≠ `succeeded`; node detail timeline rendering. Shared components are _not_ re-tested here — covered once in 0022's shared suite.
 - [x] **End-to-end** (Playwright): sign-in → search customer → suspend (type-to-confirm) → audit row appears with actor label → unsuspend → audit row appears.
 - [x] Coverage stays at 75% across all four v8 metrics (Invariant 7).
 
@@ -186,7 +190,7 @@ Files:
 
 ### 2026-04-26 — Import from `bridge-ui/shared/`, do not copy
 
-Reverses an earlier draft of this plan that proposed copy-verbatim with rule-of-three extraction at a hypothetical third consumer. Project standard: when 2+ consumers are co-designed, stand up the shared module from day one. 0022 stood it up; this plan validates it by being a second, structurally-different consumer (admin token + `X-Admin-Actor` strategy vs. portal's Bearer-key strategy). Anything portal got first that admin now also needs that *isn't* in shared is a signal to move it — call those out as discovered while implementing.
+Reverses an earlier draft of this plan that proposed copy-verbatim with rule-of-three extraction at a hypothetical third consumer. Project standard: when 2+ consumers are co-designed, stand up the shared module from day one. 0022 stood it up; this plan validates it by being a second, structurally-different consumer (admin token + `X-Admin-Actor` strategy vs. portal's Bearer-key strategy). Anything portal got first that admin now also needs that _isn't_ in shared is a signal to move it — call those out as discovered while implementing.
 
 ### 2026-04-26 — Operator admin served by the customer Fastify instance, not the metrics listener or its own port
 
@@ -194,7 +198,7 @@ Two candidate hosts: customer Fastify (already serves `/admin/*` JSON behind `X-
 
 ### 2026-04-26 — Embed Grafana, do not rebuild
 
-[0021](../completed/0021-metrics-phase-1.md) shipped a 37-panel Grafana dashboard. Re-rendering counters / histograms in-app would duplicate that work and divert effort from data Grafana *can't* show (audit log, node-event timeline, reservation drill-down). Iframe has CSP and same-origin caveats; document in the deployment guide that `GRAFANA_DASHBOARD_URL` must be reachable from the operator's browser, with Grafana's `allow_embedding = true` and an appropriate auth proxy.
+[0021](../completed/0021-metrics-phase-1.md) shipped a 37-panel Grafana dashboard. Re-rendering counters / histograms in-app would duplicate that work and divert effort from data Grafana _can't_ show (audit log, node-event timeline, reservation drill-down). Iframe has CSP and same-origin caveats; document in the deployment guide that `GRAFANA_DASHBOARD_URL` must be reachable from the operator's browser, with Grafana's `allow_embedding = true` and an appropriate auth proxy.
 
 ### 2026-04-26 — `X-Admin-Actor` for human attribution; full RBAC is Phase 2
 

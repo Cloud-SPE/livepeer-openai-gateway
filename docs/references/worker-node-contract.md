@@ -22,11 +22,11 @@ A WorkerNode is enrolled in the operator-curated overlay with one or more capabi
 
 Each capability maps to one OpenAI endpoint and a distinct set of contract obligations:
 
-| Capability   | Endpoint                 | Pricing dimension      | Stream? |
-| ------------ | ------------------------ | ---------------------- | ------- |
-| `chat`       | `/v1/chat/completions`   | input + output tokens  | yes     |
-| `embeddings` | `/v1/embeddings`         | input tokens only      | no      |
-| `images`     | `/v1/images/generations` | per-image × size × quality | no  |
+| Capability   | Endpoint                 | Pricing dimension          | Stream? |
+| ------------ | ------------------------ | -------------------------- | ------- |
+| `chat`       | `/v1/chat/completions`   | input + output tokens      | yes     |
+| `embeddings` | `/v1/embeddings`         | input tokens only          | no      |
+| `images`     | `/v1/images/generations` | per-image × size × quality | no      |
 
 If `capabilities` is omitted for a node, the bridge defaults to `['chat']` (backwards-compatibility for overlay entries authored before this contract existed).
 
@@ -66,14 +66,14 @@ The bridge forwards the customer's body with minimal transformation. The node mu
 
 ### 4.3 Failure modes
 
-| Node returns                              | Bridge action                              |
-| ----------------------------------------- | ------------------------------------------ |
-| 2xx with `usage.prompt_tokens` missing    | 503 `service_unavailable` + refund         |
-| 2xx with vector length ≠ `dimensions`     | 503 `service_unavailable` + refund         |
-| 2xx with `encoding_format` mismatch       | 503 `service_unavailable` + refund         |
-| 2xx with `data.length !== input.length`   | 503 `service_unavailable` + refund         |
-| 4xx / 5xx with error envelope             | Pass through to customer (normalized code) |
-| Network / timeout                         | 503 + refund, circuit-break counters tick  |
+| Node returns                            | Bridge action                              |
+| --------------------------------------- | ------------------------------------------ |
+| 2xx with `usage.prompt_tokens` missing  | 503 `service_unavailable` + refund         |
+| 2xx with vector length ≠ `dimensions`   | 503 `service_unavailable` + refund         |
+| 2xx with `encoding_format` mismatch     | 503 `service_unavailable` + refund         |
+| 2xx with `data.length !== input.length` | 503 `service_unavailable` + refund         |
+| 4xx / 5xx with error envelope           | Pass through to customer (normalized code) |
+| Network / timeout                       | 503 + refund, circuit-break counters tick  |
 
 ## 5. `images` capability
 
@@ -94,14 +94,14 @@ The (`model`, `size`, `quality`) triple determines the bridge's reservation and 
 
 ### 5.3 Failure modes
 
-| Node returns                                 | Bridge action                               |
-| -------------------------------------------- | ------------------------------------------- |
-| 2xx with `data.length === 0`                 | 503 `service_unavailable` + full refund     |
-| 2xx with `1 ≤ data.length < n`               | 200 with partial data, refund the delta     |
-| 2xx with mixed `url` / `b64_json` entries    | 503 `service_unavailable` + full refund     |
-| 2xx with `response_format` mismatch          | 503 `service_unavailable` + full refund     |
-| 4xx / 5xx with error envelope                | Pass through to customer (normalized code)  |
-| Network / timeout                            | 503 + refund, circuit-break counters tick   |
+| Node returns                              | Bridge action                              |
+| ----------------------------------------- | ------------------------------------------ |
+| 2xx with `data.length === 0`              | 503 `service_unavailable` + full refund    |
+| 2xx with `1 ≤ data.length < n`            | 200 with partial data, refund the delta    |
+| 2xx with mixed `url` / `b64_json` entries | 503 `service_unavailable` + full refund    |
+| 2xx with `response_format` mismatch       | 503 `service_unavailable` + full refund    |
+| 4xx / 5xx with error envelope             | Pass through to customer (normalized code) |
+| Network / timeout                         | 503 + refund, circuit-break counters tick  |
 
 ## 6. `speech` capability (TTS)
 
@@ -120,11 +120,11 @@ The (`model`, `size`, `quality`) triple determines the bridge's reservation and 
 
 ### 6.3 Failure modes
 
-| Node returns                                       | Bridge action                              |
-| -------------------------------------------------- | ------------------------------------------ |
-| 4xx / 5xx with error envelope                      | Pass through to customer (normalized code) |
-| Network / timeout                                  | 503 + refund, circuit-break counters tick  |
-| 2xx with empty body                                | Customer sees a 0-byte response            |
+| Node returns                  | Bridge action                              |
+| ----------------------------- | ------------------------------------------ |
+| 4xx / 5xx with error envelope | Pass through to customer (normalized code) |
+| Network / timeout             | 503 + refund, circuit-break counters tick  |
+| 2xx with empty body           | Customer sees a 0-byte response            |
 
 The customer is billed for the full `len(input)` even when the node returns a partial stream — synthesis work is not refundable once dispatched.
 
@@ -146,18 +146,18 @@ The node is responsible for MIME validation. The bridge does NOT maintain a code
 
 ### 7.3 Failure modes
 
-| Node returns                                            | Bridge action                              |
-| ------------------------------------------------------- | ------------------------------------------ |
-| 2xx without `x-livepeer-audio-duration-seconds`         | 503 `service_unavailable` + full refund    |
-| 2xx with header that does not parse to `> 0`            | 503 `service_unavailable` + full refund    |
-| 4xx / 5xx with error envelope (incl. unsupported MIME)  | Pass through to customer (normalized code) |
-| Network / timeout                                       | 503 + refund, circuit-break counters tick  |
+| Node returns                                           | Bridge action                              |
+| ------------------------------------------------------ | ------------------------------------------ |
+| 2xx without `x-livepeer-audio-duration-seconds`        | 503 `service_unavailable` + full refund    |
+| 2xx with header that does not parse to `> 0`           | 503 `service_unavailable` + full refund    |
+| 4xx / 5xx with error envelope (incl. unsupported MIME) | Pass through to customer (normalized code) |
+| Network / timeout                                      | 503 + refund, circuit-break counters tick  |
 
 ## 8. Non-compliance
 
 If ops discovers a node that cannot meet the obligations for a capability it has advertised:
 
-1. **First response:** Drop that capability from the node's overlay entry and reload (post-engine-extraction: edit the service-registry-daemon's overlay YAML and recreate the daemon container; pre-stage-3 this was a SIGHUP on the bridge's local `nodes.yaml`). The node keeps serving the capabilities it *can* meet.
+1. **First response:** Drop that capability from the node's overlay entry and reload (post-engine-extraction: edit the service-registry-daemon's overlay YAML and recreate the daemon container; pre-stage-3 this was a SIGHUP on the bridge's local `nodes.yaml`). The node keeps serving the capabilities it _can_ meet.
 2. **If the node breaks multiple capabilities repeatedly:** Set `enabled: false` and open a ticket with the operator.
 
 The bridge does NOT add per-node compatibility shims. Shims accumulate, drift, and erode the drop-in OpenAI-compatibility promise that customers rely on.

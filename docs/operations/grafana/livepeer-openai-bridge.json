@@ -74,7 +74,7 @@
       "type": "row",
       "id": 100,
       "title": "Cross-repo reconciliation (is the system honest)",
-      "gridPos": {"x": 0, "y": 0, "w": 24, "h": 1},
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 },
       "collapsed": false,
       "panels": []
     },
@@ -83,8 +83,8 @@
       "id": 1,
       "title": "Gross margin %",
       "description": "Realized customer revenue (USD cents) minus node cost (wei converted via $eth_usd_cents) over revenue. Sustained < 20% means the rate-card under-prices the node pool.",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 0, "y": 1, "w": 12, "h": 8},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 0, "y": 1, "w": 12, "h": 8 },
       "targets": [
         {
           "expr": "(sum(rate(livepeer_bridge_revenue_usd_cents_total{job=~\"$job\"}[5m])) - sum(rate(livepeer_bridge_node_cost_wei_total{job=~\"$job\"}[5m])) * $eth_usd_cents / 1e18) / clamp_min(sum(rate(livepeer_bridge_revenue_usd_cents_total{job=~\"$job\"}[5m])), 1e-9)",
@@ -97,33 +97,40 @@
           "unit": "percentunit",
           "min": -1,
           "max": 1,
-          "color": {"mode": "thresholds"},
+          "color": { "mode": "thresholds" },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              {"color": "red", "value": null},
-              {"color": "yellow", "value": 0.2},
-              {"color": "green", "value": 0.35}
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 0.2 },
+              { "color": "green", "value": 0.35 }
             ]
           },
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "smooth",
             "fillOpacity": 20,
-            "thresholdsStyle": {"mode": "line"}
+            "thresholdsStyle": { "mode": "line" }
           }
         },
         "overrides": []
       },
-      "options": {"legend": {"displayMode": "table", "placement": "bottom", "calcs": ["mean", "min", "max"]}, "tooltip": {"mode": "multi"}}
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": ["mean", "min", "max"]
+        },
+        "tooltip": { "mode": "multi" }
+      }
     },
     {
       "type": "timeseries",
       "id": 2,
       "title": "Revenue cents/min by tier",
       "description": "Revenue rate per minute, split by customer tier. Mirrors the row 4 panel; here it sits alongside cost so margin shifts are diagnosable.",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 12, "y": 1, "w": 6, "h": 8},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 12, "y": 1, "w": 6, "h": 8 },
       "targets": [
         {
           "expr": "sum by (tier) (rate(livepeer_bridge_revenue_usd_cents_total{job=~\"$job\"}[1m])) * 60",
@@ -134,19 +141,27 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10, "stacking": {"mode": "normal"}}
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 10,
+            "stacking": { "mode": "normal" }
+          }
         },
         "overrides": []
       },
-      "options": {"legend": {"displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"]}, "tooltip": {"mode": "multi"}}
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi" }
+      }
     },
     {
       "type": "timeseries",
       "id": 3,
       "title": "Node cost wei/min",
       "description": "Total wei paid out per minute. Compare to revenue panel left for a visual margin read.",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 18, "y": 1, "w": 6, "h": 8},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 18, "y": 1, "w": 6, "h": 8 },
       "targets": [
         {
           "expr": "sum(rate(livepeer_bridge_node_cost_wei_total{job=~\"$job\"}[1m])) * 60",
@@ -157,19 +172,22 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10}
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10 }
         },
         "overrides": []
       },
-      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single"}}
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "single" }
+      }
     },
     {
       "type": "timeseries",
       "id": 4,
       "title": "Worker units served vs Bridge revenue (per capability/model)",
       "description": "Worker-side work_units rate vs bridge-side revenue rate for the same (capability, model). A persistent gap indicates tokenizer drift or a billing bug. Recording-rule note: a true 'units billed' figure requires dividing bridge revenue by the rate-card; until that recording rule exists, this panel shows revenue as a proxy. See README.",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 0, "y": 9, "w": 12, "h": 8},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 0, "y": 9, "w": 12, "h": 8 },
       "targets": [
         {
           "expr": "sum by (capability, model) (rate(livepeer_worker_work_units_total[5m]))",
@@ -185,19 +203,22 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 0}
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 0 }
         },
         "overrides": []
       },
-      "options": {"legend": {"displayMode": "table", "placement": "right", "calcs": ["mean", "max"]}, "tooltip": {"mode": "multi"}}
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi" }
+      }
     },
     {
       "type": "timeseries",
       "id": 5,
       "title": "Daemon-side gRPC p99 vs Bridge-side PayerDaemon p99 (CreatePayment)",
       "description": "Server-side p99 (livepeer_payment_*) vs client-side p99 (livepeer_bridge_payer_daemon_*) for CreatePayment, both measured from the fast histogram. The gap is unix-socket overhead. A persistent widening gap = socket pressure or kernel-side queueing.",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 12, "y": 9, "w": 12, "h": 8},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 12, "y": 9, "w": 12, "h": 8 },
       "targets": [
         {
           "expr": "histogram_quantile(0.99, sum by (le) (rate(livepeer_payment_grpc_request_duration_seconds_fast_bucket{method=\"CreatePayment\"}[5m])))",
@@ -213,21 +234,30 @@
       "fieldConfig": {
         "defaults": {
           "unit": "s",
-          "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 0}
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 0 }
         },
         "overrides": [
-          {"matcher": {"id": "byName", "options": "p99 bridge (client)"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "blue"}}]},
-          {"matcher": {"id": "byName", "options": "p99 daemon (server)"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "green"}}]}
+          {
+            "matcher": { "id": "byName", "options": "p99 bridge (client)" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "p99 daemon (server)" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
+          }
         ]
       },
-      "options": {"legend": {"displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"]}, "tooltip": {"mode": "multi"}}
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi" }
+      }
     },
 
     {
       "type": "row",
       "id": 200,
       "title": "Overview",
-      "gridPos": {"x": 0, "y": 17, "w": 24, "h": 1},
+      "gridPos": { "x": 0, "y": 17, "w": 24, "h": 1 },
       "collapsed": false,
       "panels": []
     },
@@ -235,8 +265,8 @@
       "type": "stat",
       "id": 6,
       "title": "Build version",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 0, "y": 18, "w": 4, "h": 4},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 0, "y": 18, "w": 4, "h": 4 },
       "targets": [
         {
           "expr": "livepeer_bridge_build_info{job=~\"$job\"}",
@@ -246,15 +276,15 @@
         }
       ],
       "options": {
-        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "textMode": "name",
         "graphMode": "none",
         "colorMode": "value"
       },
       "fieldConfig": {
         "defaults": {
-          "color": {"mode": "thresholds"},
-          "thresholds": {"mode": "absolute", "steps": [{"color": "blue"}]}
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue" }] }
         },
         "overrides": []
       }
@@ -264,8 +294,8 @@
       "id": 7,
       "title": "Service up (build_info heartbeat)",
       "description": "build_info is a constant-1 gauge. Its presence is the 'service is up' signal — the bridge does not currently emit a setUptimeSeconds metric.",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 4, "y": 18, "w": 4, "h": 4},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 4, "y": 18, "w": 4, "h": 4 },
       "targets": [
         {
           "expr": "max(livepeer_bridge_build_info{job=~\"$job\"})",
@@ -274,7 +304,7 @@
         }
       ],
       "options": {
-        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "textMode": "value_and_name",
         "graphMode": "none",
         "colorMode": "value"
@@ -282,11 +312,15 @@
       "fieldConfig": {
         "defaults": {
           "unit": "none",
-          "color": {"mode": "thresholds"},
-          "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]},
-          "mappings": [
-            {"type": "value", "options": {"1": {"text": "UP", "color": "green"}}}
-          ]
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "mappings": [{ "type": "value", "options": { "1": { "text": "UP", "color": "green" } } }]
         },
         "overrides": []
       }
@@ -295,8 +329,8 @@
       "type": "stat",
       "id": 8,
       "title": "Request qps",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 8, "y": 18, "w": 4, "h": 4},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 8, "y": 18, "w": 4, "h": 4 },
       "targets": [
         {
           "expr": "sum(rate(livepeer_bridge_requests_total{job=~\"$job\"}[1m]))",
@@ -305,7 +339,7 @@
         }
       ],
       "options": {
-        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "textMode": "value",
         "graphMode": "area",
         "colorMode": "value"
@@ -313,8 +347,8 @@
       "fieldConfig": {
         "defaults": {
           "unit": "reqps",
-          "color": {"mode": "thresholds"},
-          "thresholds": {"mode": "absolute", "steps": [{"color": "blue"}]}
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue" }] }
         },
         "overrides": []
       }
@@ -324,8 +358,8 @@
       "id": 9,
       "title": "Customer-visible error rate (5m)",
       "description": "Share of requests with outcome 4xx/402/429/5xx. Green/yellow/red at 0/0.01/0.05 — set to your SLO.",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 12, "y": 18, "w": 4, "h": 4},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 12, "y": 18, "w": 4, "h": 4 },
       "targets": [
         {
           "expr": "sum(rate(livepeer_bridge_requests_total{job=~\"$job\",outcome=~\"4xx|402|429|5xx\"}[5m])) / clamp_min(sum(rate(livepeer_bridge_requests_total{job=~\"$job\"}[5m])), 1e-9)",
@@ -334,7 +368,7 @@
         }
       ],
       "options": {
-        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "showThresholdLabels": false,
         "showThresholdMarkers": true
       },
@@ -343,8 +377,15 @@
           "unit": "percentunit",
           "min": 0,
           "max": 1,
-          "color": {"mode": "thresholds"},
-          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 0.01}, {"color": "red", "value": 0.05}]}
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.01 },
+              { "color": "red", "value": 0.05 }
+            ]
+          }
         },
         "overrides": []
       }
@@ -353,8 +394,8 @@
       "type": "stat",
       "id": 10,
       "title": "Healthy nodes",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 16, "y": 18, "w": 4, "h": 4},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 16, "y": 18, "w": 4, "h": 4 },
       "targets": [
         {
           "expr": "sum(livepeer_bridge_nodes_state{job=~\"$job\",state=\"healthy\"})",
@@ -363,7 +404,7 @@
         }
       ],
       "options": {
-        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "textMode": "value",
         "graphMode": "area",
         "colorMode": "value"
@@ -371,8 +412,15 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "color": {"mode": "thresholds"},
-          "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "yellow", "value": 1}, {"color": "green", "value": 2}]}
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "green", "value": 2 }
+            ]
+          }
         },
         "overrides": []
       }
@@ -382,8 +430,8 @@
       "id": 11,
       "title": "Oldest pending top-up age",
       "description": "Phase 2 placeholder — the bridge does not yet expose a `livepeer_bridge_topup_pending_oldest_seconds` gauge. When it lands, this panel becomes red ≥ 600s. Until then the panel reads 'No data', which is expected.",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 20, "y": 18, "w": 4, "h": 4},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 20, "y": 18, "w": 4, "h": 4 },
       "targets": [
         {
           "expr": "livepeer_bridge_topup_pending_oldest_seconds{job=~\"$job\"}",
@@ -392,7 +440,7 @@
         }
       ],
       "options": {
-        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "textMode": "value",
         "graphMode": "area",
         "colorMode": "value"
@@ -400,8 +448,15 @@
       "fieldConfig": {
         "defaults": {
           "unit": "s",
-          "color": {"mode": "thresholds"},
-          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 120}, {"color": "red", "value": 600}]}
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 120 },
+              { "color": "red", "value": 600 }
+            ]
+          }
         },
         "overrides": []
       }
@@ -411,7 +466,7 @@
       "type": "row",
       "id": 300,
       "title": "Customer requests",
-      "gridPos": {"x": 0, "y": 22, "w": 24, "h": 1},
+      "gridPos": { "x": 0, "y": 22, "w": 24, "h": 1 },
       "collapsed": false,
       "panels": []
     },
@@ -419,8 +474,8 @@
       "type": "timeseries",
       "id": 12,
       "title": "qps by capability + tier + outcome",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 0, "y": 23, "w": 12, "h": 8},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 0, "y": 23, "w": 12, "h": 8 },
       "targets": [
         {
           "expr": "sum by (capability, tier, outcome) (rate(livepeer_bridge_requests_total{job=~\"$job\"}[5m]))",
@@ -431,21 +486,30 @@
       "fieldConfig": {
         "defaults": {
           "unit": "reqps",
-          "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10}
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10 }
         },
         "overrides": [
-          {"matcher": {"id": "byRegexp", "options": ".*5xx.*"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}]},
-          {"matcher": {"id": "byRegexp", "options": ".*2xx.*"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "green"}}]}
+          {
+            "matcher": { "id": "byRegexp", "options": ".*5xx.*" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": ".*2xx.*" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
+          }
         ]
       },
-      "options": {"legend": {"displayMode": "table", "placement": "right", "calcs": ["mean", "max"]}, "tooltip": {"mode": "multi"}}
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi" }
+      }
     },
     {
       "type": "timeseries",
       "id": 13,
       "title": "p99 latency by capability + tier",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 12, "y": 23, "w": 12, "h": 8},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 12, "y": 23, "w": 12, "h": 8 },
       "targets": [
         {
           "expr": "histogram_quantile(0.99, sum by (le, capability, tier) (rate(livepeer_bridge_request_duration_seconds_bucket{job=~\"$job\"}[5m])))",
@@ -456,19 +520,22 @@
       "fieldConfig": {
         "defaults": {
           "unit": "s",
-          "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 0}
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 0 }
         },
         "overrides": []
       },
-      "options": {"legend": {"displayMode": "table", "placement": "right", "calcs": ["mean", "max"]}, "tooltip": {"mode": "multi"}}
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi" }
+      }
     },
     {
       "type": "timeseries",
       "id": 14,
       "title": "Retries by attempt + reason",
       "description": "Stacked. High attempt=3 means retry policy is hiding pool-wide failures from customers — investigate node health.",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 0, "y": 31, "w": 24, "h": 7},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 0, "y": 31, "w": 24, "h": 7 },
       "targets": [
         {
           "expr": "sum by (reason, attempt) (rate(livepeer_bridge_node_retries_total{job=~\"$job\"}[5m]))",
@@ -479,18 +546,21 @@
       "fieldConfig": {
         "defaults": {
           "unit": "reqps",
-          "custom": {"drawStyle": "bars", "fillOpacity": 70, "stacking": {"mode": "normal"}}
+          "custom": { "drawStyle": "bars", "fillOpacity": 70, "stacking": { "mode": "normal" } }
         },
         "overrides": []
       },
-      "options": {"legend": {"displayMode": "table", "placement": "right", "calcs": ["sum"]}, "tooltip": {"mode": "multi"}}
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["sum"] },
+        "tooltip": { "mode": "multi" }
+      }
     },
 
     {
       "type": "row",
       "id": 400,
       "title": "Money & ledger",
-      "gridPos": {"x": 0, "y": 38, "w": 24, "h": 1},
+      "gridPos": { "x": 0, "y": 38, "w": 24, "h": 1 },
       "collapsed": false,
       "panels": []
     },
@@ -498,8 +568,8 @@
       "type": "timeseries",
       "id": 15,
       "title": "Revenue cents/min by tier",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 0, "y": 39, "w": 12, "h": 7},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 0, "y": 39, "w": 12, "h": 7 },
       "targets": [
         {
           "expr": "sum by (tier) (rate(livepeer_bridge_revenue_usd_cents_total{job=~\"$job\"}[1m])) * 60",
@@ -510,18 +580,26 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10, "stacking": {"mode": "normal"}}
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 10,
+            "stacking": { "mode": "normal" }
+          }
         },
         "overrides": []
       },
-      "options": {"legend": {"displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"]}, "tooltip": {"mode": "multi"}}
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi" }
+      }
     },
     {
       "type": "timeseries",
       "id": 16,
       "title": "Revenue cents/min by capability",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 12, "y": 39, "w": 12, "h": 7},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 12, "y": 39, "w": 12, "h": 7 },
       "targets": [
         {
           "expr": "sum by (capability) (rate(livepeer_bridge_revenue_usd_cents_total{job=~\"$job\"}[1m])) * 60",
@@ -532,18 +610,26 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10, "stacking": {"mode": "normal"}}
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 10,
+            "stacking": { "mode": "normal" }
+          }
         },
         "overrides": []
       },
-      "options": {"legend": {"displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"]}, "tooltip": {"mode": "multi"}}
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi" }
+      }
     },
     {
       "type": "timeseries",
       "id": 17,
       "title": "Top-ups by outcome",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 0, "y": 46, "w": 12, "h": 7},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 0, "y": 46, "w": 12, "h": 7 },
       "targets": [
         {
           "expr": "sum by (outcome) (rate(livepeer_bridge_topups_total{job=~\"$job\"}[5m]))",
@@ -554,21 +640,30 @@
       "fieldConfig": {
         "defaults": {
           "unit": "reqps",
-          "custom": {"drawStyle": "bars", "fillOpacity": 70, "stacking": {"mode": "normal"}}
+          "custom": { "drawStyle": "bars", "fillOpacity": 70, "stacking": { "mode": "normal" } }
         },
         "overrides": [
-          {"matcher": {"id": "byName", "options": "ok"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "green"}}]},
-          {"matcher": {"id": "byName", "options": "error"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}]}
+          {
+            "matcher": { "id": "byName", "options": "ok" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "error" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
+          }
         ]
       },
-      "options": {"legend": {"displayMode": "table", "placement": "bottom", "calcs": ["sum"]}, "tooltip": {"mode": "multi"}}
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["sum"] },
+        "tooltip": { "mode": "multi" }
+      }
     },
     {
       "type": "gauge",
       "id": 18,
       "title": "Open reservations",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 12, "y": 46, "w": 6, "h": 7},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 12, "y": 46, "w": 6, "h": 7 },
       "targets": [
         {
           "expr": "max(livepeer_bridge_reservations_open{job=~\"$job\"})",
@@ -577,7 +672,7 @@
         }
       ],
       "options": {
-        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "showThresholdMarkers": true
       },
       "fieldConfig": {
@@ -585,8 +680,15 @@
           "unit": "short",
           "min": 0,
           "max": 50,
-          "color": {"mode": "thresholds"},
-          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 5}, {"color": "red", "value": 10}]}
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 5 },
+              { "color": "red", "value": 10 }
+            ]
+          }
         },
         "overrides": []
       }
@@ -596,8 +698,8 @@
       "id": 19,
       "title": "Oldest open reservation age (LEDGER LEAK CANARY)",
       "description": "If this exceeds 5 minutes, a reservation is stuck mid-commit — investigate the ledger commit path. This is the headline canary for billing-side leaks.",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 18, "y": 46, "w": 6, "h": 7},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 18, "y": 46, "w": 6, "h": 7 },
       "targets": [
         {
           "expr": "max(livepeer_bridge_reservation_open_oldest_seconds{job=~\"$job\"})",
@@ -606,7 +708,7 @@
         }
       ],
       "options": {
-        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "showThresholdMarkers": true
       },
       "fieldConfig": {
@@ -614,8 +716,15 @@
           "unit": "s",
           "min": 0,
           "max": 1200,
-          "color": {"mode": "thresholds"},
-          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 60}, {"color": "red", "value": 300}]}
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 60 },
+              { "color": "red", "value": 300 }
+            ]
+          }
         },
         "overrides": []
       }
@@ -625,7 +734,7 @@
       "type": "row",
       "id": 500,
       "title": "Stripe webhook",
-      "gridPos": {"x": 0, "y": 53, "w": 24, "h": 1},
+      "gridPos": { "x": 0, "y": 53, "w": 24, "h": 1 },
       "collapsed": false,
       "panels": []
     },
@@ -633,8 +742,8 @@
       "type": "timeseries",
       "id": 20,
       "title": "Webhooks by event_type + outcome",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 0, "y": 54, "w": 12, "h": 8},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 0, "y": 54, "w": 12, "h": 8 },
       "targets": [
         {
           "expr": "sum by (event_type, outcome) (rate(livepeer_bridge_stripe_webhooks_total{job=~\"$job\"}[5m]))",
@@ -645,20 +754,29 @@
       "fieldConfig": {
         "defaults": {
           "unit": "reqps",
-          "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10}
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10 }
         },
         "overrides": [
-          {"matcher": {"id": "byRegexp", "options": ".*error.*"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}, {"id": "custom.lineWidth", "value": 3}]}
+          {
+            "matcher": { "id": "byRegexp", "options": ".*error.*" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } },
+              { "id": "custom.lineWidth", "value": 3 }
+            ]
+          }
         ]
       },
-      "options": {"legend": {"displayMode": "table", "placement": "right", "calcs": ["mean", "sum"]}, "tooltip": {"mode": "multi"}}
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "sum"] },
+        "tooltip": { "mode": "multi" }
+      }
     },
     {
       "type": "timeseries",
       "id": 21,
       "title": "Webhook handler p99",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 12, "y": 54, "w": 12, "h": 8},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 12, "y": 54, "w": 12, "h": 8 },
       "targets": [
         {
           "expr": "histogram_quantile(0.99, sum by (le, event_type) (rate(livepeer_bridge_stripe_webhook_duration_seconds_bucket{job=~\"$job\"}[5m])))",
@@ -669,18 +787,21 @@
       "fieldConfig": {
         "defaults": {
           "unit": "s",
-          "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 0}
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 0 }
         },
         "overrides": []
       },
-      "options": {"legend": {"displayMode": "table", "placement": "right", "calcs": ["mean", "max"]}, "tooltip": {"mode": "multi"}}
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi" }
+      }
     },
 
     {
       "type": "row",
       "id": 600,
       "title": "Node pool",
-      "gridPos": {"x": 0, "y": 62, "w": 24, "h": 1},
+      "gridPos": { "x": 0, "y": 62, "w": 24, "h": 1 },
       "collapsed": false,
       "panels": []
     },
@@ -688,8 +809,8 @@
       "type": "stat",
       "id": 22,
       "title": "Nodes by state",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 0, "y": 63, "w": 24, "h": 4},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 0, "y": 63, "w": 24, "h": 4 },
       "targets": [
         {
           "expr": "sum by (state) (livepeer_bridge_nodes_state{job=~\"$job\"})",
@@ -698,7 +819,7 @@
         }
       ],
       "options": {
-        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "textMode": "value_and_name",
         "graphMode": "none",
         "colorMode": "background"
@@ -706,14 +827,26 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "color": {"mode": "thresholds"},
-          "thresholds": {"mode": "absolute", "steps": [{"color": "blue"}]}
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue" }] }
         },
         "overrides": [
-          {"matcher": {"id": "byName", "options": "healthy"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "green"}}]},
-          {"matcher": {"id": "byName", "options": "degraded"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "yellow"}}]},
-          {"matcher": {"id": "byName", "options": "circuit_broken"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}]},
-          {"matcher": {"id": "byName", "options": "disabled"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "purple"}}]}
+          {
+            "matcher": { "id": "byName", "options": "healthy" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "degraded" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "yellow" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "circuit_broken" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "disabled" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "purple" } }]
+          }
         ]
       }
     },
@@ -721,8 +854,8 @@
       "type": "table",
       "id": 23,
       "title": "Per-node success rate (top 10)",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 0, "y": 67, "w": 12, "h": 8},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 0, "y": 67, "w": 12, "h": 8 },
       "targets": [
         {
           "expr": "topk(10, sum by (node_id) (rate(livepeer_bridge_node_requests_total{job=~\"$job\",outcome=\"2xx\"}[5m])) / clamp_min(sum by (node_id) (rate(livepeer_bridge_node_requests_total{job=~\"$job\"}[5m])), 1e-9))",
@@ -733,19 +866,22 @@
         }
       ],
       "fieldConfig": {
-        "defaults": {"unit": "percentunit", "custom": {"align": "left"}, "decimals": 4},
+        "defaults": { "unit": "percentunit", "custom": { "align": "left" }, "decimals": 4 },
         "overrides": [
-          {"matcher": {"id": "byName", "options": "Value"}, "properties": [{"id": "displayName", "value": "success rate"}]}
+          {
+            "matcher": { "id": "byName", "options": "Value" },
+            "properties": [{ "id": "displayName", "value": "success rate" }]
+          }
         ]
       },
-      "options": {"showHeader": true, "footer": {"show": false}}
+      "options": { "showHeader": true, "footer": { "show": false } }
     },
     {
       "type": "table",
       "id": 24,
       "title": "Per-node p99 latency",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 12, "y": 67, "w": 12, "h": 8},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 12, "y": 67, "w": 12, "h": 8 },
       "targets": [
         {
           "expr": "histogram_quantile(0.99, sum by (le, node_id) (rate(livepeer_bridge_node_request_duration_seconds_bucket{job=~\"$job\"}[5m])))",
@@ -756,20 +892,23 @@
         }
       ],
       "fieldConfig": {
-        "defaults": {"unit": "s", "custom": {"align": "left"}, "decimals": 3},
+        "defaults": { "unit": "s", "custom": { "align": "left" }, "decimals": 3 },
         "overrides": [
-          {"matcher": {"id": "byName", "options": "Value"}, "properties": [{"id": "displayName", "value": "p99 latency"}]}
+          {
+            "matcher": { "id": "byName", "options": "Value" },
+            "properties": [{ "id": "displayName", "value": "p99 latency" }]
+          }
         ]
       },
-      "options": {"showHeader": true, "footer": {"show": false}}
+      "options": { "showHeader": true, "footer": { "show": false } }
     },
     {
       "type": "table",
       "id": 25,
       "title": "Quote age per node + capability",
       "description": "Red ≥ 120s. Stale quotes mean the bridge will fall back to a refresh round-trip on the next request.",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 0, "y": 75, "w": 12, "h": 7},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 0, "y": 75, "w": 12, "h": 7 },
       "targets": [
         {
           "expr": "livepeer_bridge_node_quote_age_seconds{job=~\"$job\"}",
@@ -784,24 +923,34 @@
           "unit": "s",
           "custom": {
             "align": "left",
-            "cellOptions": {"type": "color-background"}
+            "cellOptions": { "type": "color-background" }
           },
-          "color": {"mode": "thresholds"},
-          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 60}, {"color": "red", "value": 120}]}
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 60 },
+              { "color": "red", "value": 120 }
+            ]
+          }
         },
         "overrides": [
-          {"matcher": {"id": "byName", "options": "Value"}, "properties": [{"id": "displayName", "value": "age (s)"}]}
+          {
+            "matcher": { "id": "byName", "options": "Value" },
+            "properties": [{ "id": "displayName", "value": "age (s)" }]
+          }
         ]
       },
-      "options": {"showHeader": true, "footer": {"show": false}}
+      "options": { "showHeader": true, "footer": { "show": false } }
     },
     {
       "type": "timeseries",
       "id": 26,
       "title": "Circuit transitions / hour",
       "description": "Frequent transitions on a single node = flapping. Allowlist or replace.",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 12, "y": 75, "w": 12, "h": 7},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 12, "y": 75, "w": 12, "h": 7 },
       "targets": [
         {
           "expr": "sum by (node_id, to_state) (rate(livepeer_bridge_node_circuit_transitions_total{job=~\"$job\"}[1h])) * 3600",
@@ -812,18 +961,21 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "custom": {"drawStyle": "bars", "fillOpacity": 70}
+          "custom": { "drawStyle": "bars", "fillOpacity": 70 }
         },
         "overrides": []
       },
-      "options": {"legend": {"displayMode": "table", "placement": "right", "calcs": ["sum"]}, "tooltip": {"mode": "multi"}}
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["sum"] },
+        "tooltip": { "mode": "multi" }
+      }
     },
 
     {
       "type": "row",
       "id": 700,
       "title": "PayerDaemon (unix-socket fast path)",
-      "gridPos": {"x": 0, "y": 82, "w": 24, "h": 1},
+      "gridPos": { "x": 0, "y": 82, "w": 24, "h": 1 },
       "collapsed": false,
       "panels": []
     },
@@ -831,8 +983,8 @@
       "type": "timeseries",
       "id": 27,
       "title": "Calls by method + outcome",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 0, "y": 83, "w": 12, "h": 8},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 0, "y": 83, "w": 12, "h": 8 },
       "targets": [
         {
           "expr": "sum by (method, outcome) (rate(livepeer_bridge_payer_daemon_calls_total{job=~\"$job\"}[5m]))",
@@ -843,20 +995,26 @@
       "fieldConfig": {
         "defaults": {
           "unit": "reqps",
-          "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10}
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10 }
         },
         "overrides": [
-          {"matcher": {"id": "byRegexp", "options": ".*error.*"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}]}
+          {
+            "matcher": { "id": "byRegexp", "options": ".*error.*" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
+          }
         ]
       },
-      "options": {"legend": {"displayMode": "table", "placement": "right", "calcs": ["mean", "sum"]}, "tooltip": {"mode": "multi"}}
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "sum"] },
+        "tooltip": { "mode": "multi" }
+      }
     },
     {
       "type": "timeseries",
       "id": 28,
       "title": "p99 from fast histogram (sub-ms buckets)",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 12, "y": 83, "w": 12, "h": 8},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 12, "y": 83, "w": 12, "h": 8 },
       "targets": [
         {
           "expr": "histogram_quantile(0.99, sum by (le, method) (rate(livepeer_bridge_payer_daemon_call_duration_seconds_fast_bucket{job=~\"$job\"}[5m])))",
@@ -867,18 +1025,21 @@
       "fieldConfig": {
         "defaults": {
           "unit": "s",
-          "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 0}
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 0 }
         },
         "overrides": []
       },
-      "options": {"legend": {"displayMode": "table", "placement": "right", "calcs": ["mean", "max"]}, "tooltip": {"mode": "multi"}}
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi" }
+      }
     },
     {
       "type": "stat",
       "id": 29,
       "title": "Deposit (wei)",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 0, "y": 91, "w": 12, "h": 5},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 0, "y": 91, "w": 12, "h": 5 },
       "targets": [
         {
           "expr": "max(livepeer_bridge_payer_daemon_deposit_wei{job=~\"$job\"})",
@@ -887,7 +1048,7 @@
         }
       ],
       "options": {
-        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "textMode": "value",
         "graphMode": "area",
         "colorMode": "value"
@@ -895,8 +1056,14 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "color": {"mode": "thresholds"},
-          "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "blue", "value": 1}]}
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "blue", "value": 1 }
+            ]
+          }
         },
         "overrides": []
       }
@@ -905,8 +1072,8 @@
       "type": "stat",
       "id": 30,
       "title": "Reserve (wei)",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 12, "y": 91, "w": 12, "h": 5},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 12, "y": 91, "w": 12, "h": 5 },
       "targets": [
         {
           "expr": "max(livepeer_bridge_payer_daemon_reserve_wei{job=~\"$job\"})",
@@ -915,7 +1082,7 @@
         }
       ],
       "options": {
-        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "textMode": "value",
         "graphMode": "area",
         "colorMode": "value"
@@ -923,8 +1090,14 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "color": {"mode": "thresholds"},
-          "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "blue", "value": 1}]}
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "blue", "value": 1 }
+            ]
+          }
         },
         "overrides": []
       }
@@ -934,7 +1107,7 @@
       "type": "row",
       "id": 800,
       "title": "Token audit",
-      "gridPos": {"x": 0, "y": 96, "w": 24, "h": 1},
+      "gridPos": { "x": 0, "y": 96, "w": 24, "h": 1 },
       "collapsed": false,
       "panels": []
     },
@@ -943,8 +1116,8 @@
       "id": 31,
       "title": "Drift % p50 / p95 / p99 by direction",
       "description": "If p95 drift sits > 5% sustained, the local tokenizer disagrees with the remote — investigate model + tokenizer pinning.",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 0, "y": 97, "w": 12, "h": 8},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 0, "y": 97, "w": 12, "h": 8 },
       "targets": [
         {
           "expr": "histogram_quantile(0.50, sum by (le, direction) (rate(livepeer_bridge_token_drift_percent_bucket{job=~\"$job\"}[1h])))",
@@ -965,18 +1138,21 @@
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
-          "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 0}
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 0 }
         },
         "overrides": []
       },
-      "options": {"legend": {"displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"]}, "tooltip": {"mode": "multi"}}
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi" }
+      }
     },
     {
       "type": "table",
       "id": 32,
       "title": "Top drifters (p95, last 1h)",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 12, "y": 97, "w": 12, "h": 8},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 12, "y": 97, "w": 12, "h": 8 },
       "targets": [
         {
           "expr": "topk(10, histogram_quantile(0.95, sum by (le, node_id) (rate(livepeer_bridge_token_drift_percent_bucket{job=~\"$job\"}[1h]))))",
@@ -987,19 +1163,22 @@
         }
       ],
       "fieldConfig": {
-        "defaults": {"unit": "percent", "custom": {"align": "left"}, "decimals": 3},
+        "defaults": { "unit": "percent", "custom": { "align": "left" }, "decimals": 3 },
         "overrides": [
-          {"matcher": {"id": "byName", "options": "Value"}, "properties": [{"id": "displayName", "value": "p95 drift %"}]}
+          {
+            "matcher": { "id": "byName", "options": "Value" },
+            "properties": [{ "id": "displayName", "value": "p95 drift %" }]
+          }
         ]
       },
-      "options": {"showHeader": true, "footer": {"show": false}}
+      "options": { "showHeader": true, "footer": { "show": false } }
     },
 
     {
       "type": "row",
       "id": 900,
       "title": "Rate limits",
-      "gridPos": {"x": 0, "y": 105, "w": 24, "h": 1},
+      "gridPos": { "x": 0, "y": 105, "w": 24, "h": 1 },
       "collapsed": false,
       "panels": []
     },
@@ -1008,8 +1187,8 @@
       "id": 33,
       "title": "Rejections by tier + kind",
       "description": "Stacked. Concurrent rejections on prod tiers usually mean the burst limiter needs widening; rpm/rpd rejections are the customer asking for an upgrade.",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "gridPos": {"x": 0, "y": 106, "w": 24, "h": 8},
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 0, "y": 106, "w": 24, "h": 8 },
       "targets": [
         {
           "expr": "sum by (tier, kind) (rate(livepeer_bridge_rate_limit_rejections_total{job=~\"$job\"}[5m]))",
@@ -1020,67 +1199,122 @@
       "fieldConfig": {
         "defaults": {
           "unit": "reqps",
-          "custom": {"drawStyle": "bars", "fillOpacity": 70, "stacking": {"mode": "normal"}}
+          "custom": { "drawStyle": "bars", "fillOpacity": 70, "stacking": { "mode": "normal" } }
         },
         "overrides": []
       },
-      "options": {"legend": {"displayMode": "table", "placement": "right", "calcs": ["sum"]}, "tooltip": {"mode": "multi"}}
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["sum"] },
+        "tooltip": { "mode": "multi" }
+      }
     },
 
     {
       "type": "row",
       "id": 1000,
       "title": "Process + Node runtime",
-      "gridPos": {"x": 0, "y": 114, "w": 24, "h": 1},
+      "gridPos": { "x": 0, "y": 114, "w": 24, "h": 1 },
       "collapsed": true,
       "panels": [
         {
           "type": "timeseries",
           "id": 34,
           "title": "Heap used",
-          "datasource": {"type": "prometheus", "uid": "${datasource}"},
-          "gridPos": {"x": 0, "y": 115, "w": 6, "h": 7},
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "x": 0, "y": 115, "w": 6, "h": 7 },
           "targets": [
-            {"expr": "nodejs_heap_size_used_bytes{job=~\"$job\"}", "legendFormat": "{{instance}}", "refId": "A"}
+            {
+              "expr": "nodejs_heap_size_used_bytes{job=~\"$job\"}",
+              "legendFormat": "{{instance}}",
+              "refId": "A"
+            }
           ],
-          "fieldConfig": {"defaults": {"unit": "bytes", "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10}}, "overrides": []},
-          "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}}
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10 }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": { "displayMode": "list", "placement": "bottom" },
+            "tooltip": { "mode": "multi" }
+          }
         },
         {
           "type": "timeseries",
           "id": 35,
           "title": "Event-loop lag p99",
-          "datasource": {"type": "prometheus", "uid": "${datasource}"},
-          "gridPos": {"x": 6, "y": 115, "w": 6, "h": 7},
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "x": 6, "y": 115, "w": 6, "h": 7 },
           "targets": [
-            {"expr": "nodejs_eventloop_lag_p99_seconds{job=~\"$job\"}", "legendFormat": "{{instance}}", "refId": "A"}
+            {
+              "expr": "nodejs_eventloop_lag_p99_seconds{job=~\"$job\"}",
+              "legendFormat": "{{instance}}",
+              "refId": "A"
+            }
           ],
-          "fieldConfig": {"defaults": {"unit": "s", "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10}}, "overrides": []},
-          "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}}
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10 }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": { "displayMode": "list", "placement": "bottom" },
+            "tooltip": { "mode": "multi" }
+          }
         },
         {
           "type": "timeseries",
           "id": 36,
           "title": "GC duration / sec",
-          "datasource": {"type": "prometheus", "uid": "${datasource}"},
-          "gridPos": {"x": 12, "y": 115, "w": 6, "h": 7},
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "x": 12, "y": 115, "w": 6, "h": 7 },
           "targets": [
-            {"expr": "sum by (kind) (rate(nodejs_gc_duration_seconds_sum{job=~\"$job\"}[1m]))", "legendFormat": "{{kind}}", "refId": "A"}
+            {
+              "expr": "sum by (kind) (rate(nodejs_gc_duration_seconds_sum{job=~\"$job\"}[1m]))",
+              "legendFormat": "{{kind}}",
+              "refId": "A"
+            }
           ],
-          "fieldConfig": {"defaults": {"unit": "percentunit", "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10}}, "overrides": []},
-          "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}}
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10 }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": { "displayMode": "list", "placement": "bottom" },
+            "tooltip": { "mode": "multi" }
+          }
         },
         {
           "type": "timeseries",
           "id": 37,
           "title": "Open file descriptors",
-          "datasource": {"type": "prometheus", "uid": "${datasource}"},
-          "gridPos": {"x": 18, "y": 115, "w": 6, "h": 7},
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "x": 18, "y": 115, "w": 6, "h": 7 },
           "targets": [
-            {"expr": "process_open_fds{job=~\"$job\"}", "legendFormat": "{{instance}}", "refId": "A"}
+            {
+              "expr": "process_open_fds{job=~\"$job\"}",
+              "legendFormat": "{{instance}}",
+              "refId": "A"
+            }
           ],
-          "fieldConfig": {"defaults": {"unit": "short", "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10}}, "overrides": []},
-          "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}}
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10 }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": { "displayMode": "list", "placement": "bottom" },
+            "tooltip": { "mode": "multi" }
+          }
         }
       ]
     }
@@ -1106,8 +1340,8 @@
         "type": "datasource"
       },
       {
-        "current": {"selected": true, "text": "All", "value": "$__all"},
-        "datasource": {"type": "prometheus", "uid": "${datasource}"},
+        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
         "definition": "label_values(livepeer_bridge_build_info, job)",
         "hide": 0,
         "includeAll": true,
@@ -1115,7 +1349,11 @@
         "multi": true,
         "name": "job",
         "options": [],
-        "query": {"qryType": 1, "query": "label_values(livepeer_bridge_build_info, job)", "refId": "Variable"},
+        "query": {
+          "qryType": 1,
+          "query": "label_values(livepeer_bridge_build_info, job)",
+          "refId": "Variable"
+        },
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
@@ -1123,8 +1361,8 @@
         "type": "query"
       },
       {
-        "current": {"selected": true, "text": "All", "value": "$__all"},
-        "datasource": {"type": "prometheus", "uid": "${datasource}"},
+        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
         "definition": "label_values(livepeer_bridge_build_info{job=~\"$job\"}, instance)",
         "hide": 0,
         "includeAll": true,
@@ -1132,7 +1370,11 @@
         "multi": true,
         "name": "instance",
         "options": [],
-        "query": {"qryType": 1, "query": "label_values(livepeer_bridge_build_info{job=~\"$job\"}, instance)", "refId": "Variable"},
+        "query": {
+          "qryType": 1,
+          "query": "label_values(livepeer_bridge_build_info{job=~\"$job\"}, instance)",
+          "refId": "Variable"
+        },
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
@@ -1140,15 +1382,13 @@
         "type": "query"
       },
       {
-        "current": {"selected": true, "text": "400000", "value": "400000"},
+        "current": { "selected": true, "text": "400000", "value": "400000" },
         "hide": 0,
         "includeAll": false,
         "label": "ETH/USD (cents)",
         "multi": false,
         "name": "eth_usd_cents",
-        "options": [
-          {"selected": true, "text": "400000", "value": "400000"}
-        ],
+        "options": [{ "selected": true, "text": "400000", "value": "400000" }],
         "query": "400000",
         "skipUrlSync": false,
         "type": "custom",
@@ -1156,8 +1396,8 @@
       }
     ]
   },
-  "time": {"from": "now-1h", "to": "now"},
-  "timepicker": {"refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h", "6h"]},
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": { "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h", "6h"] },
   "timezone": "",
   "title": "Livepeer OpenAI Bridge",
   "uid": "livepeer-openai-bridge",

@@ -272,11 +272,11 @@ docker compose -f compose.smoke.yaml down --volumes
 
 ### What this smoke verifies vs. doesn't
 
-| Verified                                                         | Not verified                                                  |
-| ---------------------------------------------------------------- | ------------------------------------------------------------- |
-| Image builds + boots                                             | `/v1/chat/completions`, `/v1/embeddings`, `/v1/images/*` etc. |
-| Auto-migration runs against an empty DB                          | Real Stripe Checkout (dummy keys 401 against Stripe's API)    |
-| Both UI `dist/`s ship inside the image and serve correctly       | Real payment issuance (needs daemon + worker node + reserve)  |
+| Verified                                                          | Not verified                                                  |
+| ----------------------------------------------------------------- | ------------------------------------------------------------- |
+| Image builds + boots                                              | `/v1/chat/completions`, `/v1/embeddings`, `/v1/images/*` etc. |
+| Auto-migration runs against an empty DB                           | Real Stripe Checkout (dummy keys 401 against Stripe's API)    |
+| Both UI `dist/`s ship inside the image and serve correctly        | Real payment issuance (needs daemon + worker node + reserve)  |
 | Auth gates: `Authorization: Bearer` + `X-Admin-Token`             |                                                               |
 | `nodes.yaml` loads at startup; `/admin/nodes` reflects it         |                                                               |
 | USD-only formatting (cents → `$X.YZ`); never wei in customer view |                                                               |
@@ -457,7 +457,9 @@ This deliberately does **not** embed Grafana via `<iframe>`. Embedding would for
 `window.GRAFANA_DASHBOARD_URL` accepts any URL the operator's browser can reach. Common shape — inject via build-time env or `index.html` template:
 
 ```html
-<script>window.GRAFANA_DASHBOARD_URL = 'https://grafana.internal/d/livepeer-bridge';</script>
+<script>
+  window.GRAFANA_DASHBOARD_URL = 'https://grafana.internal/d/livepeer-bridge';
+</script>
 ```
 
 ### Operator handle (`X-Admin-Actor`)

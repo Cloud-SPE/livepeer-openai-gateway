@@ -127,10 +127,8 @@ export function createShellAdminService(deps: ShellAdminServiceDeps): ShellAdmin
         quotaReservedTokens: 0n,
         // For free-tier callers we seed both the monthly allowance and the
         // remaining counter so the first request doesn't see a NULL ceiling.
-        quotaMonthlyAllowance:
-          input.tier === 'free' ? input.quotaMonthlyAllowance ?? null : null,
-        quotaTokensRemaining:
-          input.tier === 'free' ? input.quotaMonthlyAllowance ?? null : null,
+        quotaMonthlyAllowance: input.tier === 'free' ? (input.quotaMonthlyAllowance ?? null) : null,
+        quotaTokensRemaining: input.tier === 'free' ? (input.quotaMonthlyAllowance ?? null) : null,
       });
       const detail = await buildDetail(inserted.id);
       if (!detail) throw new Error('createCustomer: detail unavailable post-insert');

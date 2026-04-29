@@ -7,12 +7,22 @@ function makeFakeHost() {
   const updates = [];
   const controllers = [];
   const host = {
-    addController(c) { controllers.push(c); },
-    requestUpdate() { updates.push(Date.now()); },
+    addController(c) {
+      controllers.push(c);
+    },
+    requestUpdate() {
+      updates.push(Date.now());
+    },
     /* test helpers */
-    get updateCount() { return updates.length; },
-    fireConnect() { for (const c of controllers) c.hostConnected(); },
-    fireDisconnect() { for (const c of controllers) c.hostDisconnected(); },
+    get updateCount() {
+      return updates.length;
+    },
+    fireConnect() {
+      for (const c of controllers) c.hostConnected();
+    },
+    fireDisconnect() {
+      for (const c of controllers) c.hostDisconnected();
+    },
   };
   return host;
 }
@@ -56,9 +66,9 @@ describe('ObservableController', () => {
     host.fireConnect();
     subject.next(1);
     host.fireDisconnect();
-    subject.next(2);             // dropped
+    subject.next(2); // dropped
     host.fireConnect();
-    expect(ctrl.value).toBe(2);  // latest from BehaviorSubject on re-subscribe
+    expect(ctrl.value).toBe(2); // latest from BehaviorSubject on re-subscribe
     subject.next(3);
     expect(ctrl.value).toBe(3);
   });

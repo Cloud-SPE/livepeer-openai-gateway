@@ -112,9 +112,7 @@ describe('types/pricing', () => {
     const parsed = ImagesRateCardSchema.parse({
       version: 'v1',
       effectiveAt: new Date(),
-      entries: [
-        { model: 'dall-e-3', size: '1024x1024', quality: 'standard', usdPerImage: 0.05 },
-      ],
+      entries: [{ model: 'dall-e-3', size: '1024x1024', quality: 'standard', usdPerImage: 0.05 }],
     });
     expect(parsed.entries[0]!.size).toBe('1024x1024');
   });

@@ -152,7 +152,7 @@ export function registerAdminRoutes(app: FastifyInstance, deps: AdminRoutesDeps)
       size_bytes: 0,
       contents:
         '# Managed by service-registry-daemon. The bridge no longer maintains a\n' +
-        '# local nodes.yaml — edit the daemon\'s config to change the worker\n' +
+        "# local nodes.yaml — edit the daemon's config to change the worker\n" +
         '# pool, then restart the bridge to refresh its cached snapshot.\n',
       loaded_nodes: nodes,
     };
@@ -523,7 +523,6 @@ export function registerAdminRoutes(app: FastifyInstance, deps: AdminRoutesDeps)
       };
     },
   );
-
 }
 
 // ── helpers ─────────────────────────────────────────────────────────────────

@@ -23,7 +23,9 @@ export class PortalBilling extends LitElement {
     this._starting = false;
   }
 
-  createRenderRoot() { return this; }
+  createRenderRoot() {
+    return this;
+  }
 
   connectedCallback() {
     super.connectedCallback();
@@ -38,22 +40,32 @@ export class PortalBilling extends LitElement {
     return html`
       <div class="page-header"><h1>Billing</h1></div>
 
-      <section class="tile" style="margin-bottom: var(--space-5); display: grid; gap: var(--space-3); padding: var(--space-5); background: var(--surface-1); border: 1px solid var(--border-1); border-radius: var(--radius-lg)">
+      <section
+        class="tile"
+        style="margin-bottom: var(--space-5); display: grid; gap: var(--space-3); padding: var(--space-5); background: var(--surface-1); border: 1px solid var(--border-1); border-radius: var(--radius-lg)"
+      >
         <h3 style="margin: 0">Top up</h3>
         <div style="display: flex; gap: var(--space-2); flex-wrap: wrap">
-          ${PRESETS.map((p) => html`
-            <bridge-button
-              variant=${this._amount === p ? 'primary' : 'ghost'}
-              @click=${() => { this._amount = p; }}
-            >$${p}</bridge-button>
-          `)}
+          ${PRESETS.map(
+            (p) => html`
+              <bridge-button
+                variant=${this._amount === p ? 'primary' : 'ghost'}
+                @click=${() => {
+                  this._amount = p;
+                }}
+                >$${p}</bridge-button
+              >
+            `,
+          )}
           <input
             type="number"
             min="1"
             max="1000"
             step="1"
             .value=${String(this._amount)}
-            @input=${(e) => { this._amount = Number(e.target.value); }}
+            @input=${(e) => {
+              this._amount = Number(e.target.value);
+            }}
             style="width: 8rem"
           />
         </div>
@@ -63,13 +75,15 @@ export class PortalBilling extends LitElement {
       </section>
 
       <h2>History</h2>
-      ${list === null ? html`<bridge-spinner></bridge-spinner>` : html`
-        <bridge-table
-          .columns=${this._columns()}
-          .rows=${list}
-          empty="No top-ups yet."
-        ></bridge-table>
-      `}
+      ${list === null
+        ? html`<bridge-spinner></bridge-spinner>`
+        : html`
+            <bridge-table
+              .columns=${this._columns()}
+              .rows=${list}
+              empty="No top-ups yet."
+            ></bridge-table>
+          `}
     `;
   }
 
@@ -78,7 +92,11 @@ export class PortalBilling extends LitElement {
       { field: 'created_at', header: 'Date', render: (r) => formatDate(r.created_at) },
       { field: 'amount_usd', header: 'Amount', render: (r) => `$${r.amount_usd}` },
       { field: 'status', header: 'Status', render: (r) => statusBadge(r.status) },
-      { field: 'stripe_session_id', header: 'Stripe session', render: (r) => html`<span class="mono text-xs">${r.stripe_session_id.slice(0, 16)}…</span>` },
+      {
+        field: 'stripe_session_id',
+        header: 'Stripe session',
+        render: (r) => html`<span class="mono text-xs">${r.stripe_session_id.slice(0, 16)}…</span>`,
+      },
     ];
   }
 
@@ -94,16 +112,22 @@ export class PortalBilling extends LitElement {
       const { url } = await topupsService.startCheckout(amount * 100);
       window.location.assign(url);
     } catch (err) {
-      showToast({ kind: 'error', message: err instanceof Error ? err.message : 'Failed to start checkout.' });
+      showToast({
+        kind: 'error',
+        message: err instanceof Error ? err.message : 'Failed to start checkout.',
+      });
       this._starting = false;
     }
   }
 }
 
 function statusBadge(s) {
-  const color = s === 'succeeded' ? 'var(--success)'
-    : s === 'failed' || s === 'refunded' || s === 'disputed' ? 'var(--danger)'
-    : 'var(--text-3)';
+  const color =
+    s === 'succeeded'
+      ? 'var(--success)'
+      : s === 'failed' || s === 'refunded' || s === 'disputed'
+        ? 'var(--danger)'
+        : 'var(--text-3)';
   return html`<span style="color: ${color}; font-weight: 600">${s}</span>`;
 }
 

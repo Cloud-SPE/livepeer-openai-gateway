@@ -93,13 +93,13 @@ Editing the worker pool from the UI is **out of scope in v1** — operators edit
 
 ## Confirmation rules
 
-| Action      | Guard                | Reasoning                                                                                  |
-| ----------- | -------------------- | ------------------------------------------------------------------------------------------ |
-| Refund      | Type-to-confirm email | Visible to the customer (Stripe-side refund needed separately); fat-finger has cost.       |
-| Suspend     | Type-to-confirm email | Halts API access immediately; fat-finger has cost.                                          |
-| Unsuspend   | Single-click confirm | Restores service; the worst case is restoring an account someone wanted re-suspended.       |
-| Issue key   | Single-click submit  | Does not affect existing keys; cleartext returned once, customer can revoke if unwanted.    |
-| (no action) | `nodes/<id>` detail  | All v1 node mutations happen via the service-registry-daemon overlay on the host.            |
+| Action      | Guard                 | Reasoning                                                                                |
+| ----------- | --------------------- | ---------------------------------------------------------------------------------------- |
+| Refund      | Type-to-confirm email | Visible to the customer (Stripe-side refund needed separately); fat-finger has cost.     |
+| Suspend     | Type-to-confirm email | Halts API access immediately; fat-finger has cost.                                       |
+| Unsuspend   | Single-click confirm  | Restores service; the worst case is restoring an account someone wanted re-suspended.    |
+| Issue key   | Single-click submit   | Does not affect existing keys; cleartext returned once, customer can revoke if unwanted. |
+| (no action) | `nodes/<id>` detail   | All v1 node mutations happen via the service-registry-daemon overlay on the host.        |
 
 ## Polling
 

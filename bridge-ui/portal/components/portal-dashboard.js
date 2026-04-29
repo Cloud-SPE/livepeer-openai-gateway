@@ -12,7 +12,9 @@ export class PortalDashboard extends LitElement {
     this.account = new ObservableController(this, accountService.account$);
   }
 
-  createRenderRoot() { return this; }
+  createRenderRoot() {
+    return this;
+  }
 
   connectedCallback() {
     super.connectedCallback();
@@ -38,32 +40,42 @@ export class PortalDashboard extends LitElement {
         <div class="tile">
           <div class="label">Balance</div>
           <div class="value">$${a.balance_usd}</div>
-          ${a.reserved_usd && a.reserved_usd !== '0.00' ? html`
-            <div class="muted text-sm">Reserved $${a.reserved_usd}</div>
-          ` : ''}
+          ${a.reserved_usd && a.reserved_usd !== '0.00'
+            ? html` <div class="muted text-sm">Reserved $${a.reserved_usd}</div> `
+            : ''}
         </div>
 
-        ${isFree ? html`
-          <div class="tile has-warning">
-            <div class="label">Free tier tokens remaining</div>
-            <div class="value" data-low=${low ? 'true' : 'false'}>
-              ${formatNumber(remaining)}
-            </div>
-            ${quotaTotal != null ? html`
-              <div class="quota-bar">
-                <div class="fill" style="width: ${quotaPercent(remaining)}%"></div>
+        ${isFree
+          ? html`
+              <div class="tile has-warning">
+                <div class="label">Free tier tokens remaining</div>
+                <div class="value" data-low=${low ? 'true' : 'false'}>
+                  ${formatNumber(remaining)}
+                </div>
+                ${quotaTotal != null
+                  ? html`
+                      <div class="quota-bar">
+                        <div class="fill" style="width: ${quotaPercent(remaining)}%"></div>
+                      </div>
+                    `
+                  : ''}
+                ${a.free_tokens_reset_at
+                  ? html`
+                      <div class="muted text-sm">
+                        Resets ${new Date(a.free_tokens_reset_at).toLocaleString()}
+                      </div>
+                    `
+                  : ''}
               </div>
-            ` : ''}
-            ${a.free_tokens_reset_at ? html`
-              <div class="muted text-sm">Resets ${new Date(a.free_tokens_reset_at).toLocaleString()}</div>
-            ` : ''}
-          </div>
-        ` : ''}
+            `
+          : ''}
 
         <div class="tile">
           <div class="label">Tier</div>
           <div class="value" style="text-transform: capitalize">${a.tier}</div>
-          <bridge-button variant="ghost" @click=${() => navigate('keys')}>Manage keys →</bridge-button>
+          <bridge-button variant="ghost" @click=${() => navigate('keys')}
+            >Manage keys →</bridge-button
+          >
         </div>
       </section>
     `;
@@ -81,4 +93,5 @@ function quotaPercent(remaining) {
   return Math.max(0, Math.min(100, Math.round((remaining / baseline) * 100)));
 }
 
-if (!customElements.get('portal-dashboard')) customElements.define('portal-dashboard', PortalDashboard);
+if (!customElements.get('portal-dashboard'))
+  customElements.define('portal-dashboard', PortalDashboard);

@@ -17,7 +17,8 @@ afterEach(() => {
 
 function jsonResponse(status, body) {
   return new Response(JSON.stringify(body), {
-    status, headers: { 'content-type': 'application/json' },
+    status,
+    headers: { 'content-type': 'application/json' },
   });
 }
 
@@ -51,17 +52,26 @@ describe('admin-login', () => {
   });
 
   it('on success: stores session ({ token, actor }) and emits bridge:authenticated', async () => {
-    fetchStub.resolves(jsonResponse(200, {
-      ok: true, payerDaemonHealthy: true, dbOk: true, redisOk: true,
-      nodeCount: 1, nodesHealthy: 1,
-    }));
+    fetchStub.resolves(
+      jsonResponse(200, {
+        ok: true,
+        payerDaemonHealthy: true,
+        dbOk: true,
+        redisOk: true,
+        nodeCount: 1,
+        nodesHealthy: 1,
+      }),
+    );
     const el = await fixture(html`<admin-login></admin-login>`);
     el.querySelector('input#token').value = 'admin-token';
     el.querySelector('input#token').dispatchEvent(new Event('input', { bubbles: true }));
     el.querySelector('input#actor').value = 'alice';
     el.querySelector('input#actor').dispatchEvent(new Event('input', { bubbles: true }));
 
-    setTimeout(() => el.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true })), 0);
+    setTimeout(
+      () => el.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true })),
+      0,
+    );
     const evt = await oneEvent(window, 'bridge:authenticated');
     expect(evt).to.exist;
     const stored = session.get();

@@ -13,7 +13,7 @@ completed: 2026-04-25
 
 Reshape `NodeBook` so each node stores a quote per `(capability, model)` pair, not a single `Quote`. Unblocks every non-chat endpoint that routes with a capability: embeddings (0017, already landed but routing uses the chat quote under the hood), images (0017, same), speech / transcriptions (0019). Without this reshape, a single-node deployment can advertise multiple capabilities but the bridge only knows how to price one.
 
-This is the phase-2 rework 0018 deferred. 0018 non-goals: *"NodeEntry.quote stays a single Quote… Full per-(capability, model) quote storage is phase 2."*
+This is the phase-2 rework 0018 deferred. 0018 non-goals: _"NodeEntry.quote stays a single Quote… Full per-(capability, model) quote storage is phase 2."_
 
 ## Non-goals
 
@@ -72,7 +72,7 @@ This is the phase-2 rework 0018 deferred. 0018 non-goals: *"NodeEntry.quote stay
 
 - **`Quote` shape: flat capability-scoped vs. nested model map.** Option (a): `Quote` gains `modelPrices: Map<string, bigint>` alongside the shared `ticketParams`. Option (b): `NodeEntry.quotes: Map<(cap, model), Quote>` with duplicated `ticketParams` across entries. (a) preserves the worker's actual data model (one set of ticket params per capability, N prices) and halves memory; (b) is flatter but fanned-out. Recommend (a); confirm before implementation.
 - **Back-compat shim lifetime.** Should `setQuote(nodeId, quote)` stay as a compatibility shim for 1 release, or be deleted atomically with this plan? Recommend delete atomically — the only caller is internal to this repo and will be updated in the same PR.
-- **Failure mode when `/quotes` succeeds but one capability is missing.** A node that *could* quote chat but not images: should `findNodesFor(…, 'images')` return no candidates (strict) or fall back to a partial response that silently routes chat only? Strict is simpler and the operator-facing metric surfaces the gap; recommend strict.
+- **Failure mode when `/quotes` succeeds but one capability is missing.** A node that _could_ quote chat but not images: should `findNodesFor(…, 'images')` return no candidates (strict) or fall back to a partial response that silently routes chat only? Strict is simpler and the operator-facing metric surfaces the gap; recommend strict.
 
 ## Artifacts produced
 

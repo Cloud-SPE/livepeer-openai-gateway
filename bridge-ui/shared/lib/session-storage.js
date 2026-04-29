@@ -26,10 +26,18 @@ export function createSession(namespace) {
       }
     },
     clear() {
-      try { sessionStorage.removeItem(key); } catch { /* noop */ }
+      try {
+        sessionStorage.removeItem(key);
+      } catch {
+        /* noop */
+      }
     },
     has() {
-      try { return sessionStorage.getItem(key) !== null; } catch { return false; }
+      try {
+        return sessionStorage.getItem(key) !== null;
+      } catch {
+        return false;
+      }
     },
   };
 }

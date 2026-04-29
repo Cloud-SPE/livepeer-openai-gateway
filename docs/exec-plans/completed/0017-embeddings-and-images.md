@@ -159,38 +159,46 @@ Keeps the bridge thin and locates OpenAI-compatibility work where it belongs: in
 ## Artifacts produced
 
 **Docs**
+
 - `docs/references/worker-node-contract.md` — new per-capability contract (chat / embeddings / images)
 - `docs/design-docs/pricing-model.md` — embeddings + images rate tables, per-endpoint margin math
 
 **Types**
+
 - `src/types/pricing.ts` — `ChatRateCard` (renamed), `EmbeddingsRateCard`, `ImagesRateCard`, `ImageSize`, `ImageQuality`
 - `src/types/node.ts` — `NodeCapability` enum, `capabilities` field (defaults to `['chat']`)
 - `src/types/embeddings.ts` — OpenAI-compatible request/response schemas + `normalizeEmbeddingsInput`
 - `src/types/images.ts` — OpenAI-compatible request/response schemas + defaults
 
 **Config**
+
 - `src/config/pricing.ts` — v1 rate cards wired in; `rateForEmbeddingsModel`, `rateForImageSku` helpers
 - `src/config/nodes.ts` — capabilities parsed from YAML, default preserved
 
 **Service**
+
 - `src/service/nodes/nodebook.ts` — `findNodesFor(..., capability='chat')`
 - `src/service/routing/router.ts` — `pickNode(..., capability='chat')`
 - `src/service/pricing/index.ts` — `estimateEmbeddingsReservation`, `computeEmbeddingsActualCost`, `estimateImagesReservation`, `computeImagesActualCost`
 
 **Providers**
+
 - `src/providers/nodeClient.ts` — `createEmbeddings`, `createImage` on `NodeClient`
 - `src/providers/nodeClient/fetch.ts` — fetch-based implementations
 
 **Runtime**
+
 - `src/runtime/http/embeddings/index.ts` — `/v1/embeddings` handler
 - `src/runtime/http/images/generations.ts` — `/v1/images/generations` handler
 - `src/main.ts` — both routes registered
 
 **Repo**
+
 - `src/repo/schema.ts` — `usageRecordKind` enum, nullable `prompt_tokens_reported` / `completion_tokens_reported`, `image_count` column, `usage_record_kind_columns_chk` CHECK constraint
 - `migrations/0005_thin_black_crow.sql` — migration
 
 **Tests**
+
 - `src/types/types.test.ts` — embeddings + images schema coverage
 - `src/config/nodes.test.ts` — capabilities defaults + rejection
 - `src/service/nodes/nodebook.test.ts` — capability filtering
@@ -200,4 +208,5 @@ Keeps the bridge thin and locates OpenAI-compatibility work where it belongs: in
 - `src/runtime/http/images/images.test.ts` — 7 end-to-end tests including partial delivery refund + zero-image 503
 
 **Verification**
+
 - `npm test` → 270/270 passing, 91.62% lines / 80.31% branches / 95.08% functions / 91.62% statements (all above the 75% floor)

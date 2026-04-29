@@ -35,12 +35,12 @@ Bridge-specific:
 
 ### Customer request path
 
-| Question | Metric | Type | Labels |
-|---|---|---|---|
-| Per-capability customer-visible latency | `livepeer_bridge_request_duration_seconds` | histogram (Default buckets) | `capability`, `model`, `tier`, `outcome` |
-| Per-capability request accounting | `livepeer_bridge_requests_total` | counter | `capability`, `model`, `tier`, `outcome={2xx,4xx,402,429,5xx}` |
-| Why are requests being rate-limited? | `livepeer_bridge_rate_limit_rejections_total` | counter | `tier`, `kind={rpm,rpd,concurrent}` |
-| Are retries succeeding or just churning? | `livepeer_bridge_node_retries_total` | counter | `reason={timeout,5xx,quote_expired,circuit_open}`, `attempt={1,2,3}` |
+| Question                                 | Metric                                        | Type                        | Labels                                                               |
+| ---------------------------------------- | --------------------------------------------- | --------------------------- | -------------------------------------------------------------------- |
+| Per-capability customer-visible latency  | `livepeer_bridge_request_duration_seconds`    | histogram (Default buckets) | `capability`, `model`, `tier`, `outcome`                             |
+| Per-capability request accounting        | `livepeer_bridge_requests_total`              | counter                     | `capability`, `model`, `tier`, `outcome={2xx,4xx,402,429,5xx}`       |
+| Why are requests being rate-limited?     | `livepeer_bridge_rate_limit_rejections_total` | counter                     | `tier`, `kind={rpm,rpd,concurrent}`                                  |
+| Are retries succeeding or just churning? | `livepeer_bridge_node_retries_total`          | counter                     | `reason={timeout,5xx,quote_expired,circuit_open}`, `attempt={1,2,3}` |
 
 `livepeer_bridge_request_duration_seconds` is the most-looked-at metric here — the only one customers can effectively SLO against. Phase 1 keeps the outcome bucket coarse; Phase 2 splits 5xx into root-cause classes if dashboards demand it.
 
@@ -48,13 +48,13 @@ Bridge-specific:
 
 ### Money & ledger
 
-| Question | Metric | Type | Labels |
-|---|---|---|---|
-| Revenue collected (per cut) | `livepeer_bridge_revenue_usd_cents_total` | counter | `capability`, `model`, `tier` |
-| What did I pay nodes? | `livepeer_bridge_node_cost_wei_total` | counter | `capability`, `model`, `node_id` |
-| Are top-ups completing? Stuck? | `livepeer_bridge_topups_total` | counter | `outcome={initiated,succeeded,failed,disputed,refunded}` |
-| Are reservations stalling (commit/refund leak)? | `livepeer_bridge_reservations_open` (gauge), `livepeer_bridge_reservation_open_oldest_seconds` (gauge) | gauge | — |
-| Stripe webhook health | `livepeer_bridge_stripe_webhooks_total` (counter), `livepeer_bridge_stripe_webhook_duration_seconds` (hist) | counter, hist | `event_type`, `outcome={processed,duplicate,signature_invalid,handler_error}` |
+| Question                                        | Metric                                                                                                      | Type          | Labels                                                                        |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------- | ----------------------------------------------------------------------------- |
+| Revenue collected (per cut)                     | `livepeer_bridge_revenue_usd_cents_total`                                                                   | counter       | `capability`, `model`, `tier`                                                 |
+| What did I pay nodes?                           | `livepeer_bridge_node_cost_wei_total`                                                                       | counter       | `capability`, `model`, `node_id`                                              |
+| Are top-ups completing? Stuck?                  | `livepeer_bridge_topups_total`                                                                              | counter       | `outcome={initiated,succeeded,failed,disputed,refunded}`                      |
+| Are reservations stalling (commit/refund leak)? | `livepeer_bridge_reservations_open` (gauge), `livepeer_bridge_reservation_open_oldest_seconds` (gauge)      | gauge         | —                                                                             |
+| Stripe webhook health                           | `livepeer_bridge_stripe_webhooks_total` (counter), `livepeer_bridge_stripe_webhook_duration_seconds` (hist) | counter, hist | `event_type`, `outcome={processed,duplicate,signature_invalid,handler_error}` |
 
 `livepeer_bridge_revenue_usd_cents_total` and `livepeer_bridge_node_cost_wei_total` together drive the gross-margin dashboard. Same `(capability, model)` labels on both means a join works directly. Only the bridge knows both halves.
 
@@ -62,24 +62,24 @@ Bridge-specific:
 
 ### Node pool
 
-| Question | Metric | Type | Labels |
-|---|---|---|---|
-| How many nodes are usable right now? | `livepeer_bridge_nodes_state` | gauge | `state={healthy,degraded,circuit_broken,disabled}` |
-| Per-node success rate | `livepeer_bridge_node_requests_total` | counter | `node_id`, `outcome` |
-| Per-node latency | `livepeer_bridge_node_request_duration_seconds` | histogram (Default buckets) | `node_id`, `outcome` |
-| Are quotes going stale? | `livepeer_bridge_node_quote_age_seconds` | gauge | `node_id`, `capability` |
-| Circuit churn (signals a flapping node) | `livepeer_bridge_node_circuit_transitions_total` | counter | `node_id`, `to_state` |
+| Question                                | Metric                                           | Type                        | Labels                                             |
+| --------------------------------------- | ------------------------------------------------ | --------------------------- | -------------------------------------------------- |
+| How many nodes are usable right now?    | `livepeer_bridge_nodes_state`                    | gauge                       | `state={healthy,degraded,circuit_broken,disabled}` |
+| Per-node success rate                   | `livepeer_bridge_node_requests_total`            | counter                     | `node_id`, `outcome`                               |
+| Per-node latency                        | `livepeer_bridge_node_request_duration_seconds`  | histogram (Default buckets) | `node_id`, `outcome`                               |
+| Are quotes going stale?                 | `livepeer_bridge_node_quote_age_seconds`         | gauge                       | `node_id`, `capability`                            |
+| Circuit churn (signals a flapping node) | `livepeer_bridge_node_circuit_transitions_total` | counter                     | `node_id`, `to_state`                              |
 
 `livepeer_bridge_nodes_state` is a count gauge labeled by state — `sum(livepeer_bridge_nodes_state{state="healthy"})` gives the healthy-node count. Per-node detail lives in `livepeer_bridge_node_requests_total{node_id}`. Avoids the cardinality of one gauge per node × per state.
 
 ### PayerDaemon (the bridge-side client view)
 
-| Question | Metric | Type | Labels |
-|---|---|---|---|
-| PayerDaemon RPC accounting | `livepeer_bridge_payer_daemon_calls_total` | counter | `method`, `outcome` |
-| PayerDaemon RPC latency (default range) | `livepeer_bridge_payer_daemon_call_duration_seconds` | histogram (Default buckets) | `method` |
-| PayerDaemon RPC latency (sub-ms detail) | `livepeer_bridge_payer_daemon_call_duration_seconds_fast` | histogram (Fast buckets) | `method` |
-| Bridge-side view of escrow | `livepeer_bridge_payer_daemon_deposit_wei`, `livepeer_bridge_payer_daemon_reserve_wei` | gauge | — |
+| Question                                | Metric                                                                                 | Type                        | Labels              |
+| --------------------------------------- | -------------------------------------------------------------------------------------- | --------------------------- | ------------------- |
+| PayerDaemon RPC accounting              | `livepeer_bridge_payer_daemon_calls_total`                                             | counter                     | `method`, `outcome` |
+| PayerDaemon RPC latency (default range) | `livepeer_bridge_payer_daemon_call_duration_seconds`                                   | histogram (Default buckets) | `method`            |
+| PayerDaemon RPC latency (sub-ms detail) | `livepeer_bridge_payer_daemon_call_duration_seconds_fast`                              | histogram (Fast buckets)    | `method`            |
+| Bridge-side view of escrow              | `livepeer_bridge_payer_daemon_deposit_wei`, `livepeer_bridge_payer_daemon_reserve_wei` | gauge                       | —                   |
 
 Dual-histogram per the conventions doc — both observe every gRPC call. The daemon also exposes its own server-side `livepeer_payment_grpc_*` (see [`https://github.com/Cloud-SPE/livepeer-modules/blob/main/payment-daemon/docs/design-docs/metrics.md`](https://github.com/Cloud-SPE/livepeer-modules/blob/main/payment-daemon/docs/design-docs/metrics.md)). Both views are valuable: server-side captures the daemon's view; client-side here includes socket overhead. A persistent gap means the unix-socket is slow.
 
@@ -87,31 +87,31 @@ Dual-histogram per the conventions doc — both observe every gRPC call. The dae
 
 ### Token audit (existing — Phase 1 renames + dual-emits for one release)
 
-| Question | Metric | Type | Labels |
-|---|---|---|---|
-| Is any node systematically over/under-reporting tokens? | `livepeer_bridge_token_drift_percent` (renamed from `tokens_drift_percent`) | histogram | `node_id`, `model`, `direction={prompt,completion}` |
-| Local vs. reported token counts | `livepeer_bridge_token_count_local_total`, `livepeer_bridge_token_count_reported_total` | counter | `node_id`, `model`, `direction` |
+| Question                                                | Metric                                                                                  | Type      | Labels                                              |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------- | --------- | --------------------------------------------------- |
+| Is any node systematically over/under-reporting tokens? | `livepeer_bridge_token_drift_percent` (renamed from `tokens_drift_percent`)             | histogram | `node_id`, `model`, `direction={prompt,completion}` |
+| Local vs. reported token counts                         | `livepeer_bridge_token_count_local_total`, `livepeer_bridge_token_count_reported_total` | counter   | `node_id`, `model`, `direction`                     |
 
 These exist today as gauges (`tokens_local_count` / `tokens_reported_count`); Phase 1 also flips them to counters since they're cumulative event counts, not point-in-time values. Legacy unprefixed names emitted in parallel for one release.
 
 ### Build / health
 
-| Metric | Type | Labels |
-|---|---|---|
+| Metric                       | Type    | Labels                                |
+| ---------------------------- | ------- | ------------------------------------- |
 | `livepeer_bridge_build_info` | gauge=1 | `version`, `node_env`, `node_version` |
 
 Standard `process_*` and `nodejs_*` collectors (built-in to `prom-client`) handle uptime, event-loop lag, GC, heap.
 
 ## Phase 2 catalog (additive)
 
-| Question | Metric | Type | Labels |
-|---|---|---|---|
-| Streaming TTFT | `livepeer_bridge_stream_ttft_seconds` | histogram | `capability`, `model` |
-| Stream lifecycle outcomes | `livepeer_bridge_streams_total` | counter | `capability`, `model`, `outcome={completed,partial,failed,client_canceled}` |
-| Token-drift threshold violations | `livepeer_bridge_token_drift_violations_total` | counter | `node_id`, `model`, `threshold={5pct,10pct}` |
-| Customer balance distribution (sampled, no per-customer label) | `livepeer_bridge_customer_balance_usd_cents` | histogram | `tier` |
-| Free-tier quota exhaustion | `livepeer_bridge_quota_exhausted_total` | counter | — |
-| Customer tier transitions (free→prepaid upgrade signal) | `livepeer_bridge_customer_tier_transitions_total` | counter | `from`, `to` |
+| Question                                                       | Metric                                            | Type      | Labels                                                                      |
+| -------------------------------------------------------------- | ------------------------------------------------- | --------- | --------------------------------------------------------------------------- |
+| Streaming TTFT                                                 | `livepeer_bridge_stream_ttft_seconds`             | histogram | `capability`, `model`                                                       |
+| Stream lifecycle outcomes                                      | `livepeer_bridge_streams_total`                   | counter   | `capability`, `model`, `outcome={completed,partial,failed,client_canceled}` |
+| Token-drift threshold violations                               | `livepeer_bridge_token_drift_violations_total`    | counter   | `node_id`, `model`, `threshold={5pct,10pct}`                                |
+| Customer balance distribution (sampled, no per-customer label) | `livepeer_bridge_customer_balance_usd_cents`      | histogram | `tier`                                                                      |
+| Free-tier quota exhaustion                                     | `livepeer_bridge_quota_exhausted_total`           | counter   | —                                                                           |
+| Customer tier transitions (free→prepaid upgrade signal)        | `livepeer_bridge_customer_tier_transitions_total` | counter   | `from`, `to`                                                                |
 
 `livepeer_bridge_customer_balance_usd_cents` is a periodic sample (every ~5 min over `SELECT balance_usd_cents FROM customer WHERE tier='prepaid' AND status='active'`). Histogram bucket counts answer "what fraction of paying customers are under $1?" without ever labeling by customer.
 
@@ -131,12 +131,12 @@ Phase 3 ships the **operator rollups** from [`operator-economics-metrics-tooling
 
 The reason Phase 1 labels `(capability, model, node_id)` consistently across the four repos is so the following reconciliation panels work as plain Prom queries — no new metrics required.
 
-| Panel | Source A | Source B | Drift means… |
-|---|---|---|---|
-| Customer-paid USD ↔ Node-paid wei × ETH/USD | `livepeer_bridge_revenue_usd_cents_total` | `livepeer_bridge_node_cost_wei_total` × ETH/USD | Margin per `tier` × `model`. Sustained < 20 % margin = price-card review. |
-| Bridge wei sent ↔ Worker-side EV credited | `livepeer_bridge_node_cost_wei_total{node_id=X}` × (EV/face-value ratio) | sum across worker `livepeer_payment_tickets_total{outcome=accepted+winner}` × per-ticket faceValue (logs / Phase 2 `livepeer_payment_face_value_wei`) | Should match per (node, window). Sustained gap = wire-format / price-info bug — see daemon tracker `bootstrap-session-explicit-price`. |
-| Worker units served ↔ Bridge units billed | `livepeer_worker_work_units_total{capability,model}` | `livepeer_bridge_revenue_usd_cents_total ÷ rate-card` for same (capability, model) | Should match exactly. Drift = tokenizer disagreement (covered today by `livepeer_bridge_token_drift_percent`) OR billing bug. |
-| Credited EV ↔ Redeemed face-value (probabilistic) | `livepeer_payment_tickets_total{outcome=winner}` × per-ticket faceValue | `livepeer_payment_redemption_redeemed_face_value_wei_total` | Should converge over weeks (probabilistic settlement). Persistent shortfall = redemption-loop dropping winners. |
+| Panel                                             | Source A                                                                 | Source B                                                                                                                                              | Drift means…                                                                                                                           |
+| ------------------------------------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Customer-paid USD ↔ Node-paid wei × ETH/USD       | `livepeer_bridge_revenue_usd_cents_total`                                | `livepeer_bridge_node_cost_wei_total` × ETH/USD                                                                                                       | Margin per `tier` × `model`. Sustained < 20 % margin = price-card review.                                                              |
+| Bridge wei sent ↔ Worker-side EV credited         | `livepeer_bridge_node_cost_wei_total{node_id=X}` × (EV/face-value ratio) | sum across worker `livepeer_payment_tickets_total{outcome=accepted+winner}` × per-ticket faceValue (logs / Phase 2 `livepeer_payment_face_value_wei`) | Should match per (node, window). Sustained gap = wire-format / price-info bug — see daemon tracker `bootstrap-session-explicit-price`. |
+| Worker units served ↔ Bridge units billed         | `livepeer_worker_work_units_total{capability,model}`                     | `livepeer_bridge_revenue_usd_cents_total ÷ rate-card` for same (capability, model)                                                                    | Should match exactly. Drift = tokenizer disagreement (covered today by `livepeer_bridge_token_drift_percent`) OR billing bug.          |
+| Credited EV ↔ Redeemed face-value (probabilistic) | `livepeer_payment_tickets_total{outcome=winner}` × per-ticket faceValue  | `livepeer_payment_redemption_redeemed_face_value_wei_total`                                                                                           | Should converge over weeks (probabilistic settlement). Persistent shortfall = redemption-loop dropping winners.                        |
 
 Three-way reconciliation on the same hop is the whole point of building all three repos with consistent labels at the same time. It's also the thing operators historically have to script by hand against logs + SQL — this lets it be one Grafana panel.
 

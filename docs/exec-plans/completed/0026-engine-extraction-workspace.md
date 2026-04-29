@@ -28,6 +28,7 @@ What stage 3 needs to do, beyond what's already in this plan: retire `service/no
 Stage 3 of a 4-stage extraction. With interfaces ([`0024`](../completed/0024-engine-extraction-interfaces.md)) and dispatchers ([`0025`](../completed/0025-engine-extraction-dispatchers.md)) in place, this stage performs the actual file moves: convert the repo to npm workspaces, create `packages/bridge-core/` (engine) and `packages/livepeer-openai-gateway/` (shell), split the Postgres schema into `engine.*` and `app.*` namespaces, rewrite the migration history clean (nothing is deployed; we drop `migrations/0000-0006.sql` and start fresh per package), split metric-name prefixes, set up per-package ESLint configs, and rename this repo from `openai-livepeer-bridge` to `livepeer-openai-gateway`.
 
 After this stage:
+
 - `packages/bridge-core/` is a self-contained engine package with its own `package.json`, `tsconfig.json`, `vitest.config.ts`, ESLint config, migrations, tests, dashboard, and proto-generated stubs for both daemons (payment + service-registry).
 - `packages/livepeer-openai-gateway/` is the shell package consuming `bridge-core` via workspace symlink.
 - `bridge-ui/` (the entire `shared/`, `portal/`, `admin/` tree) lives under the shell package — it's all shell-owned, both consumers are shell.
@@ -60,13 +61,14 @@ Root `package.json`:
 {
   "name": "livepeer-openai-gateway-monorepo",
   "private": true,
-  "workspaces": ["packages/*", "bridge-ui/*"]
+  "workspaces": ["packages/*", "bridge-ui/*"],
 }
 ```
 
 Root retains: `compose*.yaml`, top-level `docs/`, `lint/`, `migrations/` retired, `scripts/` for orchestrating monorepo-wide commands.
 
 Move scripts:
+
 - `npm run build` → workspace-aware: builds `bridge-core` first, then `livepeer-openai-gateway`, then `bridge-ui/*`.
 - `npm test` → runs each package's `test` script in workspace order.
 - `npm run lint` → runs each package's `lint`.
@@ -104,15 +106,15 @@ Engine `package.json` excerpts:
   "version": "0.1.0-dev",
   "type": "module",
   "exports": {
-    ".":          "./dist/index.js",
-    "./fastify":  "./dist/adapters/fastify/index.js",
-    "./dashboard":"./dist/dashboard/index.js"
+    ".": "./dist/index.js",
+    "./fastify": "./dist/adapters/fastify/index.js",
+    "./dashboard": "./dist/dashboard/index.js",
   },
   "peerDependencies": {
     "fastify": "^4.29.0",
     "@fastify/static": "^7.0.0",
     "@fastify/multipart": "^8.3.0",
-    "@fastify/sensible": "^5.6.0"
+    "@fastify/sensible": "^5.6.0",
   },
   "dependencies": {
     "@grpc/grpc-js": "...",
@@ -124,8 +126,8 @@ Engine `package.json` excerpts:
     "pg": "...",
     "prom-client": "...",
     "tiktoken": "...",
-    "zod": "..."
-  }
+    "zod": "...",
+  },
 }
 ```
 
@@ -179,8 +181,8 @@ Shell `package.json`:
     "stripe": "...",
     "pg": "...",
     "drizzle-orm": "...",
-    "zod": "..."
-  }
+    "zod": "...",
+  },
 }
 ```
 
@@ -230,6 +232,7 @@ CREATE TABLE app.admin_audit_events (...);
 No cross-schema FKs. `engine.usage_records.caller_id` is a string; the shell knows it's `app.customers.id` but the engine does not.
 
 Migration runners:
+
 - Engine package: `packages/bridge-core/src/repo/migrate.ts` — reads its own `migrations/` directory, applies engine schema migrations.
 - Shell package: `packages/livepeer-openai-gateway/src/repo/migrate.ts` — reads its own `migrations/` directory, applies app schema migrations.
 - Shell `main.ts` runs both at startup (engine first, then shell) when `BRIDGE_AUTO_MIGRATE=true`.
@@ -276,7 +279,7 @@ services:
   service-registry-daemon:
     image: ghcr.io/livepeer-cloud-spe/service-registry-daemon:<pinned-version>
     volumes:
-      - ./var/run/livepeer:/var/run/livepeer  # exposes service-registry.sock
+      - ./var/run/livepeer:/var/run/livepeer # exposes service-registry.sock
       - ./service-registry-config.yaml:/etc/livepeer/service-registry.yaml:ro
     # ... env, healthcheck
 
@@ -292,7 +295,7 @@ services:
       - ./var/run/livepeer:/var/run/livepeer
 ```
 
-The `service-registry-config.yaml` example file is added at repo root, demonstrating the daemon's configured node pool. This *replaces* the old `nodes.example.yaml` (which retired in stage 2).
+The `service-registry-config.yaml` example file is added at repo root, demonstrating the daemon's configured node pool. This _replaces_ the old `nodes.example.yaml` (which retired in stage 2).
 
 ### 9. `bridge-ui/` placement
 
@@ -330,7 +333,7 @@ Doc-lint rule that enforces `bridge-ui/<consumer>/lib` doesn't redefine `shared/
 - [x] Per-package ESLint configs; engine layer rule scoped; shell allows engine imports
 - [x] Rename repo identifiers: package.json names, Dockerfile, compose, README, AGENTS.md, .github workflows, internal markdown links
 - [x] Update `compose.yaml` + `compose.prod.yaml` to add `service-registry-daemon` as a sidecar; bridge depends_on it; mount socket; add `service-registry-config.example.yaml` at repo root (replaces retired `nodes.example.yaml`)
-- [x] Manual ops step: rename GitHub repo `openai-livepeer-bridge` → `livepeer-openai-gateway` *(completed 2026-04-27 by operator)*
+- [x] Manual ops step: rename GitHub repo `openai-livepeer-bridge` → `livepeer-openai-gateway` _(completed 2026-04-27 by operator)_
 - [x] Verify both packages build, test ≥ 75% each, lint, doc-lint pass; verify Playwright e2e still green
 - [x] Smoke `npm pack packages/bridge-core` produces a valid tarball
 

@@ -38,24 +38,29 @@ describe('portal-login', () => {
   });
 
   it('on success: stores the session and emits bridge:authenticated', async () => {
-    fetchStub.resolves(jsonResponse(200, {
-      id: 'c1',
-      email: 'a@x.io',
-      tier: 'prepaid',
-      status: 'active',
-      balance_usd: '10.00',
-      reserved_usd: '0.00',
-      free_tokens_remaining: null,
-      free_tokens_reset_at: null,
-      created_at: '2026-04-20T00:00:00.000Z',
-    }));
+    fetchStub.resolves(
+      jsonResponse(200, {
+        id: 'c1',
+        email: 'a@x.io',
+        tier: 'prepaid',
+        status: 'active',
+        balance_usd: '10.00',
+        reserved_usd: '0.00',
+        free_tokens_remaining: null,
+        free_tokens_reset_at: null,
+        created_at: '2026-04-20T00:00:00.000Z',
+      }),
+    );
 
     const el = await fixture(html`<portal-login></portal-login>`);
     const input = el.querySelector('input[name="apikey"]');
     input.value = 'sk-live-abc';
     input.dispatchEvent(new Event('input', { bubbles: true }));
 
-    setTimeout(() => el.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true })), 0);
+    setTimeout(
+      () => el.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true })),
+      0,
+    );
     const evt = await oneEvent(window, 'bridge:authenticated');
     expect(evt).to.exist;
 
@@ -65,9 +70,11 @@ describe('portal-login', () => {
   });
 
   it('on 401: shows the server error message and does not store session', async () => {
-    fetchStub.resolves(jsonResponse(401, {
-      error: { code: 'invalid_api_key', type: 'InvalidApiKeyError', message: 'invalid api key' },
-    }));
+    fetchStub.resolves(
+      jsonResponse(401, {
+        error: { code: 'invalid_api_key', type: 'InvalidApiKeyError', message: 'invalid api key' },
+      }),
+    );
 
     const el = await fixture(html`<portal-login></portal-login>`);
     const input = el.querySelector('input[name="apikey"]');
@@ -85,7 +92,11 @@ describe('portal-login', () => {
 
   it('disables input and shows loading state during submit', async () => {
     let resolve;
-    fetchStub.returns(new Promise((r) => { resolve = r; }));
+    fetchStub.returns(
+      new Promise((r) => {
+        resolve = r;
+      }),
+    );
 
     const el = await fixture(html`<portal-login></portal-login>`);
     el.querySelector('input[name="apikey"]').value = 'sk-live-pending';

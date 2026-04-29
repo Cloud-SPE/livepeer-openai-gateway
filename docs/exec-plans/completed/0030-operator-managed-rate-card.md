@@ -21,7 +21,7 @@ The implementation skips the env-driven step entirely and goes directly to a DB-
 ## Non-goals
 
 - **No backwards compatibility.** Engine 0.2.0 removes `V1_RATE_CARD` / `V1_MODEL_TO_TIER` entirely; consumers must inject a `RateCardResolver`. Project hasn't shipped to anyone yet, no migration path to preserve.
-- **No tier names beyond `starter` / `standard` / `pro` / `premium`.** Operators edit tier *prices*; tier *names* are fixed in the engine. Backlog as a follow-up plan if operators ever need bespoke tiers.
+- **No tier names beyond `starter` / `standard` / `pro` / `premium`.** Operators edit tier _prices_; tier _names_ are fixed in the engine. Backlog as a follow-up plan if operators ever need bespoke tiers.
 - **No portal-side pricing page.** Customer-facing pricing transparency is `0031`, separate plan.
 - **No worker-cost / margin dashboard.** Worker-cost in USD requires an ETH-price oracle; flagged as `0032`.
 - **No per-customer rate-card overrides.** Some customers paying different prices than tier defaults is `0033`.
@@ -31,13 +31,13 @@ The implementation skips the env-driven step entirely and goes directly to a DB-
 
 ## Scope: capabilities and shapes
 
-| Capability | Pricing model | Resolution key |
-|---|---|---|
-| chat | tiered: `model → tier → (input/output USD/M tokens)` | `(model)` → `tier` → tier prices |
-| embeddings | per-model: `model → USD/M tokens` | `(model)` → entry |
-| images | per-SKU: `(model, size, quality) → USD/image` | `(model, size, quality)` → entry |
-| speech | per-model: `model → USD/M chars` | `(model)` → entry |
-| transcriptions | per-model: `model → USD/minute` | `(model)` → entry |
+| Capability     | Pricing model                                        | Resolution key                   |
+| -------------- | ---------------------------------------------------- | -------------------------------- |
+| chat           | tiered: `model → tier → (input/output USD/M tokens)` | `(model)` → `tier` → tier prices |
+| embeddings     | per-model: `model → USD/M tokens`                    | `(model)` → entry                |
+| images         | per-SKU: `(model, size, quality) → USD/image`        | `(model, size, quality)` → entry |
+| speech         | per-model: `model → USD/M chars`                     | `(model)` → entry                |
+| transcriptions | per-model: `model → USD/minute`                      | `(model)` → entry                |
 
 For chat, the operator-managed surface is **two layers**: the `model → tier` mapping (changes per worker) AND the per-tier prices (changes per pricing-strategy update). For the other four capabilities, the model line itself carries the price — no tier indirection.
 
@@ -69,7 +69,12 @@ export interface RateCardSnapshot {
   modelToTierPatterns: ReadonlyArray<{ pattern: string; tier: PricingTier }>;
   // Pattern overlays for the per-model rate cards too:
   embeddingsPatterns: ReadonlyArray<{ pattern: string; entry: EmbeddingsRateCardEntry }>;
-  imagesPatterns: ReadonlyArray<{ pattern: string; size: ImageSize; quality: ImageQuality; entry: ImagesRateCardEntry }>;
+  imagesPatterns: ReadonlyArray<{
+    pattern: string;
+    size: ImageSize;
+    quality: ImageQuality;
+    entry: ImagesRateCardEntry;
+  }>;
   speechPatterns: ReadonlyArray<{ pattern: string; entry: SpeechRateCardEntry }>;
   transcriptionsPatterns: ReadonlyArray<{ pattern: string; entry: TranscriptionsRateCardEntry }>;
 }
@@ -84,7 +89,7 @@ Dispatchers no longer take `PricingConfig` directly — they take a `RateCardRes
 
 The engine ships a `createInMemoryRateCardResolver({...})` test fixture (parallel to `InMemoryWallet`) so tests + the minimal-shell example can wire one up without DB.
 
-`V1_RATE_CARD` / `V1_MODEL_TO_TIER` are **deleted** from `config/pricing.ts`. `loadPricingConfig` is repurposed to load the *non-rate-card* parts of pricing config (`defaultMaxTokensPrepaid`, etc.); rate-card data flows entirely through the resolver.
+`V1_RATE_CARD` / `V1_MODEL_TO_TIER` are **deleted** from `config/pricing.ts`. `loadPricingConfig` is repurposed to load the _non-rate-card_ parts of pricing config (`defaultMaxTokensPrepaid`, etc.); rate-card data flows entirely through the resolver.
 
 ### Shell — DB-backed RateCardResolver
 
@@ -226,6 +231,7 @@ Extension to `/admin/registry/probe`: each `live[]` entry surfaces its capabilit
 ```
 
 Each sub-tab has:
+
 - A **table** listing exact entries first, then patterns (sorted by `sort_order`)
 - A **+ Add** button opening a `bridge-dialog` form
 - Form fields:

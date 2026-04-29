@@ -44,18 +44,18 @@ providers:
 
 10 rows, top-to-bottom in order of operational importance:
 
-| Row | What it shows |
-|---|---|
-| **Cross-repo reconciliation** | Gross margin %, revenue cents/min by tier, node cost wei/min, worker units served vs bridge revenue, daemon-side gRPC p99 vs bridge-side PayerDaemon p99. Joins three repos. |
-| **Overview** | Build version, build_info heartbeat, qps, customer-visible error rate (gauge), healthy nodes count, oldest pending top-up age (Phase 2 placeholder). |
-| **Customer requests** | qps by capability + tier + outcome, p99 latency by capability + tier, retries by attempt + reason. |
-| **Money & ledger** | Revenue cents/min by tier and by capability, top-ups by outcome, open reservations, oldest open reservation age (LEDGER LEAK CANARY). |
-| **Stripe webhook** | Webhooks by event_type + outcome, webhook handler p99. |
-| **Node pool** | Nodes by state (4 colored stat tiles), per-node success rate, per-node p99 latency, quote age per node + capability, circuit transitions. |
-| **PayerDaemon (unix-socket fast path)** | Calls by method + outcome, p99 from fast histogram, deposit and reserve gauges. |
-| **Token audit** | Drift % p50/p95/p99 by direction, top drifters table. |
-| **Rate limits** | Rejections by tier + kind (stacked). |
-| **Process + Node runtime** (collapsed by default) | Heap, event-loop lag p99, GC, open FDs. |
+| Row                                               | What it shows                                                                                                                                                                |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Cross-repo reconciliation**                     | Gross margin %, revenue cents/min by tier, node cost wei/min, worker units served vs bridge revenue, daemon-side gRPC p99 vs bridge-side PayerDaemon p99. Joins three repos. |
+| **Overview**                                      | Build version, build_info heartbeat, qps, customer-visible error rate (gauge), healthy nodes count, oldest pending top-up age (Phase 2 placeholder).                         |
+| **Customer requests**                             | qps by capability + tier + outcome, p99 latency by capability + tier, retries by attempt + reason.                                                                           |
+| **Money & ledger**                                | Revenue cents/min by tier and by capability, top-ups by outcome, open reservations, oldest open reservation age (LEDGER LEAK CANARY).                                        |
+| **Stripe webhook**                                | Webhooks by event_type + outcome, webhook handler p99.                                                                                                                       |
+| **Node pool**                                     | Nodes by state (4 colored stat tiles), per-node success rate, per-node p99 latency, quote age per node + capability, circuit transitions.                                    |
+| **PayerDaemon (unix-socket fast path)**           | Calls by method + outcome, p99 from fast histogram, deposit and reserve gauges.                                                                                              |
+| **Token audit**                                   | Drift % p50/p95/p99 by direction, top drifters table.                                                                                                                        |
+| **Rate limits**                                   | Rejections by tier + kind (stacked).                                                                                                                                         |
+| **Process + Node runtime** (collapsed by default) | Heap, event-loop lag p99, GC, open FDs.                                                                                                                                      |
 
 ## Cross-repo reconciliation row
 
@@ -63,13 +63,13 @@ This is the row most operators won't have anywhere else. The bridge is the only 
 
 The row expects all three services (`livepeer-openai-gateway`, `livepeer-payment-library`'s daemon, `livepeer-byoc`'s worker) to be scraped by the same Prometheus. Cross-environment scrapes also work as long as the metric names line up.
 
-| Panel | What it answers | What to do when it diverges |
-|---|---|---|
-| **Gross margin %** | Are customers paying more than nodes cost us? | Sustained < 20% means the rate-card is under-pricing. Reprice via the rate-card config; check whether one capability dominates the loss. The threshold in this panel is 20% (red) / 35% (green); tune to your business target. |
-| **Revenue cents/min by tier** | Which tier is generating the most revenue right now? | Use as context — alongside the cost panel it explains which tiers are profitable. If `free` tier shows non-zero revenue, that's a billing bug. |
-| **Node cost wei/min** | What are we paying nodes per minute? | Sudden spikes without matching revenue = a node returned an unexpectedly large quote, or the rate-card on the worker side widened. Cross-check with row 6's per-node panels. |
-| **Worker units served vs Bridge revenue** | Do worker-reported units match bridge billing? | Persistent gap = tokenizer drift (already covered by `livepeer_bridge_token_drift_percent` in row 8) OR billing bug. The panel currently plots revenue cents directly; a true 'units billed' line requires a recording rule that divides revenue by the rate-card per `(capability, model)` — see the customizing section. |
-| **Daemon p99 vs Bridge p99 (CreatePayment)** | What's the unix-socket overhead between daemon and bridge? | A widening gap between server-side and client-side p99 means the unix socket is slow — usually kernel-side queueing under heavy fork load, or an unrelated CPU hog. Both quantiles use the **fast** histogram so sub-ms detail survives. |
+| Panel                                        | What it answers                                            | What to do when it diverges                                                                                                                                                                                                                                                                                                |
+| -------------------------------------------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Gross margin %**                           | Are customers paying more than nodes cost us?              | Sustained < 20% means the rate-card is under-pricing. Reprice via the rate-card config; check whether one capability dominates the loss. The threshold in this panel is 20% (red) / 35% (green); tune to your business target.                                                                                             |
+| **Revenue cents/min by tier**                | Which tier is generating the most revenue right now?       | Use as context — alongside the cost panel it explains which tiers are profitable. If `free` tier shows non-zero revenue, that's a billing bug.                                                                                                                                                                             |
+| **Node cost wei/min**                        | What are we paying nodes per minute?                       | Sudden spikes without matching revenue = a node returned an unexpectedly large quote, or the rate-card on the worker side widened. Cross-check with row 6's per-node panels.                                                                                                                                               |
+| **Worker units served vs Bridge revenue**    | Do worker-reported units match bridge billing?             | Persistent gap = tokenizer drift (already covered by `livepeer_bridge_token_drift_percent` in row 8) OR billing bug. The panel currently plots revenue cents directly; a true 'units billed' line requires a recording rule that divides revenue by the rate-card per `(capability, model)` — see the customizing section. |
+| **Daemon p99 vs Bridge p99 (CreatePayment)** | What's the unix-socket overhead between daemon and bridge? | A widening gap between server-side and client-side p99 means the unix socket is slow — usually kernel-side queueing under heavy fork load, or an unrelated CPU hog. Both quantiles use the **fast** histogram so sub-ms detail survives.                                                                                   |
 
 If a panel here goes red, jump to the corresponding non-reconciliation row first (rows 4 / 6 / 7 / 8) for breakdowns.
 
@@ -77,12 +77,12 @@ If a panel here goes red, jump to the corresponding non-reconciliation row first
 
 The dashboard exposes four template variables at the top:
 
-| Variable | Source | What it does |
-|---|---|---|
-| `datasource` | Prometheus picker | Switch dashboards across datasources without editing JSON. |
-| `job` | `label_values(livepeer_bridge_build_info, job)` | Filter to a specific Prometheus scrape job (default: All). |
-| `instance` | `label_values(...{job=~"$job"}, instance)` | Filter to a specific bridge instance (default: All). |
-| `eth_usd_cents` | Custom (default `400000` = $4000/ETH × 100) | Used by the gross margin panel to convert wei to USD cents. Override per environment. |
+| Variable        | Source                                          | What it does                                                                          |
+| --------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `datasource`    | Prometheus picker                               | Switch dashboards across datasources without editing JSON.                            |
+| `job`           | `label_values(livepeer_bridge_build_info, job)` | Filter to a specific Prometheus scrape job (default: All).                            |
+| `instance`      | `label_values(...{job=~"$job"}, instance)`      | Filter to a specific bridge instance (default: All).                                  |
+| `eth_usd_cents` | Custom (default `400000` = $4000/ETH × 100)     | Used by the gross margin panel to convert wei to USD cents. Override per environment. |
 
 Every bridge-side panel filters by `{job=~"$job"}`. The cross-repo panels intentionally do NOT filter on `$job` for the daemon/worker queries — `$job` in this dashboard refers to the bridge's scrape job, and adding it to `livepeer_payment_*` / `livepeer_worker_*` queries would silently zero them. If you run multiple bridge fleets and want per-fleet reconciliation, extend the daemon/worker scrape configs to include a matching job label and edit the queries by hand.
 
@@ -105,11 +105,11 @@ Then change the `eth_usd_cents` variable's `query` from the constant to `query_r
 
 **Adjust thresholds.** The threshold-driven panels are:
 
-- *Gross margin %* — red < 20%, yellow 20–35%, green ≥ 35%. Edit per business target.
-- *Customer-visible error rate* — green/yellow/red at `0`, `0.01`, `0.05` (1%, 5%). Edit per SLO.
-- *Open reservations* — green/yellow/red at `0`, `5`, `10`.
-- *Oldest open reservation age* — green/yellow/red at `0`, `60s`, `300s`. **This is the ledger-leak canary.** Set this alert before anything else.
-- *Quote age per node + capability* — table cell colors trigger at `60s` (yellow) and `120s` (red).
+- _Gross margin %_ — red < 20%, yellow 20–35%, green ≥ 35%. Edit per business target.
+- _Customer-visible error rate_ — green/yellow/red at `0`, `0.01`, `0.05` (1%, 5%). Edit per SLO.
+- _Open reservations_ — green/yellow/red at `0`, `5`, `10`.
+- _Oldest open reservation age_ — green/yellow/red at `0`, `60s`, `300s`. **This is the ledger-leak canary.** Set this alert before anything else.
+- _Quote age per node + capability_ — table cell colors trigger at `60s` (yellow) and `120s` (red).
 
 **Build the units-billed recording rule.** The "Worker units served vs Bridge revenue" panel currently plots revenue directly. To get a true unit-for-unit comparison, add a recording rule per (capability, model) that divides revenue by the rate-card:
 
@@ -146,12 +146,12 @@ The dashboard displays metrics; it does NOT ship alert rules. A starter `groups:
 
 ## Troubleshooting
 
-| Symptom | Likely cause |
-|---|---|
-| Panels show "No data" | The bridge isn't started with `METRICS_LISTEN`, or Prometheus isn't scraping `:9602`. Check `/metrics` directly with curl. |
-| `Build version` stat shows nothing | The bridge wasn't built with `setBuildInfo()` wired (the constant-1 gauge at startup). |
-| Cross-repo row entirely empty | Prometheus is scraping the bridge but not the daemon or worker. Add the daemon's `:9601` and worker's `/metrics` endpoints to your scrape config. |
+| Symptom                                                           | Likely cause                                                                                                                                                                                                                                      |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Panels show "No data"                                             | The bridge isn't started with `METRICS_LISTEN`, or Prometheus isn't scraping `:9602`. Check `/metrics` directly with curl.                                                                                                                        |
+| `Build version` stat shows nothing                                | The bridge wasn't built with `setBuildInfo()` wired (the constant-1 gauge at startup).                                                                                                                                                            |
+| Cross-repo row entirely empty                                     | Prometheus is scraping the bridge but not the daemon or worker. Add the daemon's `:9601` and worker's `/metrics` endpoints to your scrape config.                                                                                                 |
 | Cross-repo row partial — bridge panels work, daemon/worker do not | Daemon/worker metrics are scraped but their job labels don't match `livepeer_payment_*` / `livepeer_worker_*` filters. The cross-repo queries deliberately don't filter by `$job` so this is normally fine; check metric names match the catalog. |
-| Gross margin shows nonsense (huge negative or positive) | `$eth_usd_cents` is wrong, or you're seeing a startup window where one counter has data and the other hasn't ticked yet. Wait one full scrape interval. |
-| Oldest reservation age stuck at 0 | Sampler hasn't run yet (30s cycle), or no reservations exist. Place a paid request and wait. |
-| Quote age table empty | No quotes have been refreshed yet. The gauge is set on every quote refresh — if no requests have flowed, no rows. |
+| Gross margin shows nonsense (huge negative or positive)           | `$eth_usd_cents` is wrong, or you're seeing a startup window where one counter has data and the other hasn't ticked yet. Wait one full scrape interval.                                                                                           |
+| Oldest reservation age stuck at 0                                 | Sampler hasn't run yet (30s cycle), or no reservations exist. Place a paid request and wait.                                                                                                                                                      |
+| Quote age table empty                                             | No quotes have been refreshed yet. The gauge is set on every quote refresh — if no requests have flowed, no rows.                                                                                                                                 |

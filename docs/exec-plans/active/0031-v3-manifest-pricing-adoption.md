@@ -11,15 +11,16 @@ depends-on: livepeer-network-suite plan 0003 §G (livepeer-openai-gateway row)
 ## Goal
 
 Bring the openai-livepeer-bridge (this monorepo: `livepeer-openai-gateway`
-+ `livepeer-gateway-core` packages) into the v3.0.0 contract:
-regenerate resolver proto stubs against modules v3.0.0, rename
-`models` → `offerings` references in TypeScript, and replace the
-Postgres-stored wholesale rate-card reads in `src/service/pricing/`
-with manifest-priced reads off
-`offerings[i].pricePerWorkUnitWei` from the resolver `Select`
-response. The customer-facing USD rate card stays as the *retail*
-layer — the change is strictly to the *wholesale* input that drives
-routing decisions.
+
+- `livepeer-gateway-core` packages) into the v3.0.0 contract:
+  regenerate resolver proto stubs against modules v3.0.0, rename
+  `models` → `offerings` references in TypeScript, and replace the
+  Postgres-stored wholesale rate-card reads in `src/service/pricing/`
+  with manifest-priced reads off
+  `offerings[i].pricePerWorkUnitWei` from the resolver `Select`
+  response. The customer-facing USD rate card stays as the _retail_
+  layer — the change is strictly to the _wholesale_ input that drives
+  routing decisions.
 
 ## Non-goals
 
@@ -41,7 +42,7 @@ consumer-facing `SelectQuery.model` shape was preserved in gateway-core
 v3 for backwards compat, so the bridge code keeps working unchanged.
 
 **Reality-check** (2026-04-29): the original plan claimed the bridge
-had a *Postgres-stored wholesale rate card* to replace with manifest
+had a _Postgres-stored wholesale rate card_ to replace with manifest
 reads. Audit shows otherwise — the bridge has only a customer-facing
 USD rate card (`src/service/pricing/rateCard.ts`); wholesale prices
 already flow through gateway-core's `nodeClient.getQuote` via the

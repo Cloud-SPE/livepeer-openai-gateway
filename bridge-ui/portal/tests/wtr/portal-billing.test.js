@@ -19,8 +19,24 @@ afterEach(() => {
 
 const sampleTopups = {
   topups: [
-    { id: 't1', stripe_session_id: 'cs_abc1234567890123', amount_usd: '25.00', status: 'succeeded', created_at: '2026-04-20T00:00:00.000Z', refunded_at: null, disputed_at: null },
-    { id: 't2', stripe_session_id: 'cs_def1234567890123', amount_usd: '10.00', status: 'pending',   created_at: '2026-04-21T00:00:00.000Z', refunded_at: null, disputed_at: null },
+    {
+      id: 't1',
+      stripe_session_id: 'cs_abc1234567890123',
+      amount_usd: '25.00',
+      status: 'succeeded',
+      created_at: '2026-04-20T00:00:00.000Z',
+      refunded_at: null,
+      disputed_at: null,
+    },
+    {
+      id: 't2',
+      stripe_session_id: 'cs_def1234567890123',
+      amount_usd: '10.00',
+      status: 'pending',
+      created_at: '2026-04-21T00:00:00.000Z',
+      refunded_at: null,
+      disputed_at: null,
+    },
   ],
   next_cursor: null,
 };
@@ -57,8 +73,7 @@ describe('portal-billing', () => {
     // through with the expected cent amount, and (b) avoid exercising the
     // actual redirect path (window.location.assign is non-configurable in
     // Chromium, so we never let the component reach it).
-    const startStub = sinon.stub(topupsService, 'startCheckout')
-      .returns(new Promise(() => {})); // pending forever — component stays in `_starting`
+    const startStub = sinon.stub(topupsService, 'startCheckout').returns(new Promise(() => {})); // pending forever — component stays in `_starting`
 
     const el = await fixture(html`<portal-billing></portal-billing>`);
     await aTimeout(0);

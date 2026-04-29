@@ -90,7 +90,9 @@ describe('admin pricing — chat tiers', () => {
   it('PUT updates a tier and invalidates the cache', async () => {
     const { server, rateCardService } = await buildServer();
     try {
-      const before = rateCardService.current().chatRateCard.entries.find((e) => e.tier === 'starter');
+      const before = rateCardService
+        .current()
+        .chatRateCard.entries.find((e) => e.tier === 'starter');
       expect(before?.inputUsdPerMillion).toBe(0.05);
 
       const res = await server.app.inject({
@@ -103,7 +105,9 @@ describe('admin pricing — chat tiers', () => {
 
       // Give the post-write invalidate refresh a moment.
       await new Promise((r) => setTimeout(r, 50));
-      const after = rateCardService.current().chatRateCard.entries.find((e) => e.tier === 'starter');
+      const after = rateCardService
+        .current()
+        .chatRateCard.entries.find((e) => e.tier === 'starter');
       expect(after?.inputUsdPerMillion).toBe(0.07);
       expect(after?.outputUsdPerMillion).toBe(0.14);
     } finally {

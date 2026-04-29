@@ -22,9 +22,14 @@ describe('portal-settings', () => {
 
   it('renders account fields and rate-limit fields once data is loaded', async () => {
     accountService.set({
-      id: 'c1', email: 'who@x.io', tier: 'free', status: 'active',
-      balance_usd: '0.00', reserved_usd: '0.00',
-      free_tokens_remaining: 50_000, free_tokens_reset_at: '2026-05-01T00:00:00.000Z',
+      id: 'c1',
+      email: 'who@x.io',
+      tier: 'free',
+      status: 'active',
+      balance_usd: '0.00',
+      reserved_usd: '0.00',
+      free_tokens_remaining: 50_000,
+      free_tokens_reset_at: '2026-05-01T00:00:00.000Z',
       created_at: '2026-04-01T00:00:00.000Z',
     });
     sinon.stub(api, 'get').resolves({
@@ -48,9 +53,14 @@ describe('portal-settings', () => {
 
   it("shows 'unlimited' when monthly quota is null", async () => {
     accountService.set({
-      id: 'c2', email: 'p@x.io', tier: 'prepaid', status: 'active',
-      balance_usd: '5.00', reserved_usd: '0.00',
-      free_tokens_remaining: null, free_tokens_reset_at: null,
+      id: 'c2',
+      email: 'p@x.io',
+      tier: 'prepaid',
+      status: 'active',
+      balance_usd: '5.00',
+      reserved_usd: '0.00',
+      free_tokens_remaining: null,
+      free_tokens_reset_at: null,
       created_at: '2026-04-01T00:00:00.000Z',
     });
     sinon.stub(api, 'get').resolves({

@@ -155,15 +155,15 @@ labels: [bug, triage]
 body:
   - type: input
     id: version
-    attributes: { label: Version, description: "@cloudspe/livepeer-gateway-core version" }
+    attributes: { label: Version, description: '@cloudspe/livepeer-gateway-core version' }
     validations: { required: true }
   - type: input
     id: node
-    attributes: { label: Node version, description: "node --version output" }
+    attributes: { label: Node version, description: 'node --version output' }
     validations: { required: true }
   - type: textarea
     id: repro
-    attributes: { label: Minimal reproduction, description: "Smallest code that triggers the bug" }
+    attributes: { label: Minimal reproduction, description: 'Smallest code that triggers the bug' }
     validations: { required: true }
   - type: textarea
     id: expected
@@ -189,7 +189,11 @@ body:
     validations: { required: true }
   - type: textarea
     id: shape
-    attributes: { label: Proposed shape, description: "API/interface sketch (TypeScript signatures preferred)" }
+    attributes:
+      {
+        label: Proposed shape,
+        description: 'API/interface sketch (TypeScript signatures preferred)',
+      }
   - type: textarea
     id: alternatives
     attributes: { label: Alternatives considered }
@@ -207,21 +211,26 @@ body:
 
 ```markdown
 ## Summary
+
 <1–3 sentences>
 
 ## Linked exec-plan
-<docs/exec-plans/active/00XX-*.md, or "ephemeral" for trivial changes>
+
+<docs/exec-plans/active/00XX-\*.md, or "ephemeral" for trivial changes>
 
 ## Test plan
+
 - [ ] Unit tests added/updated
 - [ ] Integration tests added/updated
 - [ ] Coverage stays ≥ 75% on all v8 metrics
 - [ ] CHANGELOG entry added (under Unreleased)
 
 ## Breaking changes
+
 <None, or describe + flag the version bump required>
 
 ## Sign-off
+
 By submitting, I agree to the [DCO](https://developercertificate.org/) — my commit messages include `Signed-off-by:`.
 ```
 
@@ -231,7 +240,7 @@ Authored as part of stage 4 (referenced from there). This plan only ensures the 
 
 ### 9. Sample adapter docs
 
-`docs/adapters.md` in the public repo. Long-form guide for the **five operator-overridable adapters** (Wallet, AuthResolver, RateLimiter, Logger, AdminAuthResolver). Explicitly clarifies that `ServiceRegistryClient` is *not* an operator-overridable adapter — the engine commits to the `livepeer-modules-project/service-registry-daemon` as the canonical discovery source.
+`docs/adapters.md` in the public repo. Long-form guide for the **five operator-overridable adapters** (Wallet, AuthResolver, RateLimiter, Logger, AdminAuthResolver). Explicitly clarifies that `ServiceRegistryClient` is _not_ an operator-overridable adapter — the engine commits to the `livepeer-modules-project/service-registry-daemon` as the canonical discovery source.
 
 - Why adapters? (one-paragraph framing — what's swap-out, what's not)
 - `Wallet` interface — full TS signature, semantics of `null` reservation, partial-commit semantics, refund-on-failure.
@@ -260,8 +269,8 @@ Each is a single-file, ~50-LOC stub with an `npm test` smoke test.
 - [x] Author `LICENSE` (MIT verbatim, "Cloud-SPE contributors" copyright)
 - [x] Author `CONTRIBUTING.md` (sections: bug, proposal, dev setup, testing, style, commits, pre-1.0 policy, adapter contracts, CoC)
 - [x] Author `SECURITY.md` with `security@livepeer.cloud` as the reporting address
-- [ ] Provision `security@livepeer.cloud` + `conduct@livepeer.cloud` as forwarding aliases on the `livepeer.cloud` domain pointing to a monitored inbox *(operator-driven; must be live before stage-4 publish)*
-- [x] Author `CODE_OF_CONDUCT.md` (Contributor Covenant v2.1 verbatim) *(fetched from EthicalSource canonical source; Hugo front-matter stripped; `[INSERT CONTACT METHOD]` swapped to `conduct@livepeer.cloud`)*
+- [ ] Provision `security@livepeer.cloud` + `conduct@livepeer.cloud` as forwarding aliases on the `livepeer.cloud` domain pointing to a monitored inbox _(operator-driven; must be live before stage-4 publish)_
+- [x] Author `CODE_OF_CONDUCT.md` (Contributor Covenant v2.1 verbatim) _(fetched from EthicalSource canonical source; Hugo front-matter stripped; `[INSERT CONTACT METHOD]` swapped to `conduct@livepeer.cloud`)_
 - [x] Author `CHANGELOG.md` (Keep a Changelog format; 0.1.0 entry stub)
 - [x] Author `GOVERNANCE.md` (maintainers, decision rules, adding maintainers)
 - [x] Author `.github/ISSUE_TEMPLATE/bug.yml` + `proposal.yml`
@@ -269,7 +278,7 @@ Each is a single-file, ~50-LOC stub with an `npm test` smoke test.
 - [x] Author `docs/adapters.md` (public-repo destination)
 - [x] Author `examples/wallets/{postpaid,prepaid-usd,free-quota}.ts` + `examples/wallets/README.md`
 - [x] Confirm `package.json` field `"license": "MIT"` (was unset)
-- [ ] Confirm all the above are committed to `Cloud-SPE/livepeer-gateway-core` BEFORE the `v0.1.0` tag in [`0027`](./0027-engine-extraction-public-release.md) is pushed *(handed off to 0027 — files live in `packages/livepeer-gateway-core/` in the monorepo and ride along when 0027 carves the public repo)*
+- [ ] Confirm all the above are committed to `Cloud-SPE/livepeer-gateway-core` BEFORE the `v0.1.0` tag in [`0027`](./0027-engine-extraction-public-release.md) is pushed _(handed off to 0027 — files live in `packages/livepeer-gateway-core/` in the monorepo and ride along when 0027 carves the public repo)_
 
 ## Decisions log
 

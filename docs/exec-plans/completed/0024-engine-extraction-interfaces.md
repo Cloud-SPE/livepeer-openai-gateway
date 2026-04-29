@@ -110,7 +110,10 @@ export interface Logger {
 }
 
 export interface AdminAuthResolver {
-  resolve(req: { headers: Record<string, string | undefined>; ip: string }): Promise<{ actor: string } | null>;
+  resolve(req: {
+    headers: Record<string, string | undefined>;
+    ip: string;
+  }): Promise<{ actor: string } | null>;
 }
 ```
 
@@ -138,6 +141,7 @@ Existing `reserve/reserveQuota/commit/commitQuota/refund/refundQuota` functions 
 `src/providers/logger/console.ts` (new): default impl using `console.warn`/`console.error` with the existing `[bridge]` prefix convention.
 
 In `src/main.ts`:
+
 - Construct a `Logger` once.
 - Pass it to engine-bound providers and services that currently call `console.*` directly: `providers/payerDaemon/grpc.ts`, `service/nodes/quoteRefresher.ts`, the metrics server, the shutdown handler.
 

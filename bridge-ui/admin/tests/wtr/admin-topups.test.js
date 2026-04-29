@@ -11,7 +11,10 @@ beforeEach(() => {
   getStub = sinon.stub(api, 'get').resolves({ topups: [], next_cursor: null });
 });
 
-afterEach(() => { sinon.restore(); topupsService.reset(); });
+afterEach(() => {
+  sinon.restore();
+  topupsService.reset();
+});
 
 describe('admin-topups', () => {
   it('queries with no filters on first connect', async () => {
@@ -51,6 +54,8 @@ describe('admin-topups', () => {
     await el.updateComplete;
 
     expect(getStub.callCount).to.equal(2);
-    expect(getStub.secondCall.args[0]).to.contain('customer_id=12345678-aaaa-bbbb-cccc-1234567890ab');
+    expect(getStub.secondCall.args[0]).to.contain(
+      'customer_id=12345678-aaaa-bbbb-cccc-1234567890ab',
+    );
   });
 });

@@ -11,10 +11,10 @@ import './admin-rate-card-speech.js';
 import './admin-rate-card-transcriptions.js';
 
 const TABS = [
-  { key: 'chat',           label: 'Chat' },
-  { key: 'embeddings',     label: 'Embeddings' },
-  { key: 'images',         label: 'Images' },
-  { key: 'speech',         label: 'Speech' },
+  { key: 'chat', label: 'Chat' },
+  { key: 'embeddings', label: 'Embeddings' },
+  { key: 'images', label: 'Images' },
+  { key: 'speech', label: 'Speech' },
   { key: 'transcriptions', label: 'Transcriptions' },
 ];
 
@@ -28,7 +28,9 @@ export class AdminRateCard extends LitElement {
     this.tab = 'chat';
   }
 
-  createRenderRoot() { return this; }
+  createRenderRoot() {
+    return this;
+  }
 
   render() {
     const active = TABS.some((t) => t.key === this.tab) ? this.tab : 'chat';
@@ -36,27 +38,40 @@ export class AdminRateCard extends LitElement {
       <div class="page-header">
         <h1>Rate card</h1>
         <p class="muted text-sm">
-          Operator-managed pricing for all 5 capabilities. Edits take
-          effect immediately for new requests; in-flight reservations
-          honor the price quoted at reserve time.
+          Operator-managed pricing for all 5 capabilities. Edits take effect immediately for new
+          requests; in-flight reservations honor the price quoted at reserve time.
         </p>
       </div>
-      <nav class="sub-nav" style="display:flex; gap: var(--space-3); margin-bottom: var(--space-4); border-bottom: 1px solid var(--color-border);">
-        ${TABS.map((t) => html`
-          <button
-            type="button"
-            aria-current=${active === t.key ? 'page' : 'false'}
-            class=${active === t.key ? 'sub-nav-active' : ''}
-            style="padding: var(--space-2) var(--space-3); background: none; border: none; border-bottom: 2px solid ${active === t.key ? 'var(--color-primary)' : 'transparent'}; cursor: pointer;"
-            @click=${() => navigate(`rate-card/${t.key}`)}
-          >${t.label}</button>
-        `)}
+      <nav
+        class="sub-nav"
+        style="display:flex; gap: var(--space-3); margin-bottom: var(--space-4); border-bottom: 1px solid var(--color-border);"
+      >
+        ${TABS.map(
+          (t) => html`
+            <button
+              type="button"
+              aria-current=${active === t.key ? 'page' : 'false'}
+              class=${active === t.key ? 'sub-nav-active' : ''}
+              style="padding: var(--space-2) var(--space-3); background: none; border: none; border-bottom: 2px solid ${active ===
+              t.key
+                ? 'var(--color-primary)'
+                : 'transparent'}; cursor: pointer;"
+              @click=${() => navigate(`rate-card/${t.key}`)}
+            >
+              ${t.label}
+            </button>
+          `,
+        )}
       </nav>
-      ${active === 'chat'           ? html`<admin-rate-card-chat></admin-rate-card-chat>` : ''}
-      ${active === 'embeddings'     ? html`<admin-rate-card-embeddings></admin-rate-card-embeddings>` : ''}
-      ${active === 'images'         ? html`<admin-rate-card-images></admin-rate-card-images>` : ''}
-      ${active === 'speech'         ? html`<admin-rate-card-speech></admin-rate-card-speech>` : ''}
-      ${active === 'transcriptions' ? html`<admin-rate-card-transcriptions></admin-rate-card-transcriptions>` : ''}
+      ${active === 'chat' ? html`<admin-rate-card-chat></admin-rate-card-chat>` : ''}
+      ${active === 'embeddings'
+        ? html`<admin-rate-card-embeddings></admin-rate-card-embeddings>`
+        : ''}
+      ${active === 'images' ? html`<admin-rate-card-images></admin-rate-card-images>` : ''}
+      ${active === 'speech' ? html`<admin-rate-card-speech></admin-rate-card-speech>` : ''}
+      ${active === 'transcriptions'
+        ? html`<admin-rate-card-transcriptions></admin-rate-card-transcriptions>`
+        : ''}
     `;
   }
 }

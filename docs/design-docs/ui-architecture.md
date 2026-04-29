@@ -51,16 +51,16 @@ The `src/` tree is the bridge's TypeScript server. `bridge-ui/` is plain-JS brow
 
 ### What belongs in `shared/`
 
-| Belongs                                      | Belongs in the consumer                                |
-| -------------------------------------------- | ------------------------------------------------------ |
-| `@layer reset / tokens / base / utilities`   | `@layer layout` and `@layer components` (page-specific)|
-| `ObservableController` (no domain knowledge) | Domain services (`account.service`, `nodes.service`)   |
-| `createApi(...)` factory                     | Auth-strategy wrapper (Bearer key vs. admin+actor)     |
-| Validator combinators                        | Per-route response schemas                             |
-| Generic web components                       | App shell + page components                            |
-| Session-storage helpers + namespaced events  | Module-namespaced session keys                         |
+| Belongs                                      | Belongs in the consumer                                 |
+| -------------------------------------------- | ------------------------------------------------------- |
+| `@layer reset / tokens / base / utilities`   | `@layer layout` and `@layer components` (page-specific) |
+| `ObservableController` (no domain knowledge) | Domain services (`account.service`, `nodes.service`)    |
+| `createApi(...)` factory                     | Auth-strategy wrapper (Bearer key vs. admin+actor)      |
+| Validator combinators                        | Per-route response schemas                              |
+| Generic web components                       | App shell + page components                             |
+| Session-storage helpers + namespaced events  | Module-namespaced session keys                          |
 
-Rule of thumb: if two consumers would write the same code, it goes in shared. If they'd write *similar* code that differs in a parameter, the parameterized factory goes in shared and each consumer passes its parameters.
+Rule of thumb: if two consumers would write the same code, it goes in shared. If they'd write _similar_ code that differs in a parameter, the parameterized factory goes in shared and each consumer passes its parameters.
 
 ### What does not belong in `shared/`
 
@@ -74,10 +74,10 @@ Every consumer's stylesheet declares the layer order and pulls cross-UI layers f
 
 ```css
 @layer reset, tokens, base, layout, components, utilities;
-@import url("../shared/css/reset.css") layer(reset);
-@import url("../shared/css/tokens.css") layer(tokens);
-@import url("../shared/css/base.css") layer(base);
-@import url("../shared/css/utilities.css") layer(utilities);
+@import url('../shared/css/reset.css') layer(reset);
+@import url('../shared/css/tokens.css') layer(tokens);
+@import url('../shared/css/base.css') layer(base);
+@import url('../shared/css/utilities.css') layer(utilities);
 /* @layer layout and @layer components defined in this consumer's stylesheet */
 ```
 
@@ -99,7 +99,7 @@ The default is **light DOM** so cascade layers and `@scope` rules from the consu
 
 Components that **do** accept slotted children — `bridge-button`, `bridge-dialog` — use **shadow DOM**. `<slot>` is a shadow-DOM-specific feature; in light DOM, `<slot>` is inert and consumer-slotted content stays outside the rendered template. For `bridge-button` this means the slotted text renders alongside the inner empty `<button>` instead of inside it (visually broken). For `bridge-dialog` it's worse: when `dialog.showModal()` runs, slotted action buttons end up outside the modal's top layer and become unclickable.
 
-CSS custom properties cross the shadow boundary via inheritance, so the global `--accent`, `--surface-1`, etc. tokens still drive these components without re-declaration. They use `static styles = css\`...\`` for component-scoped CSS. One trade-off: native form submission doesn't cross the shadow boundary, so `<bridge-button type="submit">` manually calls `form.requestSubmit()` on the closest ancestor `<form>` to preserve the expected behavior.
+CSS custom properties cross the shadow boundary via inheritance, so the global `--accent`, `--surface-1`, etc. tokens still drive these components without re-declaration. They use `static styles = css\`...\``for component-scoped CSS. One trade-off: native form submission doesn't cross the shadow boundary, so`<bridge-button type="submit">`manually calls`form.requestSubmit()`on the closest ancestor`<form>` to preserve the expected behavior.
 
 Tests query light-DOM components with `el.querySelector(...)` and shadow-DOM components with `el.shadowRoot.querySelector(...)`. Slotted children remain on the host's light DOM in both cases.
 
@@ -116,23 +116,32 @@ import { ObservableController } from '../../shared/controllers/observable-contro
 import { accountService } from '../lib/services/account.service.js';
 
 export class PortalDashboard extends LitElement {
-  static properties = { /* local UI state only */ };
-  createRenderRoot() { return this; }   // light DOM
+  static properties = {
+    /* local UI state only */
+  };
+  createRenderRoot() {
+    return this;
+  } // light DOM
   constructor() {
     super();
     this.account = new ObservableController(this, accountService.account$);
   }
-  connectedCallback() { super.connectedCallback(); accountService.refresh(); }
+  connectedCallback() {
+    super.connectedCallback();
+    accountService.refresh();
+  }
   render() {
     const a = this.account.value;
     if (!a) return html`<bridge-spinner></bridge-spinner>`;
-    return html`<section class="balance">${formatUsd(a.balance_usd)}</section>...`;
+    return html`<section class="balance">${formatUsd(a.balance_usd)}</section>
+      ...`;
   }
 }
 customElements.define('portal-dashboard', PortalDashboard);
 ```
 
 Rules:
+
 - Local props for ephemeral UI state (form fields, `loading`, `error`, `dialogOpen`). Domain state from RxJS services via `ObservableController`.
 - Cross-cutting signals via `bridge:`-namespaced `CustomEvent` on `window`: `bridge:authenticated`, `bridge:unauthorized`, `bridge:routechange`.
 - Components never call `fetch` directly. They call service methods.
@@ -146,6 +155,7 @@ Each consumer's services own `BehaviorSubject`s and expose them as `Observable`s
 ## Auth and credential handling
 
 Every UI module:
+
 1. Has a sign-in page that captures whatever credential the bridge expects (portal: API key as Bearer; admin: `ADMIN_TOKEN` + operator name).
 2. Stores the credential in **`sessionStorage`** under a module-namespaced key (`bridge.portal.session`, `bridge.admin.session`). Tab-scoped — closing the tab signs out.
 3. Wraps the shared `createApi(...)` factory with a module-specific `getAuthHeaders` that reads from sessionStorage.

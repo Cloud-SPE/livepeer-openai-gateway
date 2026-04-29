@@ -22,12 +22,24 @@ export const rateCardService = {
   transcriptions$: _transcriptions.asObservable(),
 
   // Snapshot getters.
-  get chatTiers()      { return _chatTiers.getValue(); },
-  get chatModels()     { return _chatModels.getValue(); },
-  get embeddings()     { return _embeddings.getValue(); },
-  get images()         { return _images.getValue(); },
-  get speech()         { return _speech.getValue(); },
-  get transcriptions() { return _transcriptions.getValue(); },
+  get chatTiers() {
+    return _chatTiers.getValue();
+  },
+  get chatModels() {
+    return _chatModels.getValue();
+  },
+  get embeddings() {
+    return _embeddings.getValue();
+  },
+  get images() {
+    return _images.getValue();
+  },
+  get speech() {
+    return _speech.getValue();
+  },
+  get transcriptions() {
+    return _transcriptions.getValue();
+  },
 
   // ── Chat tier prices ─────────────────────────────────────────────────────
 

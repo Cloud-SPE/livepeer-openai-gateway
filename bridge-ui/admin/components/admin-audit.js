@@ -21,13 +21,21 @@ export class AdminAudit extends LitElement {
     this._debounce = null;
   }
 
-  createRenderRoot() { return this; }
+  createRenderRoot() {
+    return this;
+  }
 
   async connectedCallback() {
     super.connectedCallback();
     if (!auditService.value) {
-      try { await auditService.search({ limit: 200 }); }
-      catch (err) { showToast({ kind: 'error', message: err instanceof Error ? err.message : 'Failed to load audit.' }); }
+      try {
+        await auditService.search({ limit: 200 });
+      } catch (err) {
+        showToast({
+          kind: 'error',
+          message: err instanceof Error ? err.message : 'Failed to load audit.',
+        });
+      }
     }
   }
 
@@ -44,44 +52,74 @@ export class AdminAudit extends LitElement {
         <bridge-button variant="ghost" @click=${this._exportCsv}>Export CSV</bridge-button>
       </div>
 
-      <section style="display: flex; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-4)">
+      <section
+        style="display: flex; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-4)"
+      >
         <input
           type="text"
           placeholder="Actor (e.g. alice)"
           .value=${this._actor}
-          @input=${(e) => { this._actor = e.target.value; this._schedule(); }}
+          @input=${(e) => {
+            this._actor = e.target.value;
+            this._schedule();
+          }}
           style="width: 14rem"
         />
         <input
           type="text"
           placeholder="Action substring (e.g. /admin/customers)"
           .value=${this._action}
-          @input=${(e) => { this._action = e.target.value; this._schedule(); }}
+          @input=${(e) => {
+            this._action = e.target.value;
+            this._schedule();
+          }}
           style="width: 22rem"
         />
         <bridge-button variant="ghost" @click=${this._clear}>Clear</bridge-button>
       </section>
 
-      ${s === null ? html`<bridge-spinner></bridge-spinner>` : html`
-        <bridge-table
-          .columns=${this._columns()}
-          .rows=${s.events}
-          empty="No audit events match this query."
-        ></bridge-table>
-      `}
+      ${s === null
+        ? html`<bridge-spinner></bridge-spinner>`
+        : html`
+            <bridge-table
+              .columns=${this._columns()}
+              .rows=${s.events}
+              empty="No audit events match this query."
+            ></bridge-table>
+          `}
     `;
   }
 
   _columns() {
     return [
-      { field: 'occurred_at', header: 'When', render: (e) => new Date(e.occurred_at).toLocaleString() },
-      { field: 'actor', header: 'Actor', render: (e) => html`<span class="mono text-xs">${e.actor}</span>` },
-      { field: 'action', header: 'Action', render: (e) => html`<span class="mono text-xs">${e.action}</span>` },
-      { field: 'target_id', header: 'Target', render: (e) => e.target_id ? html`<span class="mono text-xs">${e.target_id.slice(0, 12)}…</span>` : html`<span class="muted">—</span>` },
+      {
+        field: 'occurred_at',
+        header: 'When',
+        render: (e) => new Date(e.occurred_at).toLocaleString(),
+      },
+      {
+        field: 'actor',
+        header: 'Actor',
+        render: (e) => html`<span class="mono text-xs">${e.actor}</span>`,
+      },
+      {
+        field: 'action',
+        header: 'Action',
+        render: (e) => html`<span class="mono text-xs">${e.action}</span>`,
+      },
+      {
+        field: 'target_id',
+        header: 'Target',
+        render: (e) =>
+          e.target_id
+            ? html`<span class="mono text-xs">${e.target_id.slice(0, 12)}…</span>`
+            : html`<span class="muted">—</span>`,
+      },
       {
         field: 'status_code',
         header: 'Status',
-        render: (e) => html`<span data-status=${statusCategory(e.status_code)}>${e.status_code}</span>`,
+        render: (e) =>
+          html`<span data-status=${statusCategory(e.status_code)}>${e.status_code}</span>`,
       },
     ];
   }
@@ -95,8 +133,11 @@ export class AdminAudit extends LitElement {
     const params = { limit: 200 };
     if (this._actor.trim()) params.actor = this._actor.trim();
     if (this._action.trim()) params.action = this._action.trim();
-    try { await auditService.search(params); }
-    catch (err) { showToast({ kind: 'error', message: err instanceof Error ? err.message : 'Search failed.' }); }
+    try {
+      await auditService.search(params);
+    } catch (err) {
+      showToast({ kind: 'error', message: err instanceof Error ? err.message : 'Search failed.' });
+    }
   }
 
   async _clear() {

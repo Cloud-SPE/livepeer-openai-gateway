@@ -13,6 +13,7 @@ opened: 2026-04-26
 Stage 4 of a 4-stage extraction. With the engine isolated as a workspace package from [`0026`](../completed/0026-engine-extraction-workspace.md), this stage bootstraps the public OSS repo `Cloud-SPE/livepeer-gateway-core` on GitHub, syncs the engine package over, sets up CI to build/test/publish-on-tag, ships a runnable `examples/minimal-shell/` (using `InMemoryWallet` + a no-op `AuthResolver`) so adopters can clone-and-run in 30 seconds, cuts version `0.1.0`, and rewires this repo to consume the engine via npm dep instead of the workspace symlink.
 
 After this stage:
+
 - Public GitHub repo `Cloud-SPE/livepeer-gateway-core` exists, MIT-licensed, with the engine source.
 - Engine published to npm as `@cloudspe/livepeer-gateway-core@0.1.0` (placeholder scope; the published name may move to `@livepeer/*` or another org before public announcement — the placeholder is documented and swappable in one PR).
 - Public repo has CI: build matrix (Node 20, 22), `npm test`, `npm run lint`, `npm run typecheck`, publish-on-tag-with-`v*`-prefix.
@@ -124,23 +125,46 @@ const wallet = new InMemoryWallet();
 const authResolver = createNoopAuthResolver({ defaultTier: 'free' });
 const nodeClient = createFetchNodeClient();
 const payerDaemonConfig = loadPayerDaemonConfig();
-const payerDaemon = createGrpcPayerDaemonClient({ config: payerDaemonConfig, scheduler: realScheduler() });
+const payerDaemon = createGrpcPayerDaemonClient({
+  config: payerDaemonConfig,
+  scheduler: realScheduler(),
+});
 const sessionCache = createSessionCache({ payerDaemon });
 const paymentsService = createPaymentsService({ payerDaemon, sessions: sessionCache });
-const serviceRegistry = createGrpcServiceRegistryClient({ config: loadServiceRegistryConfig(), scheduler: realScheduler() });
+const serviceRegistry = createGrpcServiceRegistryClient({
+  config: loadServiceRegistryConfig(),
+  scheduler: realScheduler(),
+});
 const circuitBreaker = createCircuitBreaker();
 const quoteCache = createQuoteCache();
 const pricing = loadPricingConfig();
 
-createQuoteRefresher({ serviceRegistry, nodeClient, quoteCache, scheduler: realScheduler(), bridgeEthAddress: payerDaemonConfig.bridgeEthAddress, recorder: new NoopRecorder() }).start();
+createQuoteRefresher({
+  serviceRegistry,
+  nodeClient,
+  quoteCache,
+  scheduler: realScheduler(),
+  bridgeEthAddress: payerDaemonConfig.bridgeEthAddress,
+  recorder: new NoopRecorder(),
+}).start();
 
 const app = Fastify();
-registerChatCompletionsRoute(app, { wallet, authResolver, serviceRegistry, circuitBreaker, quoteCache, nodeClient, paymentsService, pricing });
+registerChatCompletionsRoute(app, {
+  wallet,
+  authResolver,
+  serviceRegistry,
+  circuitBreaker,
+  quoteCache,
+  nodeClient,
+  paymentsService,
+  pricing,
+});
 await app.listen({ port: 8080 });
 console.log('Minimal shell running on :8080');
 ```
 
 `examples/minimal-shell/compose.yaml` brings up:
+
 - `service-registry-daemon` (config: `./service-registry-config.yaml`) on socket `/var/run/livepeer/service-registry.sock`
 - `payment-daemon` (sender mode, config: `./payment-daemon-config.yaml`) on socket `/var/run/livepeer/payment-daemon.sock`
 - `minimal-shell` (this example) bind-mounting both sockets
@@ -229,6 +253,7 @@ This repo's policy: pin to `^0.1.0` style range; bump explicitly. No auto-update
 ### 8. Public-facing README content
 
 `README.md` must:
+
 - One-paragraph elevator pitch (OpenAI-compatible engine fronting Livepeer worker pools; bring your own billing/auth/rate-limit via adapters).
 - Quickstart (`npm install @cloudspe/livepeer-gateway-core` → minimal-shell example).
 - Adapter overview (Wallet, AuthResolver, RateLimiter, Logger, AdminAuthResolver).
@@ -260,6 +285,7 @@ Engine-relevant design-docs that move (copy + history-discarded since the public
 - `docs/references/openai-bridge-architecture.md` → splits: an engine-architecture variant lives in the public repo; a shell-architecture variant stays here.
 
 This repo retains:
+
 - `docs/design-docs/tiers.md` (customer tiers — shell concept)
 - `docs/design-docs/stripe-integration.md`
 - `docs/design-docs/ui-architecture.md`

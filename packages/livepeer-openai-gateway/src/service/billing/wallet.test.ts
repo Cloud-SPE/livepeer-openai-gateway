@@ -2,7 +2,10 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
 import { startTestPg, type TestPg } from './testPg.js';
 import * as customersRepo from '../../repo/customers.js';
-import type { CostQuote, UsageReport } from '@cloudspe/livepeer-openai-gateway-core/interfaces/index.js';
+import type {
+  CostQuote,
+  UsageReport,
+} from '@cloudspe/livepeer-openai-gateway-core/interfaces/index.js';
 import { UnknownCallerTierError } from '@cloudspe/livepeer-openai-gateway-core/service/billing/errors.js';
 import { createPrepaidQuotaWallet } from './wallet.js';
 
@@ -139,8 +142,8 @@ describe('createPrepaidQuotaWallet — tier mismatch', () => {
     const id = await seedPrepaidCustomer(1000n);
     const wallet = createPrepaidQuotaWallet({ db: pg.db });
 
-    await expect(
-      wallet.reserve(id, quote({ callerTier: 'enterprise' })),
-    ).rejects.toBeInstanceOf(UnknownCallerTierError);
+    await expect(wallet.reserve(id, quote({ callerTier: 'enterprise' }))).rejects.toBeInstanceOf(
+      UnknownCallerTierError,
+    );
   });
 });

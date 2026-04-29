@@ -9,9 +9,14 @@ import { api } from '../../lib/api.js';
 import { session } from '../../lib/session.js';
 
 const ACCOUNT = {
-  id: 'c1', email: 'a@x.io', tier: 'prepaid', status: 'active',
-  balance_usd: '5.00', reserved_usd: '0.00',
-  free_tokens_remaining: null, free_tokens_reset_at: null,
+  id: 'c1',
+  email: 'a@x.io',
+  tier: 'prepaid',
+  status: 'active',
+  balance_usd: '5.00',
+  reserved_usd: '0.00',
+  free_tokens_remaining: null,
+  free_tokens_reset_at: null,
   created_at: '2026-04-20T00:00:00.000Z',
 };
 
@@ -115,8 +120,9 @@ describe('portal-app', () => {
     await aTimeout(0);
     await el.updateComplete;
 
-    const signOutBtn = [...el.querySelectorAll('header.app-bar bridge-button')]
-      .find((b) => b.textContent.trim() === 'Sign out');
+    const signOutBtn = [...el.querySelectorAll('header.app-bar bridge-button')].find(
+      (b) => b.textContent.trim() === 'Sign out',
+    );
     expect(signOutBtn).to.exist;
     signOutBtn.click();
     await aTimeout(0);

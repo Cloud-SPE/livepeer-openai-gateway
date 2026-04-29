@@ -24,10 +24,7 @@ export interface AuditSearchInput {
 }
 
 /** Operator-side audit feed. Cursor pages descending by occurredAt. */
-export async function search(
-  db: Db,
-  input: AuditSearchInput,
-): Promise<AdminAuditEventRow[]> {
+export async function search(db: Db, input: AuditSearchInput): Promise<AdminAuditEventRow[]> {
   const conds = [];
   if (input.from) conds.push(gte(adminAuditEvents.occurredAt, input.from));
   if (input.to) conds.push(lt(adminAuditEvents.occurredAt, input.to));

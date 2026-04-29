@@ -1,6 +1,11 @@
 import { LitElement, html } from 'lit';
 import { BRIDGE_EVENTS, on } from '../../shared/lib/events.js';
-import { onHashChange, resolveRoute, withViewTransition, navigate } from '../../shared/lib/route.js';
+import {
+  onHashChange,
+  resolveRoute,
+  withViewTransition,
+  navigate,
+} from '../../shared/lib/route.js';
 import { healthService } from '../lib/services/health.service.js';
 import { nodesService } from '../lib/services/nodes.service.js';
 import { customersService } from '../lib/services/customers.service.js';
@@ -22,7 +27,16 @@ import './admin-audit.js';
 import './admin-config.js';
 import './admin-rate-card.js';
 
-const TOP_VIEWS = ['health', 'nodes', 'customers', 'reservations', 'topups', 'rate-card', 'audit', 'config'];
+const TOP_VIEWS = [
+  'health',
+  'nodes',
+  'customers',
+  'reservations',
+  'topups',
+  'rate-card',
+  'audit',
+  'config',
+];
 const ALL_PREFIXES = TOP_VIEWS;
 
 function viewFromHash() {
@@ -44,25 +58,37 @@ export class AdminApp extends LitElement {
     this._unsubs = [];
   }
 
-  createRenderRoot() { return this; }
+  createRenderRoot() {
+    return this;
+  }
 
   connectedCallback() {
     super.connectedCallback();
-    this._unsubs.push(onHashChange(() => {
-      const next = viewFromHash();
-      withViewTransition(() => { this._route = next; });
-    }));
-    this._unsubs.push(on(BRIDGE_EVENTS.AUTHENTICATED, () => { this._authed = true; }));
-    this._unsubs.push(on(BRIDGE_EVENTS.UNAUTHORIZED, () => {
-      this._authed = false;
-      healthService.reset();
-      nodesService.reset();
-      customersService.reset();
-      reservationsService.reset();
-      topupsService.reset();
-      auditService.reset();
-      configService.reset();
-    }));
+    this._unsubs.push(
+      onHashChange(() => {
+        const next = viewFromHash();
+        withViewTransition(() => {
+          this._route = next;
+        });
+      }),
+    );
+    this._unsubs.push(
+      on(BRIDGE_EVENTS.AUTHENTICATED, () => {
+        this._authed = true;
+      }),
+    );
+    this._unsubs.push(
+      on(BRIDGE_EVENTS.UNAUTHORIZED, () => {
+        this._authed = false;
+        healthService.reset();
+        nodesService.reset();
+        customersService.reset();
+        reservationsService.reset();
+        topupsService.reset();
+        auditService.reset();
+        configService.reset();
+      }),
+    );
   }
 
   disconnectedCallback() {
@@ -79,13 +105,17 @@ export class AdminApp extends LitElement {
       <header class="app-bar">
         <div class="brand">Livepeer Bridge<span class="scope">admin</span></div>
         <nav class="nav">
-          ${TOP_VIEWS.map((v) => html`
-            <button
-              type="button"
-              aria-current=${top === v ? 'page' : 'false'}
-              @click=${() => navigate(v)}
-            >${labelFor(v)}</button>
-          `)}
+          ${TOP_VIEWS.map(
+            (v) => html`
+              <button
+                type="button"
+                aria-current=${top === v ? 'page' : 'false'}
+                @click=${() => navigate(v)}
+              >
+                ${labelFor(v)}
+              </button>
+            `,
+          )}
         </nav>
         <div class="meta">
           ${actor ? html`<span class="actor-pill">${actor}</span>` : ''}
@@ -108,13 +138,20 @@ export class AdminApp extends LitElement {
       return html`<admin-customer-detail .customerId=${parts[1]}></admin-customer-detail>`;
     }
     switch (head) {
-      case 'nodes': return html`<admin-nodes></admin-nodes>`;
-      case 'customers': return html`<admin-customers></admin-customers>`;
-      case 'reservations': return html`<admin-reservations></admin-reservations>`;
-      case 'topups': return html`<admin-topups></admin-topups>`;
-      case 'audit': return html`<admin-audit></admin-audit>`;
-      case 'config': return html`<admin-config></admin-config>`;
-      case 'rate-card': return html`<admin-rate-card .tab=${parts[1] ?? 'chat'}></admin-rate-card>`;
+      case 'nodes':
+        return html`<admin-nodes></admin-nodes>`;
+      case 'customers':
+        return html`<admin-customers></admin-customers>`;
+      case 'reservations':
+        return html`<admin-reservations></admin-reservations>`;
+      case 'topups':
+        return html`<admin-topups></admin-topups>`;
+      case 'audit':
+        return html`<admin-audit></admin-audit>`;
+      case 'config':
+        return html`<admin-config></admin-config>`;
+      case 'rate-card':
+        return html`<admin-rate-card .tab=${parts[1] ?? 'chat'}></admin-rate-card>`;
       case 'health':
       default:
         return html`<admin-health></admin-health>`;

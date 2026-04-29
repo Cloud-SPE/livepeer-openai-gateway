@@ -3,10 +3,10 @@
 
 @layer reset, tokens, base, layout, components, utilities;
 
-@import url("../shared/css/reset.css") layer(reset);
-@import url("../shared/css/tokens.css") layer(tokens);
-@import url("../shared/css/base.css") layer(base);
-@import url("../shared/css/utilities.css") layer(utilities);
+@import url('../shared/css/reset.css') layer(reset);
+@import url('../shared/css/tokens.css') layer(tokens);
+@import url('../shared/css/base.css') layer(base);
+@import url('../shared/css/utilities.css') layer(utilities);
 
 @layer layout {
   portal-app {
@@ -41,10 +41,14 @@
     border-radius: var(--radius-md);
     font-size: var(--font-size-sm);
     color: var(--text-2);
-    transition: background var(--duration-fast) var(--ease-standard),
-                color var(--duration-fast) var(--ease-standard);
+    transition:
+      background var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard);
   }
-  portal-app header.app-bar .nav button:hover { background: var(--surface-2); color: var(--text-1); }
+  portal-app header.app-bar .nav button:hover {
+    background: var(--surface-2);
+    color: var(--text-1);
+  }
   portal-app header.app-bar .nav button[aria-current='page'] {
     background: var(--accent-tint);
     color: var(--accent);
@@ -95,10 +99,22 @@
     display: grid;
     gap: var(--space-4);
   }
-  portal-login h1 { font-size: var(--font-size-2xl); margin: 0; }
-  portal-login p { font-size: var(--font-size-sm); margin: 0; }
-  portal-login .field { display: grid; gap: var(--space-2); }
-  portal-login label { font-size: var(--font-size-sm); color: var(--text-2); }
+  portal-login h1 {
+    font-size: var(--font-size-2xl);
+    margin: 0;
+  }
+  portal-login p {
+    font-size: var(--font-size-sm);
+    margin: 0;
+  }
+  portal-login .field {
+    display: grid;
+    gap: var(--space-2);
+  }
+  portal-login label {
+    font-size: var(--font-size-sm);
+    color: var(--text-2);
+  }
   portal-login input {
     font-family: var(--font-mono);
     font-size: var(--font-size-sm);
@@ -116,7 +132,9 @@
     display: grid;
     gap: var(--space-5);
   }
-  portal-dashboard h1 { margin: 0; }
+  portal-dashboard h1 {
+    margin: 0;
+  }
   portal-dashboard .grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
@@ -137,7 +155,7 @@
     font-size: clamp(1.75rem, 1.4rem + 1.5vw, 2.5rem);
     font-weight: 700;
     color: var(--text-1);
-    font-feature-settings: "tnum";
+    font-feature-settings: 'tnum';
   }
   portal-dashboard .tile.has-warning:has([data-low='true']) {
     border-color: var(--warning);
@@ -156,7 +174,9 @@
   }
 
   /* Keys */
-  portal-keys h1 { margin-top: 0; }
+  portal-keys h1 {
+    margin-top: 0;
+  }
   portal-keys .toolbar {
     display: flex;
     justify-content: space-between;
@@ -181,8 +201,13 @@
     font-size: var(--font-size-sm);
     overflow-wrap: anywhere;
   }
-  portal-keys .key-status[data-revoked='true'] { color: var(--text-3); }
-  portal-keys .key-status[data-revoked='false'] { color: var(--success); font-weight: 600; }
+  portal-keys .key-status[data-revoked='true'] {
+    color: var(--text-3);
+  }
+  portal-keys .key-status[data-revoked='false'] {
+    color: var(--success);
+    font-weight: 600;
+  }
 
   /* Page header */
   .page-header {
@@ -192,5 +217,7 @@
     gap: var(--space-3);
     margin-bottom: var(--space-5);
   }
-  .page-header h1 { margin: 0; }
+  .page-header h1 {
+    margin: 0;
+  }
 }

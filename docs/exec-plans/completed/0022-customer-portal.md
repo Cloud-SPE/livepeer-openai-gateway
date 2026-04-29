@@ -93,6 +93,7 @@ bridge-ui/
 **Shared module mechanics**: `bridge-ui/shared/` is a directory of source files, **not** an npm package with its own `node_modules` or build. Consumers import via relative paths (`import { ObservableController } from '../shared/controllers/observable-controller.js'`). Vite tree-shakes from each consumer's bundle. `shared/package.json` declares `peerDependencies` only (`lit ^3.3`, `rxjs ^7.8`) and a one-line description; no `dependencies`, no `scripts`. This matches the reference UI's "no monorepo tooling" simplification while still making the boundary explicit.
 
 **What belongs in `shared/`** — primitives reusable across any UI in the bridge fleet:
+
 - Cross-cutting CSS layers (`reset`, `tokens`, `base`, `utilities`) — the `@layer components` block stays per-module since component blocks are domain-specific.
 - The `ObservableController` (RxJS ↔ Lit glue, no domain knowledge).
 - `api-base.js` — a `createApi({ baseUrl, getAuthHeader, onUnauthorized })` factory; consumers wrap with their own auth strategy (Bearer key for portal, `X-Admin-Token` + `X-Admin-Actor` for admin).
@@ -101,6 +102,7 @@ bridge-ui/
 - Session-storage and namespaced-event helpers.
 
 **What does NOT belong in `shared/`** — domain or app-shell concerns:
+
 - Domain services (`account.service`, `nodes.service`) — module-specific.
 - App shell components (`portal-app`, `admin-app`) — different routing tables, different auth UIs.
 - Page components — module-specific.
@@ -108,6 +110,7 @@ bridge-ui/
 - Auth-header strategy details — Bearer key vs admin token + actor.
 
 Tasks:
+
 - [x] `bridge-ui/shared/package.json` — `peerDependencies`: `lit ^3.3`, `rxjs ^7.8`. No `dependencies`. No `scripts`.
 - [x] `bridge-ui/shared/README.md` — what belongs / does not belong (mirror the lists above), peer-version expectations, "imported via relative paths, not as an npm package."
 - [x] All `bridge-ui/shared/css/*.css`, `controllers/`, `lib/`, `components/` files listed above.
@@ -125,10 +128,10 @@ Layer order is the project standard, declared in `bridge-ui/portal/portal.css` a
 
 ```css
 @layer reset, tokens, base, layout, components, utilities;
-@import url("../shared/css/reset.css") layer(reset);
-@import url("../shared/css/tokens.css") layer(tokens);
-@import url("../shared/css/base.css") layer(base);
-@import url("../shared/css/utilities.css") layer(utilities);
+@import url('../shared/css/reset.css') layer(reset);
+@import url('../shared/css/tokens.css') layer(tokens);
+@import url('../shared/css/base.css') layer(base);
+@import url('../shared/css/utilities.css') layer(utilities);
 /* @layer layout and @layer components defined below, in this file */
 ```
 
@@ -147,24 +150,47 @@ Layer order is the project standard, declared in `bridge-ui/portal/portal.css` a
   @layer components {
     portal-dashboard {
       @scope (portal-dashboard) to (portal-dashboard .nested-app) {
-        .balance { font-size: clamp(2rem, 6cqi, 3.5rem); }
-        .quota:has([data-low='true']) { color: var(--warning); }
+        .balance {
+          font-size: clamp(2rem, 6cqi, 3.5rem);
+        }
+        .quota:has([data-low='true']) {
+          color: var(--warning);
+        }
       }
     }
-    portal-keys table { container-type: inline-size; }
+    portal-keys table {
+      container-type: inline-size;
+    }
     @container (max-width: 600px) {
-      portal-keys table { display: none; }
-      portal-keys .cards { display: grid; gap: var(--space-3); }
+      portal-keys table {
+        display: none;
+      }
+      portal-keys .cards {
+        display: grid;
+        gap: var(--space-3);
+      }
     }
   }
   ```
 - [x] `shared/css/utilities.css` — single-purpose helpers (`.sr-only`, `.flex-center`, `.truncate`, etc.).
 
-**Light DOM caveat for shared components**: even though shared/components live in light DOM, their generic styles ship as tagged-template `static styles = css\`...\`` blocks that Lit applies via constructable stylesheets. With `createRenderRoot() { return this; }` Lit ignores `static styles`, so shared components instead inject their CSS into `document.adoptedStyleSheets` once on first construction (idempotent, keyed by tag name). Documented in `shared/components/README.md` and the design doc.
+**Light DOM caveat for shared components**: even though shared/components live in light DOM, their generic styles ship as tagged-template `static styles = css\`...\``blocks that Lit applies via constructable stylesheets. With`createRenderRoot() { return this; }`Lit ignores`static styles`, so shared components instead inject their CSS into `document.adoptedStyleSheets`once on first construction (idempotent, keyed by tag name). Documented in`shared/components/README.md` and the design doc.
+
 - [x] **Entry animations**: `@starting-style` on dialogs, menus, toasts. Example:
   ```css
-  dialog[open] { opacity: 1; translate: 0 0; transition: opacity .15s, translate .15s; }
-  @starting-style { dialog[open] { opacity: 0; translate: 0 -8px; } }
+  dialog[open] {
+    opacity: 1;
+    translate: 0 0;
+    transition:
+      opacity 0.15s,
+      translate 0.15s;
+  }
+  @starting-style {
+    dialog[open] {
+      opacity: 0;
+      translate: 0 -8px;
+    }
+  }
   ```
 - [x] **View Transitions** wrap the route swap (manually triggered — hash routing is JS-driven). `portal-app._setView` calls `document.startViewTransition(() => { this.view = next; })` when supported, else falls through.
 - [x] **Popover API** for contextual menus and the "I've saved my new key" confirmation: `popover` attribute + `:popover-open` styling, with `::backdrop` dim.
@@ -189,11 +215,15 @@ Pattern: each service exports a singleton object owning one or more `BehaviorSub
   // representative shape
   import { BehaviorSubject } from 'rxjs';
   import { api } from '../api.js';
-  const _account = new BehaviorSubject(/** @type {AccountSummary|null} */(null));
+  const _account = new BehaviorSubject(/** @type {AccountSummary|null} */ (null));
   export const accountService = {
     account$: _account.asObservable(),
-    async refresh() { _account.next(await api.get('/v1/account')); },
-    signOut() { _account.next(null); },
+    async refresh() {
+      _account.next(await api.get('/v1/account'));
+    },
+    signOut() {
+      _account.next(null);
+    },
   };
   ```
 - [x] `lib/services/keys.service.js` — `keys$`, `create(label)` (optimistic insert with `pending: true`, replace on response or rollback on error), `revoke(id)` (optimistic mark, rollback on 412).
@@ -209,8 +239,15 @@ Pattern: each service exports a singleton object owning one or more `BehaviorSub
       this.value = initial;
       host.addController(this);
     }
-    hostConnected() { this._sub = this.observable.subscribe(v => { this.value = v; this.host.requestUpdate(); }); }
-    hostDisconnected() { this._sub?.unsubscribe(); }
+    hostConnected() {
+      this._sub = this.observable.subscribe((v) => {
+        this.value = v;
+        this.host.requestUpdate();
+      });
+    }
+    hostDisconnected() {
+      this._sub?.unsubscribe();
+    }
   }
   ```
 - [x] `bridge-ui/shared/lib/api-base.js` — fetch wrapper **factory**, not a singleton:
@@ -219,12 +256,21 @@ Pattern: each service exports a singleton object owning one or more `BehaviorSub
   export function createApi({ baseUrl, getAuthHeaders, onUnauthorized, parseResponse }) {
     return {
       async request(method, path, body) {
-        const res = await fetch(`${baseUrl}${path}`, { method, headers: { ...getAuthHeaders(), 'content-type': 'application/json' }, body: body && JSON.stringify(body) });
-        if (res.status === 401) { onUnauthorized(); throw new Error('unauthorized'); }
+        const res = await fetch(`${baseUrl}${path}`, {
+          method,
+          headers: { ...getAuthHeaders(), 'content-type': 'application/json' },
+          body: body && JSON.stringify(body),
+        });
+        if (res.status === 401) {
+          onUnauthorized();
+          throw new Error('unauthorized');
+        }
         if (!res.ok) throw new Error(`http_${res.status}`);
         return parseResponse(path, await res.json());
       },
-      get(path) { return this.request('GET', path); },
+      get(path) {
+        return this.request('GET', path);
+      },
       // post / delete / etc.
     };
   }
@@ -259,6 +305,7 @@ All routes require `Authorization: Bearer <api-key>` (existing customer-auth mid
 - [x] `GET /v1/account/limits` → `{ tier, max_concurrent, requests_per_minute, max_tokens_per_request, monthly_token_quota }` (rate-card view).
 
 Files:
+
 - [x] `src/runtime/http/account/routes.ts` — Fastify plugin.
 - [x] `src/runtime/http/account/usage.test.ts` — rollup grouping, date-range edges.
 - [x] `src/repo/customers.ts` — extend with `findApiKeysByCustomer`, `insertApiKey`, `revokeApiKey`.
@@ -280,7 +327,7 @@ Files:
 
 - [x] **New design doc** `docs/design-docs/ui-architecture.md` — captures: Lit + RxJS + modern CSS; `bridge-ui/` sibling layout with `shared/` + per-consumer module split (what belongs in shared, what does not); light DOM rationale + adoptedStyleSheets caveat for shared component CSS; cascade layer order with `@import url(...) layer(...)` pulls from shared; OKLCH + `light-dark()` theming; `ObservableController` pattern; namespaced `bridge:` events; hash routing + View Transitions; sessionStorage credential; per-module `package.json` + shared as a peerDependencies-only directory module; supported-browsers floor. Both consoles reference this; design-docs may not reference plans (per [PLANS.md](../../../PLANS.md)).
 - [x] **New product spec** `docs/product-specs/customer-portal.md` — page-by-page UX, rate-card display rules, dispute / refund visibility, USD formatting rules.
-- [x] **Update** `docs/design-docs/architecture.md` — replace the `ui/ admin UI (v2+)` row with a pointer to `bridge-ui/` sibling layout. Note layer rule still holds *within* `src/`; `bridge-ui/` is a separate static-asset deliverable that talks to the bridge over HTTP only.
+- [x] **Update** `docs/design-docs/architecture.md` — replace the `ui/ admin UI (v2+)` row with a pointer to `bridge-ui/` sibling layout. Note layer rule still holds _within_ `src/`; `bridge-ui/` is a separate static-asset deliverable that talks to the bridge over HTTP only.
 - [x] **Update** `AGENTS.md` "Knowledge base layout" and "Where to look for X" — add the new `bridge-ui/` and design / product entries.
 - [x] **Update** `docs/operations/deployment.md` — `bridge-ui/portal/` build step, `@fastify/static` mount, Docker UI stage, Grafana not required for portal.
 
@@ -292,7 +339,7 @@ Project directive. Pattern lifted from `livepeer-cloud-openai-ui/portal` (Lit, l
 
 ### 2026-04-26 — Stand up `bridge-ui/shared/` from day one, not on rule-of-three
 
-Two consumers (portal + admin) are being designed in the same planning session. The rule-of-three protects against premature abstraction *discovered* too early; here the abstraction isn't premature because both consumers are already on the design table. Copy-then-extract would waste 0023's implementation time and risks the two copies drifting before extraction. `shared/` is a directory of source files (no own `node_modules` / build), peerDependencies declared, imported via relative paths. Easy to grow, easy to delete what doesn't earn its keep.
+Two consumers (portal + admin) are being designed in the same planning session. The rule-of-three protects against premature abstraction _discovered_ too early; here the abstraction isn't premature because both consumers are already on the design table. Copy-then-extract would waste 0023's implementation time and risks the two copies drifting before extraction. `shared/` is a directory of source files (no own `node_modules` / build), peerDependencies declared, imported via relative paths. Easy to grow, easy to delete what doesn't earn its keep.
 
 ### 2026-04-26 — Sibling `bridge-ui/`, not `src/ui/`
 

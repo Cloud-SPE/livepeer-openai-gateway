@@ -1,7 +1,10 @@
 import { z } from 'zod';
 import { CustomerTierSchema } from '@cloudspe/livepeer-openai-gateway-core/types/tier.js';
 
-export { CustomerTierSchema, type CustomerTier } from '@cloudspe/livepeer-openai-gateway-core/types/tier.js';
+export {
+  CustomerTierSchema,
+  type CustomerTier,
+} from '@cloudspe/livepeer-openai-gateway-core/types/tier.js';
 
 export const CustomerIdSchema = z.string().uuid().brand<'CustomerId'>();
 export type CustomerId = z.infer<typeof CustomerIdSchema>;

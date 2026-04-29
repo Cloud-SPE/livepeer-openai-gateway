@@ -1,6 +1,11 @@
 import { LitElement, html } from 'lit';
 import { BRIDGE_EVENTS, on } from '../../shared/lib/events.js';
-import { onHashChange, resolveRoute, withViewTransition, navigate } from '../../shared/lib/route.js';
+import {
+  onHashChange,
+  resolveRoute,
+  withViewTransition,
+  navigate,
+} from '../../shared/lib/route.js';
 import { ObservableController } from '../../shared/controllers/observable-controller.js';
 import { accountService } from '../lib/services/account.service.js';
 import { keysService } from '../lib/services/keys.service.js';
@@ -31,25 +36,35 @@ export class PortalApp extends LitElement {
     this._unsubs = [];
   }
 
-  createRenderRoot() { return this; }
+  createRenderRoot() {
+    return this;
+  }
 
   connectedCallback() {
     super.connectedCallback();
-    this._unsubs.push(onHashChange(() => {
-      const next = resolveRoute(VIEWS, 'dashboard');
-      withViewTransition(() => { this._view = next; });
-    }));
-    this._unsubs.push(on(BRIDGE_EVENTS.AUTHENTICATED, () => {
-      this._authed = true;
-      void accountService.refresh().catch(() => {});
-    }));
-    this._unsubs.push(on(BRIDGE_EVENTS.UNAUTHORIZED, () => {
-      this._authed = false;
-      accountService.signOut();
-      keysService.reset();
-      usageService.reset();
-      topupsService.reset();
-    }));
+    this._unsubs.push(
+      onHashChange(() => {
+        const next = resolveRoute(VIEWS, 'dashboard');
+        withViewTransition(() => {
+          this._view = next;
+        });
+      }),
+    );
+    this._unsubs.push(
+      on(BRIDGE_EVENTS.AUTHENTICATED, () => {
+        this._authed = true;
+        void accountService.refresh().catch(() => {});
+      }),
+    );
+    this._unsubs.push(
+      on(BRIDGE_EVENTS.UNAUTHORIZED, () => {
+        this._authed = false;
+        accountService.signOut();
+        keysService.reset();
+        usageService.reset();
+        topupsService.reset();
+      }),
+    );
     if (this._authed) void accountService.refresh().catch(() => {});
   }
 
@@ -65,13 +80,17 @@ export class PortalApp extends LitElement {
       <header class="app-bar">
         <div class="brand">Livepeer Bridge</div>
         <nav class="nav">
-          ${VIEWS.map((v) => html`
-            <button
-              type="button"
-              aria-current=${this._view === v ? 'page' : 'false'}
-              @click=${() => navigate(v)}
-            >${labelFor(v)}</button>
-          `)}
+          ${VIEWS.map(
+            (v) => html`
+              <button
+                type="button"
+                aria-current=${this._view === v ? 'page' : 'false'}
+                @click=${() => navigate(v)}
+              >
+                ${labelFor(v)}
+              </button>
+            `,
+          )}
         </nav>
         <div class="meta">
           ${a ? html`<span class="tier-pill">${a.tier}</span>` : ''}
@@ -85,10 +104,14 @@ export class PortalApp extends LitElement {
 
   _renderView() {
     switch (this._view) {
-      case 'keys': return html`<portal-keys></portal-keys>`;
-      case 'usage': return html`<portal-usage></portal-usage>`;
-      case 'billing': return html`<portal-billing></portal-billing>`;
-      case 'settings': return html`<portal-settings></portal-settings>`;
+      case 'keys':
+        return html`<portal-keys></portal-keys>`;
+      case 'usage':
+        return html`<portal-usage></portal-usage>`;
+      case 'billing':
+        return html`<portal-billing></portal-billing>`;
+      case 'settings':
+        return html`<portal-settings></portal-settings>`;
       case 'dashboard':
       default:
         return html`<portal-dashboard></portal-dashboard>`;

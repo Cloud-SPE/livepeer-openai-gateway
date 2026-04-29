@@ -87,7 +87,9 @@ export class BridgeTable extends LitElement {
     adoptStyles('bridge-table', STYLES);
   }
 
-  createRenderRoot() { return this; }
+  createRenderRoot() {
+    return this;
+  }
 
   render() {
     if (!this.rows || this.rows.length === 0) {
@@ -97,28 +99,38 @@ export class BridgeTable extends LitElement {
       <div class="table-wrap">
         <table>
           <thead>
-            <tr>${this.columns.map((c) => html`<th>${c.header}</th>`)}</tr>
+            <tr>
+              ${this.columns.map((c) => html`<th>${c.header}</th>`)}
+            </tr>
           </thead>
           <tbody>
-            ${this.rows.map((row) => html`
-              <tr>
-                ${this.columns.map((c) => html`<td>${c.render ? c.render(row) : row[c.field]}</td>`)}
-              </tr>
-            `)}
+            ${this.rows.map(
+              (row) => html`
+                <tr>
+                  ${this.columns.map(
+                    (c) => html`<td>${c.render ? c.render(row) : row[c.field]}</td>`,
+                  )}
+                </tr>
+              `,
+            )}
           </tbody>
         </table>
       </div>
       <div class="cards">
-        ${this.rows.map((row) => html`
-          <div class="card">
-            ${this.columns.map((c) => html`
-              <div class="row">
-                <span class="key">${c.header}</span>
-                <span>${c.render ? c.render(row) : row[c.field]}</span>
-              </div>
-            `)}
-          </div>
-        `)}
+        ${this.rows.map(
+          (row) => html`
+            <div class="card">
+              ${this.columns.map(
+                (c) => html`
+                  <div class="row">
+                    <span class="key">${c.header}</span>
+                    <span>${c.render ? c.render(row) : row[c.field]}</span>
+                  </div>
+                `,
+              )}
+            </div>
+          `,
+        )}
       </div>
     `;
   }

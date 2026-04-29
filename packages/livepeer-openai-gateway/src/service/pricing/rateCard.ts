@@ -115,42 +115,50 @@ export function createRateCardService(deps: RateCardServiceDeps): RateCardServic
         effectiveAt: new Date(),
         entries: embeddings
           .filter((r) => !r.isPattern)
-          .map((r): EmbeddingsRateCardEntry => ({
-            model: r.modelOrPattern,
-            usdPerMillionTokens: Number(r.usdPerMillionTokens),
-          })),
+          .map(
+            (r): EmbeddingsRateCardEntry => ({
+              model: r.modelOrPattern,
+              usdPerMillionTokens: Number(r.usdPerMillionTokens),
+            }),
+          ),
       },
       imagesRateCard: {
         version: 'operator-managed',
         effectiveAt: new Date(),
         entries: images
           .filter((r) => !r.isPattern && isValidSize(r.size) && isValidQuality(r.quality))
-          .map((r): ImagesRateCardEntry => ({
-            model: r.modelOrPattern,
-            size: r.size as ImageSize,
-            quality: r.quality as ImageQuality,
-            usdPerImage: Number(r.usdPerImage),
-          })),
+          .map(
+            (r): ImagesRateCardEntry => ({
+              model: r.modelOrPattern,
+              size: r.size as ImageSize,
+              quality: r.quality as ImageQuality,
+              usdPerImage: Number(r.usdPerImage),
+            }),
+          ),
       },
       speechRateCard: {
         version: 'operator-managed',
         effectiveAt: new Date(),
         entries: speech
           .filter((r) => !r.isPattern)
-          .map((r): SpeechRateCardEntry => ({
-            model: r.modelOrPattern,
-            usdPerMillionChars: Number(r.usdPerMillionChars),
-          })),
+          .map(
+            (r): SpeechRateCardEntry => ({
+              model: r.modelOrPattern,
+              usdPerMillionChars: Number(r.usdPerMillionChars),
+            }),
+          ),
       },
       transcriptionsRateCard: {
         version: 'operator-managed',
         effectiveAt: new Date(),
         entries: transcriptions
           .filter((r) => !r.isPattern)
-          .map((r): TranscriptionsRateCardEntry => ({
-            model: r.modelOrPattern,
-            usdPerMinute: Number(r.usdPerMinute),
-          })),
+          .map(
+            (r): TranscriptionsRateCardEntry => ({
+              model: r.modelOrPattern,
+              usdPerMinute: Number(r.usdPerMinute),
+            }),
+          ),
       },
       modelToTierExact: new Map(
         chatModels

@@ -22,7 +22,7 @@ const account = object({
   email: string(),
   tier,
   status,
-  balance_usd: string(),                    // formatted "12.34"
+  balance_usd: string(), // formatted "12.34"
   reserved_usd: string(),
   free_tokens_remaining: nullable(number()),
   free_tokens_reset_at: nullable(isoDate()),
@@ -47,7 +47,7 @@ const apiKeyCreated = object({
 });
 
 const usageRow = object({
-  bucket: string(),                         // 'YYYY-MM-DD' or model name or capability
+  bucket: string(), // 'YYYY-MM-DD' or model name or capability
   prompt_tokens: number(),
   completion_tokens: number(),
   requests: number(),

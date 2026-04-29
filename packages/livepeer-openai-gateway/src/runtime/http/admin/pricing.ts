@@ -165,7 +165,11 @@ export function registerAdminPricingRoutes(app: FastifyInstance, deps: AdminPric
     const rows = await db
       .select()
       .from(rateCardChatModels)
-      .orderBy(asc(rateCardChatModels.isPattern), asc(rateCardChatModels.sortOrder), asc(rateCardChatModels.modelOrPattern));
+      .orderBy(
+        asc(rateCardChatModels.isPattern),
+        asc(rateCardChatModels.sortOrder),
+        asc(rateCardChatModels.modelOrPattern),
+      );
     return { entries: rows.map(serializeChatModel) };
   });
 

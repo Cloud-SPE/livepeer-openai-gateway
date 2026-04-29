@@ -39,7 +39,10 @@ export async function listByState(
   options: { state: ReservationState; limit: number; cursorCreatedAt?: Date },
 ): Promise<ReservationRow[]> {
   const where = options.cursorCreatedAt
-    ? and(eq(reservations.state, options.state), gt(reservations.createdAt, options.cursorCreatedAt))
+    ? and(
+        eq(reservations.state, options.state),
+        gt(reservations.createdAt, options.cursorCreatedAt),
+      )
     : eq(reservations.state, options.state);
   return db
     .select()

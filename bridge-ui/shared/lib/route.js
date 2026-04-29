@@ -26,7 +26,11 @@ export async function withViewTransition(update) {
     // Both `ready` and `finished` reject with AbortError when a transition is
     // interrupted. Swallow both so they don't surface as unhandled rejections.
     t.ready.catch(() => {});
-    try { await t.finished; } catch { /* skipped */ }
+    try {
+      await t.finished;
+    } catch {
+      /* skipped */
+    }
     return;
   }
   await update();

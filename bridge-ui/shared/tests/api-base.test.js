@@ -53,10 +53,12 @@ describe('createApi', () => {
   });
 
   it('calls onUnauthorized + throws on 401', async () => {
-    globalThis.fetch.mockResolvedValueOnce(makeResponse({
-      status: 401,
-      json: { error: { message: 'unauthorized' } },
-    }));
+    globalThis.fetch.mockResolvedValueOnce(
+      makeResponse({
+        status: 401,
+        json: { error: { message: 'unauthorized' } },
+      }),
+    );
     const onUnauth = vi.fn();
     const api = createApi({
       baseUrl: '',
@@ -70,10 +72,12 @@ describe('createApi', () => {
   });
 
   it('throws ApiError with message from server body on non-2xx', async () => {
-    globalThis.fetch.mockResolvedValueOnce(makeResponse({
-      status: 400,
-      json: { error: { message: 'bad request', type: 'InvalidRequest' } },
-    }));
+    globalThis.fetch.mockResolvedValueOnce(
+      makeResponse({
+        status: 400,
+        json: { error: { message: 'bad request', type: 'InvalidRequest' } },
+      }),
+    );
     const api = createApi({
       baseUrl: '',
       getAuthHeaders: () => ({}),

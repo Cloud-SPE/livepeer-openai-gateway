@@ -49,30 +49,30 @@ Dependency rule: each layer may import only layers **below** it, plus `providers
 
 ## Runtime surfaces
 
-| Path                                   | Purpose                                                                                                  |
-| -------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `src/runtime/http/chat/completions.ts` | OpenAI-compatible `/v1/chat/completions`, non-streaming                                                  |
-| `src/runtime/http/chat/streaming.ts`   | OpenAI-compatible `/v1/chat/completions` SSE streaming variant                                           |
-| `src/runtime/http/embeddings/`         | OpenAI-compatible `/v1/embeddings`                                                                       |
-| `src/runtime/http/images/`             | OpenAI-compatible `/v1/images/generations`                                                               |
-| `src/runtime/http/billing/`            | Customer-facing balance + top-up endpoints                                                               |
-| `src/runtime/http/stripe/`             | Stripe webhook (`payment_intent.succeeded`, disputes)                                                    |
-| `src/runtime/http/admin/`              | Ops endpoints (health, NodeBook status, customer lookup, manual refund)                                  |
-| `src/runtime/http/middleware/`         | Auth + rate-limit middleware shared by paid routes                                                       |
+| Path                                   | Purpose                                                                 |
+| -------------------------------------- | ----------------------------------------------------------------------- |
+| `src/runtime/http/chat/completions.ts` | OpenAI-compatible `/v1/chat/completions`, non-streaming                 |
+| `src/runtime/http/chat/streaming.ts`   | OpenAI-compatible `/v1/chat/completions` SSE streaming variant          |
+| `src/runtime/http/embeddings/`         | OpenAI-compatible `/v1/embeddings`                                      |
+| `src/runtime/http/images/`             | OpenAI-compatible `/v1/images/generations`                              |
+| `src/runtime/http/billing/`            | Customer-facing balance + top-up endpoints                              |
+| `src/runtime/http/stripe/`             | Stripe webhook (`payment_intent.succeeded`, disputes)                   |
+| `src/runtime/http/admin/`              | Ops endpoints (health, NodeBook status, customer lookup, manual refund) |
+| `src/runtime/http/middleware/`         | Auth + rate-limit middleware shared by paid routes                      |
 
 ## Providers
 
-| Provider            | Interface role                                                                | Default implementation                           |
-| ------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------ |
-| `PayerDaemonClient` | gRPC client to local Livepeer payment daemon                                  | `@grpc/grpc-js` stub                             |
+| Provider            | Interface role                                                                     | Default implementation                            |
+| ------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------- |
+| `PayerDaemonClient` | gRPC client to local Livepeer payment daemon                                       | `@grpc/grpc-js` stub                              |
 | `NodeClient`        | HTTP client to WorkerNode `/health`, `/capabilities`, `/quote`, `/quotes`, `/v1/*` | `fetch`-based impl in `src/providers/nodeClient/` |
-| `StripeClient`      | Top-ups, webhooks, disputes, refunds                                          | `stripe` SDK                                     |
-| `RedisClient`       | Rate-limit state                                                              | `ioredis`                                        |
-| `Database`          | Postgres pool                                                                 | `pg` + Drizzle                                   |
-| `Tokenizer`         | Model-aware token counting (drift audit)                                      | `tiktoken` for OpenAI-compat; per-family plugins |
-| `ChainInfo`         | Read-only Eth for admin views                                                 | `viem`                                           |
-| `MetricsSink`       | Counter / Gauge / Histogram                                                   | No-op default; Prometheus later                  |
-| `Logger`            | Structured log                                                                | `pino`                                           |
+| `StripeClient`      | Top-ups, webhooks, disputes, refunds                                               | `stripe` SDK                                      |
+| `RedisClient`       | Rate-limit state                                                                   | `ioredis`                                         |
+| `Database`          | Postgres pool                                                                      | `pg` + Drizzle                                    |
+| `Tokenizer`         | Model-aware token counting (drift audit)                                           | `tiktoken` for OpenAI-compat; per-family plugins  |
+| `ChainInfo`         | Read-only Eth for admin views                                                      | `viem`                                            |
+| `MetricsSink`       | Counter / Gauge / Histogram                                                        | No-op default; Prometheus later                   |
+| `Logger`            | Structured log                                                                     | `pino`                                            |
 
 ## What this does NOT do
 

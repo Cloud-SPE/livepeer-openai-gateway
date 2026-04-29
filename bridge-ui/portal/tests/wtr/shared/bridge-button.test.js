@@ -38,7 +38,9 @@ describe('bridge-button', () => {
   it('blocks click events when disabled (browser short-circuits disabled buttons)', async () => {
     const el = await fixture(html`<bridge-button disabled>x</bridge-button>`);
     let clicked = false;
-    el.addEventListener('click', () => { clicked = true; });
+    el.addEventListener('click', () => {
+      clicked = true;
+    });
     el.shadowRoot.querySelector('button').click();
     expect(clicked).to.equal(false);
   });

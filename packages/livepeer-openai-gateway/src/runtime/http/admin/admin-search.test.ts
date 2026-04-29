@@ -19,14 +19,24 @@ const ADMIN_TOKEN = 'a'.repeat(40);
 
 function mockPayerDaemon(): PayerDaemonClient {
   return {
-    async startSession() { return { workId: 'wrk' }; },
-    async createPayment() { return { paymentBytes: new Uint8Array([1]), ticketsCreated: 1, expectedValueWei: 10n }; },
-    async closeSession() { /* noop */ },
-    async getDepositInfo() { return { depositWei: 1n, reserveWei: 1n, withdrawRound: 0n }; },
+    async startSession() {
+      return { workId: 'wrk' };
+    },
+    async createPayment() {
+      return { paymentBytes: new Uint8Array([1]), ticketsCreated: 1, expectedValueWei: 10n };
+    },
+    async closeSession() {
+      /* noop */
+    },
+    async getDepositInfo() {
+      return { depositWei: 1n, reserveWei: 1n, withdrawRound: 0n };
+    },
     isHealthy: () => true,
     startHealthLoop: () => undefined,
     stopHealthLoop: () => undefined,
-    async close() { /* noop */ },
+    async close() {
+      /* noop */
+    },
   };
 }
 
@@ -48,8 +58,12 @@ async function buildServer() {
     adminService,
     authConfig: { pepper: 'admin-search-pepper-000', envPrefix: 'test', cacheTtlMs: 60_000 },
     serviceRegistry: {
-      async select() { return []; },
-      async listKnown() { return []; },
+      async select() {
+        return [];
+      },
+      async listKnown() {
+        return [];
+      },
       isHealthy: () => true,
     },
   });
@@ -81,7 +95,9 @@ describe('X-Admin-Actor middleware', () => {
     const server = await buildServer();
     try {
       const res = await server.app.inject({
-        method: 'GET', url: '/admin/health', headers: authHeaders('alice'),
+        method: 'GET',
+        url: '/admin/health',
+        headers: authHeaders('alice'),
       });
       expect(res.statusCode).toBe(200);
       // Audit row written on response close — wait briefly for it.
@@ -98,7 +114,9 @@ describe('X-Admin-Actor middleware', () => {
     const server = await buildServer();
     try {
       const res = await server.app.inject({
-        method: 'GET', url: '/admin/health', headers: authHeaders('Capital Letters!'),
+        method: 'GET',
+        url: '/admin/health',
+        headers: authHeaders('Capital Letters!'),
       });
       expect(res.statusCode).toBe(200);
       await new Promise((r) => setTimeout(r, 50));
@@ -125,7 +143,9 @@ describe('GET /admin/customers', () => {
     const server = await buildServer();
     try {
       const res = await server.app.inject({
-        method: 'GET', url: '/admin/customers?limit=10', headers: authHeaders('admin'),
+        method: 'GET',
+        url: '/admin/customers?limit=10',
+        headers: authHeaders('admin'),
       });
       expect(res.statusCode).toBe(200);
       const body = res.json() as { customers: Array<{ email: string }> };
@@ -142,7 +162,9 @@ describe('GET /admin/customers', () => {
     const server = await buildServer();
     try {
       const res = await server.app.inject({
-        method: 'GET', url: '/admin/customers?q=example', headers: authHeaders('admin'),
+        method: 'GET',
+        url: '/admin/customers?q=example',
+        headers: authHeaders('admin'),
       });
       const body = res.json() as { customers: Array<{ email: string }> };
       expect(body.customers).toHaveLength(2);
@@ -154,11 +176,17 @@ describe('GET /admin/customers', () => {
   it('filters by tier and status', async () => {
     await customersRepo.insertCustomer(pg.db, { email: 'a@x.io', tier: 'prepaid' });
     await customersRepo.insertCustomer(pg.db, { email: 'b@x.io', tier: 'free' });
-    await customersRepo.insertCustomer(pg.db, { email: 'c@x.io', tier: 'free', status: 'suspended' });
+    await customersRepo.insertCustomer(pg.db, {
+      email: 'c@x.io',
+      tier: 'free',
+      status: 'suspended',
+    });
     const server = await buildServer();
     try {
       const res = await server.app.inject({
-        method: 'GET', url: '/admin/customers?tier=free&status=suspended', headers: authHeaders('admin'),
+        method: 'GET',
+        url: '/admin/customers?tier=free&status=suspended',
+        headers: authHeaders('admin'),
       });
       const body = res.json() as { customers: Array<{ email: string }> };
       expect(body.customers).toHaveLength(1);
@@ -172,7 +200,9 @@ describe('GET /admin/customers', () => {
     const server = await buildServer();
     try {
       const res = await server.app.inject({
-        method: 'GET', url: '/admin/customers?tier=enterprise', headers: authHeaders('admin'),
+        method: 'GET',
+        url: '/admin/customers?tier=enterprise',
+        headers: authHeaders('admin'),
       });
       expect(res.statusCode).toBe(400);
     } finally {
@@ -191,7 +221,9 @@ describe('Operator-issued customer API keys', () => {
     const server = await buildServer();
     try {
       const res = await server.app.inject({
-        method: 'GET', url: `/admin/customers/${c.id}/api-keys`, headers: authHeaders('admin'),
+        method: 'GET',
+        url: `/admin/customers/${c.id}/api-keys`,
+        headers: authHeaders('admin'),
       });
       expect(res.statusCode).toBe(200);
       const body = res.json() as { keys: Array<Record<string, unknown>> };
@@ -206,7 +238,8 @@ describe('Operator-issued customer API keys', () => {
     const server = await buildServer();
     try {
       const res = await server.app.inject({
-        method: 'GET', url: `/admin/customers/00000000-0000-4000-8000-000000000000/api-keys`,
+        method: 'GET',
+        url: `/admin/customers/00000000-0000-4000-8000-000000000000/api-keys`,
         headers: authHeaders('admin'),
       });
       expect(res.statusCode).toBe(404);
@@ -220,7 +253,8 @@ describe('Operator-issued customer API keys', () => {
     const server = await buildServer();
     try {
       const res = await server.app.inject({
-        method: 'POST', url: `/admin/customers/${c.id}/api-keys`,
+        method: 'POST',
+        url: `/admin/customers/${c.id}/api-keys`,
         headers: { ...authHeaders('admin'), 'content-type': 'application/json' },
         payload: JSON.stringify({ label: 'op-issued' }),
       });
@@ -238,7 +272,8 @@ describe('Operator-issued customer API keys', () => {
     const server = await buildServer();
     try {
       const res = await server.app.inject({
-        method: 'POST', url: `/admin/customers/${c.id}/api-keys`,
+        method: 'POST',
+        url: `/admin/customers/${c.id}/api-keys`,
         headers: { ...authHeaders('admin'), 'content-type': 'application/json' },
         payload: JSON.stringify({ label: '' }),
       });
@@ -256,12 +291,18 @@ describe('GET /admin/audit', () => {
     const server = await buildServer();
     try {
       // Generate two requests as different actors
-      await server.app.inject({ method: 'GET', url: '/admin/health', headers: authHeaders('alice') });
+      await server.app.inject({
+        method: 'GET',
+        url: '/admin/health',
+        headers: authHeaders('alice'),
+      });
       await server.app.inject({ method: 'GET', url: '/admin/health', headers: authHeaders('bob') });
       await new Promise((r) => setTimeout(r, 80));
 
       const res = await server.app.inject({
-        method: 'GET', url: '/admin/audit?actor=alice', headers: authHeaders('admin'),
+        method: 'GET',
+        url: '/admin/audit?actor=alice',
+        headers: authHeaders('admin'),
       });
       const body = res.json() as { events: Array<{ actor: string }> };
       expect(body.events.length).toBeGreaterThan(0);
@@ -278,22 +319,35 @@ describe('GET /admin/reservations', () => {
   it('lists open reservations ascending by created_at with age_seconds', async () => {
     const c = await customersRepo.insertCustomer(pg.db, { email: 'r@x.io', tier: 'prepaid' });
     await reservationsRepo.insertReservation(pg.db, {
-      customerId: c.id, workId: 'w-1', kind: 'prepaid', amountUsdCents: 100n, state: 'open',
+      customerId: c.id,
+      workId: 'w-1',
+      kind: 'prepaid',
+      amountUsdCents: 100n,
+      state: 'open',
       createdAt: new Date(Date.now() - 60_000),
     });
     await reservationsRepo.insertReservation(pg.db, {
-      customerId: c.id, workId: 'w-2', kind: 'prepaid', amountUsdCents: 200n, state: 'open',
+      customerId: c.id,
+      workId: 'w-2',
+      kind: 'prepaid',
+      amountUsdCents: 200n,
+      state: 'open',
       createdAt: new Date(Date.now() - 30_000),
     });
     await reservationsRepo.insertReservation(pg.db, {
-      customerId: c.id, workId: 'w-3', kind: 'prepaid', amountUsdCents: 300n, state: 'committed',
+      customerId: c.id,
+      workId: 'w-3',
+      kind: 'prepaid',
+      amountUsdCents: 300n,
+      state: 'committed',
       createdAt: new Date(Date.now() - 10_000),
     });
 
     const server = await buildServer();
     try {
       const res = await server.app.inject({
-        method: 'GET', url: '/admin/reservations?state=open&limit=10',
+        method: 'GET',
+        url: '/admin/reservations?state=open&limit=10',
         headers: authHeaders('admin'),
       });
       const body = res.json() as { reservations: Array<{ work_id: string; age_seconds: number }> };
@@ -312,15 +366,23 @@ describe('GET /admin/topups', () => {
   it('searches topups by status', async () => {
     const c = await customersRepo.insertCustomer(pg.db, { email: 't@x.io', tier: 'prepaid' });
     await topupsRepo.insertTopup(pg.db, {
-      customerId: c.id, stripeSessionId: 'cs_ok', amountUsdCents: 1000n, status: 'succeeded',
+      customerId: c.id,
+      stripeSessionId: 'cs_ok',
+      amountUsdCents: 1000n,
+      status: 'succeeded',
     });
     await topupsRepo.insertTopup(pg.db, {
-      customerId: c.id, stripeSessionId: 'cs_fail', amountUsdCents: 500n, status: 'failed',
+      customerId: c.id,
+      stripeSessionId: 'cs_fail',
+      amountUsdCents: 500n,
+      status: 'failed',
     });
     const server = await buildServer();
     try {
       const res = await server.app.inject({
-        method: 'GET', url: '/admin/topups?status=failed', headers: authHeaders('admin'),
+        method: 'GET',
+        url: '/admin/topups?status=failed',
+        headers: authHeaders('admin'),
       });
       const body = res.json() as { topups: Array<{ stripe_session_id: string }> };
       expect(body.topups).toHaveLength(1);
@@ -333,12 +395,24 @@ describe('GET /admin/topups', () => {
   it('searches topups by customer_id', async () => {
     const a = await customersRepo.insertCustomer(pg.db, { email: 'a@x.io', tier: 'prepaid' });
     const b = await customersRepo.insertCustomer(pg.db, { email: 'b@x.io', tier: 'prepaid' });
-    await topupsRepo.insertTopup(pg.db, { customerId: a.id, stripeSessionId: 'cs_a', amountUsdCents: 500n, status: 'succeeded' });
-    await topupsRepo.insertTopup(pg.db, { customerId: b.id, stripeSessionId: 'cs_b', amountUsdCents: 500n, status: 'succeeded' });
+    await topupsRepo.insertTopup(pg.db, {
+      customerId: a.id,
+      stripeSessionId: 'cs_a',
+      amountUsdCents: 500n,
+      status: 'succeeded',
+    });
+    await topupsRepo.insertTopup(pg.db, {
+      customerId: b.id,
+      stripeSessionId: 'cs_b',
+      amountUsdCents: 500n,
+      status: 'succeeded',
+    });
     const server = await buildServer();
     try {
       const res = await server.app.inject({
-        method: 'GET', url: `/admin/topups?customer_id=${a.id}`, headers: authHeaders('admin'),
+        method: 'GET',
+        url: `/admin/topups?customer_id=${a.id}`,
+        headers: authHeaders('admin'),
       });
       const body = res.json() as { topups: Array<{ stripe_session_id: string }> };
       expect(body.topups).toHaveLength(1);
@@ -354,21 +428,29 @@ describe('GET /admin/topups', () => {
 describe('GET /admin/nodes/:id/events', () => {
   it('returns the event timeline for a node, newest first', async () => {
     await nodeHealthRepo.insertNodeHealthEvent(pg.db, {
-      nodeId: 'n-1', kind: 'circuit_opened', detail: 'failure 1',
+      nodeId: 'n-1',
+      kind: 'circuit_opened',
+      detail: 'failure 1',
       occurredAt: new Date('2026-04-20T10:00:00Z'),
     });
     await nodeHealthRepo.insertNodeHealthEvent(pg.db, {
-      nodeId: 'n-1', kind: 'circuit_closed', detail: null,
+      nodeId: 'n-1',
+      kind: 'circuit_closed',
+      detail: null,
       occurredAt: new Date('2026-04-21T10:00:00Z'),
     });
     await nodeHealthRepo.insertNodeHealthEvent(pg.db, {
-      nodeId: 'other', kind: 'circuit_opened', detail: null,
+      nodeId: 'other',
+      kind: 'circuit_opened',
+      detail: null,
       occurredAt: new Date('2026-04-22T10:00:00Z'),
     });
     const server = await buildServer();
     try {
       const res = await server.app.inject({
-        method: 'GET', url: '/admin/nodes/n-1/events?limit=10', headers: authHeaders('admin'),
+        method: 'GET',
+        url: '/admin/nodes/n-1/events?limit=10',
+        headers: authHeaders('admin'),
       });
       const body = res.json() as { events: Array<{ kind: string; node_id: string }> };
       expect(body.events).toHaveLength(2);
@@ -379,4 +461,3 @@ describe('GET /admin/nodes/:id/events', () => {
     }
   });
 });
-

@@ -74,21 +74,25 @@ const customerDetail = object({
   quotaMonthlyAllowance: nullable(string()),
   rateLimitTier: string(),
   createdAt: isoDate(),
-  topups: array(object({
-    stripeSessionId: string(),
-    amountUsdCents: string(),
-    status: string(),
-    createdAt: isoDate(),
-    refundedAt: nullable(isoDate()),
-    disputedAt: nullable(isoDate()),
-  })),
-  recentUsage: array(object({
-    workId: string(),
-    model: string(),
-    costUsdCents: string(),
-    status: string(),
-    createdAt: isoDate(),
-  })),
+  topups: array(
+    object({
+      stripeSessionId: string(),
+      amountUsdCents: string(),
+      status: string(),
+      createdAt: isoDate(),
+      refundedAt: nullable(isoDate()),
+      disputedAt: nullable(isoDate()),
+    }),
+  ),
+  recentUsage: array(
+    object({
+      workId: string(),
+      model: string(),
+      costUsdCents: string(),
+      status: string(),
+      createdAt: isoDate(),
+    }),
+  ),
 });
 
 const adminApiKey = object({
@@ -177,9 +181,11 @@ export function parseResponse(method, path, body) {
   if (m === 'GET' && p === '/admin/customers') return customersList(body);
   if (m === 'POST' && p === '/admin/customers') return customerDetail(body);
   if (m === 'GET' && p.match(/^\/admin\/customers\/[^/]+\/api-keys$/)) return adminApiKeyList(body);
-  if (m === 'POST' && p.match(/^\/admin\/customers\/[^/]+\/api-keys$/)) return adminApiKeyCreated(body);
+  if (m === 'POST' && p.match(/^\/admin\/customers\/[^/]+\/api-keys$/))
+    return adminApiKeyCreated(body);
   if (m === 'GET' && p.match(/^\/admin\/customers\/[^/]+$/)) return customerDetail(body);
-  if (m === 'POST' && p.match(/^\/admin\/customers\/[^/]+\/(refund|suspend|unsuspend)$/)) return body;
+  if (m === 'POST' && p.match(/^\/admin\/customers\/[^/]+\/(refund|suspend|unsuspend)$/))
+    return body;
   if (m === 'GET' && p === '/admin/audit') return auditList(body);
   if (m === 'GET' && p === '/admin/reservations') return reservationsList(body);
   if (m === 'GET' && p === '/admin/topups') return adminTopupsList(body);
@@ -193,7 +199,16 @@ export function parseResponse(method, path, body) {
 }
 
 export const validators = {
-  health, nodeList, nodeEventsList, customersList, customerDetail,
-  adminApiKeyList, adminApiKeyCreated, auditList, reservationsList,
-  adminTopupsList, escrow, nodesConfigView,
+  health,
+  nodeList,
+  nodeEventsList,
+  customersList,
+  customerDetail,
+  adminApiKeyList,
+  adminApiKeyCreated,
+  auditList,
+  reservationsList,
+  adminTopupsList,
+  escrow,
+  nodesConfigView,
 };

@@ -56,7 +56,9 @@ export class BridgeToastStack extends LitElement {
     adoptStyles('bridge-toast-stack', STYLES);
   }
 
-  createRenderRoot() { return this; }
+  createRenderRoot() {
+    return this;
+  }
 
   connectedCallback() {
     super.connectedCallback();
@@ -83,9 +85,9 @@ export class BridgeToastStack extends LitElement {
 
   render() {
     return html`
-      ${this._toasts.map((t) => html`
-        <div class="toast" data-kind=${t.kind} role="status">${t.message}</div>
-      `)}
+      ${this._toasts.map(
+        (t) => html` <div class="toast" data-kind=${t.kind} role="status">${t.message}</div> `,
+      )}
     `;
   }
 }

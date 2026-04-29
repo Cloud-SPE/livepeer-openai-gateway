@@ -77,10 +77,38 @@ describe('usageRollups.rollup', () => {
     const day2 = new Date('2026-04-21T10:00:00Z');
     const day3 = new Date('2026-04-22T10:00:00Z');
 
-    await seedRecord({ callerId: cid, workId: 'w1', createdAt: day1, promptLocal: 100, completionLocal: 50, costCents: 5n });
-    await seedRecord({ callerId: cid, workId: 'w2', createdAt: day1, promptLocal: 200, completionLocal: 80, costCents: 10n });
-    await seedRecord({ callerId: cid, workId: 'w3', createdAt: day2, promptLocal: 50, completionLocal: 25, costCents: 3n });
-    await seedRecord({ callerId: cid, workId: 'w4', createdAt: day3, promptLocal: 300, completionLocal: 150, costCents: 20n });
+    await seedRecord({
+      callerId: cid,
+      workId: 'w1',
+      createdAt: day1,
+      promptLocal: 100,
+      completionLocal: 50,
+      costCents: 5n,
+    });
+    await seedRecord({
+      callerId: cid,
+      workId: 'w2',
+      createdAt: day1,
+      promptLocal: 200,
+      completionLocal: 80,
+      costCents: 10n,
+    });
+    await seedRecord({
+      callerId: cid,
+      workId: 'w3',
+      createdAt: day2,
+      promptLocal: 50,
+      completionLocal: 25,
+      costCents: 3n,
+    });
+    await seedRecord({
+      callerId: cid,
+      workId: 'w4',
+      createdAt: day3,
+      promptLocal: 300,
+      completionLocal: 150,
+      costCents: 20n,
+    });
 
     const rows = await rollup(pg.db, {
       callerId: cid,
@@ -116,9 +144,30 @@ describe('usageRollups.rollup', () => {
   it('groups by model', async () => {
     const cid = await seedCustomer();
     const t = new Date('2026-04-20T10:00:00Z');
-    await seedRecord({ callerId: cid, workId: 'a', createdAt: t, model: 'gpt-4o', promptLocal: 100, costCents: 10n });
-    await seedRecord({ callerId: cid, workId: 'b', createdAt: t, model: 'gpt-4o', promptLocal: 200, costCents: 20n });
-    await seedRecord({ callerId: cid, workId: 'c', createdAt: t, model: 'gpt-4o-mini', promptLocal: 50, costCents: 5n });
+    await seedRecord({
+      callerId: cid,
+      workId: 'a',
+      createdAt: t,
+      model: 'gpt-4o',
+      promptLocal: 100,
+      costCents: 10n,
+    });
+    await seedRecord({
+      callerId: cid,
+      workId: 'b',
+      createdAt: t,
+      model: 'gpt-4o',
+      promptLocal: 200,
+      costCents: 20n,
+    });
+    await seedRecord({
+      callerId: cid,
+      workId: 'c',
+      createdAt: t,
+      model: 'gpt-4o-mini',
+      promptLocal: 50,
+      costCents: 5n,
+    });
 
     const rows = await rollup(pg.db, {
       callerId: cid,
@@ -139,7 +188,13 @@ describe('usageRollups.rollup', () => {
     const t = new Date('2026-04-20T10:00:00Z');
     await seedRecord({ callerId: cid, workId: 'c1', createdAt: t, kind: 'chat', costCents: 10n });
     await seedRecord({ callerId: cid, workId: 'c2', createdAt: t, kind: 'chat', costCents: 5n });
-    await seedRecord({ callerId: cid, workId: 'e1', createdAt: t, kind: 'embeddings', costCents: 2n });
+    await seedRecord({
+      callerId: cid,
+      workId: 'e1',
+      createdAt: t,
+      kind: 'embeddings',
+      costCents: 2n,
+    });
     await seedRecord({ callerId: cid, workId: 'i1', createdAt: t, kind: 'images', costCents: 30n });
 
     const rows = await rollup(pg.db, {
@@ -160,10 +215,34 @@ describe('usageRollups.rollup', () => {
   it('counts status_breakdown correctly', async () => {
     const cid = await seedCustomer();
     const t = new Date('2026-04-20T10:00:00Z');
-    await seedRecord({ callerId: cid, workId: 's1', createdAt: t, costCents: 1n, status: 'success' });
-    await seedRecord({ callerId: cid, workId: 's2', createdAt: t, costCents: 1n, status: 'success' });
-    await seedRecord({ callerId: cid, workId: 's3', createdAt: t, costCents: 1n, status: 'partial' });
-    await seedRecord({ callerId: cid, workId: 's4', createdAt: t, costCents: 1n, status: 'failed' });
+    await seedRecord({
+      callerId: cid,
+      workId: 's1',
+      createdAt: t,
+      costCents: 1n,
+      status: 'success',
+    });
+    await seedRecord({
+      callerId: cid,
+      workId: 's2',
+      createdAt: t,
+      costCents: 1n,
+      status: 'success',
+    });
+    await seedRecord({
+      callerId: cid,
+      workId: 's3',
+      createdAt: t,
+      costCents: 1n,
+      status: 'partial',
+    });
+    await seedRecord({
+      callerId: cid,
+      workId: 's4',
+      createdAt: t,
+      costCents: 1n,
+      status: 'failed',
+    });
 
     const rows = await rollup(pg.db, {
       callerId: cid,
@@ -206,9 +285,24 @@ describe('usageRollups.rollup', () => {
 
   it('respects [from, to) window boundaries', async () => {
     const cid = await seedCustomer();
-    await seedRecord({ callerId: cid, workId: 'in', createdAt: new Date('2026-04-20T12:00:00Z'), costCents: 1n });
-    await seedRecord({ callerId: cid, workId: 'before', createdAt: new Date('2026-04-19T23:59:59Z'), costCents: 1n });
-    await seedRecord({ callerId: cid, workId: 'at-to', createdAt: new Date('2026-04-21T00:00:00Z'), costCents: 1n });
+    await seedRecord({
+      callerId: cid,
+      workId: 'in',
+      createdAt: new Date('2026-04-20T12:00:00Z'),
+      costCents: 1n,
+    });
+    await seedRecord({
+      callerId: cid,
+      workId: 'before',
+      createdAt: new Date('2026-04-19T23:59:59Z'),
+      costCents: 1n,
+    });
+    await seedRecord({
+      callerId: cid,
+      workId: 'at-to',
+      createdAt: new Date('2026-04-21T00:00:00Z'),
+      costCents: 1n,
+    });
 
     const rows = await rollup(pg.db, {
       callerId: cid,
@@ -226,7 +320,13 @@ describe('usageRollups.rollup', () => {
     const b = await seedCustomer('b@x.io');
     const t = new Date('2026-04-20T10:00:00Z');
     await seedRecord({ callerId: a, workId: 'a-1', createdAt: t, promptLocal: 100, costCents: 5n });
-    await seedRecord({ callerId: b, workId: 'b-1', createdAt: t, promptLocal: 999, costCents: 50n });
+    await seedRecord({
+      callerId: b,
+      workId: 'b-1',
+      createdAt: t,
+      promptLocal: 999,
+      costCents: 50n,
+    });
 
     const rowsA = await rollup(pg.db, {
       callerId: a,

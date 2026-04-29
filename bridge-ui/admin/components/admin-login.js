@@ -20,7 +20,9 @@ export class AdminLogin extends LitElement {
     this._error = '';
   }
 
-  createRenderRoot() { return this; }
+  createRenderRoot() {
+    return this;
+  }
 
   render() {
     return html`
@@ -40,7 +42,9 @@ export class AdminLogin extends LitElement {
             required
             ?disabled=${this._loading}
             .value=${this._token}
-            @input=${(e) => { this._token = e.target.value; }}
+            @input=${(e) => {
+              this._token = e.target.value;
+            }}
           />
         </div>
 
@@ -56,7 +60,9 @@ export class AdminLogin extends LitElement {
             required
             ?disabled=${this._loading}
             .value=${this._actor}
-            @input=${(e) => { this._actor = e.target.value; }}
+            @input=${(e) => {
+              this._actor = e.target.value;
+            }}
           />
         </div>
 

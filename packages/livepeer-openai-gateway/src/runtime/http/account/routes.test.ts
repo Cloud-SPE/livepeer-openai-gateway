@@ -118,7 +118,7 @@ describe('GET /v1/account/limits', () => {
 });
 
 describe('GET /v1/account/api-keys', () => {
-  it('returns the calling customer\'s keys without hashes', async () => {
+  it("returns the calling customer's keys without hashes", async () => {
     const { customer, plaintext } = await seedCustomerAndKey();
     // Add a second key, revoke one
     const k2 = await apiKeysRepo.insertApiKey(pg.db, {
@@ -258,7 +258,7 @@ describe('DELETE /v1/account/api-keys/:id', () => {
     }
   });
 
-  it('refuses to revoke the request\'s own key with 412', async () => {
+  it("refuses to revoke the request's own key with 412", async () => {
     const { plaintext, apiKeyId } = await seedCustomerAndKey();
     const server = await buildServer();
     try {
@@ -278,7 +278,7 @@ describe('DELETE /v1/account/api-keys/:id', () => {
     }
   });
 
-  it('refuses to revoke another customer\'s key with 404', async () => {
+  it("refuses to revoke another customer's key with 404", async () => {
     const { plaintext: tokenA } = await seedCustomerAndKey({ email: 'rev-a@x.io' });
     const { apiKeyId: keyB } = await seedCustomerAndKey({ email: 'rev-b@x.io' });
     const server = await buildServer();

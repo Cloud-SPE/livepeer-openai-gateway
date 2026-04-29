@@ -7,8 +7,12 @@ const _selected = new BehaviorSubject(null); // currently-open customer detail
 export const customersService = {
   results$: _results.asObservable(),
   selected$: _selected.asObservable(),
-  get results() { return _results.getValue(); },
-  get selected() { return _selected.getValue(); },
+  get results() {
+    return _results.getValue();
+  },
+  get selected() {
+    return _selected.getValue();
+  },
 
   /**
    * @param {{ q?: string, tier?: string, status?: string, limit?: number, cursor?: string }} params
@@ -68,5 +72,8 @@ export const customersService = {
     return api.post('/admin/customers', input);
   },
 
-  reset() { _results.next(null); _selected.next(null); },
+  reset() {
+    _results.next(null);
+    _selected.next(null);
+  },
 };

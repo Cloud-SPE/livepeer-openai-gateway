@@ -11,8 +11,15 @@ const SAMPLE = {
   size_bytes: 512,
   contents: 'nodes:\n  - id: node-1\n    url: http://x\n',
   loaded_nodes: [
-    { id: 'node-1', url: 'http://x', enabled: true, status: 'healthy',
-      tierAllowed: ['free', 'prepaid'], supportedModels: ['m'], weight: 100 },
+    {
+      id: 'node-1',
+      url: 'http://x',
+      enabled: true,
+      status: 'healthy',
+      tierAllowed: ['free', 'prepaid'],
+      supportedModels: ['m'],
+      weight: 100,
+    },
   ],
 };
 
@@ -23,7 +30,10 @@ beforeEach(() => {
   getStub = sinon.stub(api, 'get').resolves(SAMPLE);
 });
 
-afterEach(() => { sinon.restore(); configService.reset(); });
+afterEach(() => {
+  sinon.restore();
+  configService.reset();
+});
 
 describe('admin-config', () => {
   it('shows path, sha256, mtime, and the loaded-nodes table', async () => {
@@ -43,8 +53,9 @@ describe('admin-config', () => {
     await aTimeout(0);
     await el.updateComplete;
 
-    const reloadBtn = [...el.querySelectorAll('bridge-button')]
-      .find((b) => b.textContent.trim() === 'Reload');
+    const reloadBtn = [...el.querySelectorAll('bridge-button')].find(
+      (b) => b.textContent.trim() === 'Reload',
+    );
     reloadBtn.click();
     await aTimeout(0);
     expect(getStub.callCount).to.be.greaterThan(1);

@@ -57,9 +57,7 @@ export function adminAuthPreHandler(deps: AdminAuthDeps): preHandlerAsyncHookHan
     // the token-hash when missing or malformed.
     const actorHeader = req.headers['x-admin-actor'];
     const actorClaim =
-      typeof actorHeader === 'string' && ADMIN_ACTOR_PATTERN.test(actorHeader)
-        ? actorHeader
-        : null;
+      typeof actorHeader === 'string' && ADMIN_ACTOR_PATTERN.test(actorHeader) ? actorHeader : null;
     req.adminActor = actorClaim ?? actorFromToken(token);
 
     // Record success after the handler replies so status_code reflects outcome.

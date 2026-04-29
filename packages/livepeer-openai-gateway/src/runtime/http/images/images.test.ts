@@ -46,9 +46,7 @@ async function startFakeWorkerNode(): Promise<FakeWorkerNode> {
   let mode: ImagesMode = 'ok';
   const app: FastifyInstance = Fastify({ logger: false, disableRequestLogging: true });
   app.get('/health', async () => fakeHealthResponse());
-  app.get('/quote', async () =>
-    fakeQuoteResponse({ model: 'dall-e-3', pricePerWorkUnitWei: '1' }),
-  );
+  app.get('/quote', async () => fakeQuoteResponse({ model: 'dall-e-3', pricePerWorkUnitWei: '1' }));
   app.get('/quotes', async () =>
     fakeQuotesResponse({
       capabilities: [

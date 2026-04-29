@@ -44,9 +44,10 @@ export function createApi(cfg) {
     const payload = isJson ? await res.json().catch(() => null) : null;
 
     if (!res.ok) {
-      const message = payload && typeof payload === 'object' && 'error' in payload
-        ? extractErrorMessage(payload.error)
-        : `http_${res.status}`;
+      const message =
+        payload && typeof payload === 'object' && 'error' in payload
+          ? extractErrorMessage(payload.error)
+          : `http_${res.status}`;
       throw new ApiError('http_error', res.status, message, payload);
     }
 
@@ -56,13 +57,21 @@ export function createApi(cfg) {
   return {
     request,
     /** @param {string} path */
-    get(path) { return request('GET', path); },
+    get(path) {
+      return request('GET', path);
+    },
     /** @param {string} path @param {unknown} body */
-    post(path, body) { return request('POST', path, body); },
+    post(path, body) {
+      return request('POST', path, body);
+    },
     /** @param {string} path @param {unknown} body */
-    put(path, body) { return request('PUT', path, body); },
+    put(path, body) {
+      return request('PUT', path, body);
+    },
     /** @param {string} path */
-    del(path) { return request('DELETE', path); },
+    del(path) {
+      return request('DELETE', path);
+    },
   };
 }
 

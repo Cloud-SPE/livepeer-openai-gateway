@@ -7,14 +7,7 @@ import type {
   Wallet,
 } from '@cloudspe/livepeer-openai-gateway-core/interfaces/index.js';
 import { UnknownCallerTierError } from '@cloudspe/livepeer-openai-gateway-core/service/billing/errors.js';
-import {
-  commit,
-  commitQuota,
-  refund,
-  refundQuota,
-  reserve,
-  reserveQuota,
-} from './reservations.js';
+import { commit, commitQuota, refund, refundQuota, reserve, reserveQuota } from './reservations.js';
 
 /**
  * Default `Wallet` implementation that wraps the existing prepaid/free

@@ -11,15 +11,26 @@ beforeEach(() => {
   getStub = sinon.stub(api, 'get');
 });
 
-afterEach(() => { sinon.restore(); reservationsService.reset(); });
+afterEach(() => {
+  sinon.restore();
+  reservationsService.reset();
+});
 
 describe('admin-reservations', () => {
   it('queries open reservations on connect and renders the table', async () => {
     getStub.resolves({
       reservations: [
-        { id: 'r1', customer_id: '12345678-aaaa-bbbb-cccc-1234567890ab', work_id: 'w-1',
-          kind: 'prepaid', amount_usd_cents: '100', amount_tokens: null, state: 'open',
-          created_at: '2026-04-26T08:00:00.000Z', age_seconds: 125 },
+        {
+          id: 'r1',
+          customer_id: '12345678-aaaa-bbbb-cccc-1234567890ab',
+          work_id: 'w-1',
+          kind: 'prepaid',
+          amount_usd_cents: '100',
+          amount_tokens: null,
+          state: 'open',
+          created_at: '2026-04-26T08:00:00.000Z',
+          age_seconds: 125,
+        },
       ],
       next_cursor: null,
     });

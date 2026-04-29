@@ -45,12 +45,14 @@ export function registerAccountRoutes(app: FastifyInstance, deps: AccountRoutesD
 
   app.get('/v1/account', { preHandler }, (req, reply) => respondAccount(req, reply));
   app.get('/v1/account/limits', { preHandler }, (req, reply) => respondLimits(req, reply, deps));
-  app.get('/v1/account/api-keys', { preHandler }, (req, reply) => respondListKeys(req, reply, deps));
-  app.post('/v1/account/api-keys', { preHandler }, (req, reply) => handleCreateKey(req, reply, deps));
-  app.delete<{ Params: { id: string } }>(
-    '/v1/account/api-keys/:id',
-    { preHandler },
-    (req, reply) => handleRevokeKey(req, reply, deps),
+  app.get('/v1/account/api-keys', { preHandler }, (req, reply) =>
+    respondListKeys(req, reply, deps),
+  );
+  app.post('/v1/account/api-keys', { preHandler }, (req, reply) =>
+    handleCreateKey(req, reply, deps),
+  );
+  app.delete<{ Params: { id: string } }>('/v1/account/api-keys/:id', { preHandler }, (req, reply) =>
+    handleRevokeKey(req, reply, deps),
   );
   app.get('/v1/account/usage', { preHandler }, (req, reply) => handleUsage(req, reply, deps));
   app.get('/v1/account/topups', { preHandler }, (req, reply) => handleTopups(req, reply, deps));

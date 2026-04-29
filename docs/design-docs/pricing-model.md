@@ -37,11 +37,11 @@ The pricing model has three independent dials. Operators (worker AND bridge) nee
 
 Same GPU, very different cost-per-token depending on batching:
 
-| Mode | Tokens/sec sustained (gemma3 27B class on RTX 5090) | Tokens/day at 100% util |
-| --- | --- | --- |
-| Single user (Ollama, no batching) | ~70 t/s | ~6M |
-| 4× concurrent (vLLM `--max-num-seqs 4`) | ~250 t/s | ~22M |
-| 16× concurrent (vLLM `--max-num-seqs 16`) | ~500 t/s | ~43M |
+| Mode                                      | Tokens/sec sustained (gemma3 27B class on RTX 5090) | Tokens/day at 100% util |
+| ----------------------------------------- | --------------------------------------------------- | ----------------------- |
+| Single user (Ollama, no batching)         | ~70 t/s                                             | ~6M                     |
+| 4× concurrent (vLLM `--max-num-seqs 4`)   | ~250 t/s                                            | ~22M                    |
+| 16× concurrent (vLLM `--max-num-seqs 16`) | ~500 t/s                                            | ~43M                    |
 
 (Numbers approximate; exact depends on prompt length, model size, quantization, and the inference engine.)
 
@@ -49,20 +49,20 @@ Same GPU, very different cost-per-token depending on batching:
 
 Break-even price/M tokens for the worker = `daily_cost / daily_tokens`:
 
-| Mode | Break-even ($12/day) | $5/day profit ($17/day rev) |
-| --- | --- | --- |
-| Single user | $2.00 | $2.83 |
-| 4× batched | $0.55 | $0.79 |
-| 16× batched | $0.28 | $0.39 |
+| Mode        | Break-even ($12/day) | $5/day profit ($17/day rev) |
+| ----------- | -------------------- | --------------------------- |
+| Single user | $2.00                | $2.83                       |
+| 4× batched  | $0.55                | $0.79                       |
+| 16× batched | $0.28                | $0.39                       |
 
 ### Default (growth-phase) tier mapping
 
-| Tier | Bridge customer (avg) | Default `worker.yaml` `price_per_work_unit_wei` (at $4k/ETH) | Worker take | Bridge keeps |
-| --- | --- | --- | --- | --- |
-| **starter** ($0.05/$0.10) | ~$0.075/M | `1_250_000` (≈ $0.005/M) | ~7 % | ~93 % |
-| **standard** ($0.15/$0.40) | ~$0.25/M | `5_000_000` (≈ $0.02/M) | ~8 % | ~92 % |
-| **pro** ($0.40/$1.20) | ~$0.80/M | `15_000_000` (≈ $0.06/M) | ~7 % | ~93 % |
-| **premium** ($2.50/$6.00) | ~$3.75/M | `75_000_000` (≈ $0.30/M) | ~8 % | ~92 % |
+| Tier                       | Bridge customer (avg) | Default `worker.yaml` `price_per_work_unit_wei` (at $4k/ETH) | Worker take | Bridge keeps |
+| -------------------------- | --------------------- | ------------------------------------------------------------ | ----------- | ------------ |
+| **starter** ($0.05/$0.10)  | ~$0.075/M             | `1_250_000` (≈ $0.005/M)                                     | ~7 %        | ~93 %        |
+| **standard** ($0.15/$0.40) | ~$0.25/M              | `5_000_000` (≈ $0.02/M)                                      | ~8 %        | ~92 %        |
+| **pro** ($0.40/$1.20)      | ~$0.80/M              | `15_000_000` (≈ $0.06/M)                                     | ~7 %        | ~93 %        |
+| **premium** ($2.50/$6.00)  | ~$3.75/M              | `75_000_000` (≈ $0.30/M)                                     | ~8 %        | ~92 %        |
 
 These defaults are **deliberately worker-unfavorable in the short term**. A consumer GPU running at any of these prices loses money against its hardware cost. Workers participate because:
 
@@ -89,14 +89,14 @@ The bridge already records the raw inputs (`usage_record` table, daemon BoltDB, 
 
 ### What's recorded today
 
-| Source | Data | Location |
-| --- | --- | --- |
-| `usage_record` (postgres) | per-request: customer_id, model, kind, prompt/completion tokens, cost_usd_cents, node_cost_wei, status, timestamp | bridge db |
-| `topup` (postgres) | Stripe Checkout settlements per customer | bridge db |
-| `node_health_event` (postgres) | circuit-state transitions per worker | bridge db |
-| daemon BoltDB | pending winning tickets, redeemed tx hashes, sender nonces | worker daemon `/var/lib/livepeer/payment-daemon.db` |
-| Arbitrum One | actual ETH/LPT received from `redeemWinningTicket` events on the recipient address | on-chain |
-| Bridge logs | per-request `session started`, `ticket batch created`, `commit reservation` lines | container stdout |
+| Source                         | Data                                                                                                              | Location                                            |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| `usage_record` (postgres)      | per-request: customer_id, model, kind, prompt/completion tokens, cost_usd_cents, node_cost_wei, status, timestamp | bridge db                                           |
+| `topup` (postgres)             | Stripe Checkout settlements per customer                                                                          | bridge db                                           |
+| `node_health_event` (postgres) | circuit-state transitions per worker                                                                              | bridge db                                           |
+| daemon BoltDB                  | pending winning tickets, redeemed tx hashes, sender nonces                                                        | worker daemon `/var/lib/livepeer/payment-daemon.db` |
+| Arbitrum One                   | actual ETH/LPT received from `redeemWinningTicket` events on the recipient address                                | on-chain                                            |
+| Bridge logs                    | per-request `session started`, `ticket batch created`, `commit reservation` lines                                 | container stdout                                    |
 
 ### What's missing (tracked as tech debt)
 
@@ -118,14 +118,15 @@ The lack of these tools is not blocking the deploy — workers can still earn, c
 
 ## Chat rate card (v2, effective 2026-04-25)
 
-| Tier         | Input $ / 1M tokens | Output $ / 1M tokens | Worker batching expectation | Commercial reference (per 1M, in/out) |
-| ------------ | ------------------- | -------------------- | --------------------------- | ------------------------------------- |
-| **Starter**  | $0.05               | $0.10                | ≥ 16× concurrent (vLLM heavy) | strictly < OpenAI gpt-4o-mini $0.15 / $0.60 |
-| **Standard** | $0.15               | $0.40                | ~10× concurrent             | strictly < Anthropic Claude Haiku $0.25 / $1.25 |
-| **Pro**      | $0.40               | $1.20                | ~3-4× concurrent            | strictly < Together llama-3.1-70b $0.88 / $0.88; Replicate llama-3.1-70b ~$0.65 / $2.75 |
-| **Premium**  | $2.50               | $6.00                | single-user (no batching), niche / fine-tuned models | strictly < OpenAI gpt-4o $2.50 / $10; Anthropic Claude Sonnet 3.5 $3 / $15 |
+| Tier         | Input $ / 1M tokens | Output $ / 1M tokens | Worker batching expectation                          | Commercial reference (per 1M, in/out)                                                   |
+| ------------ | ------------------- | -------------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| **Starter**  | $0.05               | $0.10                | ≥ 16× concurrent (vLLM heavy)                        | strictly < OpenAI gpt-4o-mini $0.15 / $0.60                                             |
+| **Standard** | $0.15               | $0.40                | ~10× concurrent                                      | strictly < Anthropic Claude Haiku $0.25 / $1.25                                         |
+| **Pro**      | $0.40               | $1.20                | ~3-4× concurrent                                     | strictly < Together llama-3.1-70b $0.88 / $0.88; Replicate llama-3.1-70b ~$0.65 / $2.75 |
+| **Premium**  | $2.50               | $6.00                | single-user (no batching), niche / fine-tuned models | strictly < OpenAI gpt-4o $2.50 / $10; Anthropic Claude Sonnet 3.5 $3 / $15              |
 
 Other reference points (2026-04):
+
 - OpenAI gpt-3.5-turbo $0.50 / $1.50 — Cloud-SPE's standard tier beats this on both sides.
 - Groq llama-70b $0.59 / $0.79 — Cloud-SPE's pro tier beats input; output edged by Groq but Groq is rate-limited.
 - OpenAI gpt-4-turbo $10 / $30 — Cloud-SPE's premium tier 4× cheaper across the board.
@@ -138,25 +139,25 @@ Free tier consumes against the **Starter** rate for internal cost accounting (qu
 
 Embeddings are priced per model, input-tokens only. Free tier is not available for embeddings in v1.
 
-| Model                      | $ / 1M tokens | Cheapest commercial reference |
-| -------------------------- | ------------- | ----------------------------- |
-| `text-embedding-3-small`   | $0.005        | OpenAI $0.020 — Cloud-SPE 4× cheaper |
-| `text-embedding-3-large`   | $0.05         | OpenAI $0.130 — Cloud-SPE 2.6× cheaper |
-| `text-embedding-bge-m3`    | $0.005        | open-source class; cheapest available  |
+| Model                    | $ / 1M tokens | Cheapest commercial reference          |
+| ------------------------ | ------------- | -------------------------------------- |
+| `text-embedding-3-small` | $0.005        | OpenAI $0.020 — Cloud-SPE 4× cheaper   |
+| `text-embedding-3-large` | $0.05         | OpenAI $0.130 — Cloud-SPE 2.6× cheaper |
+| `text-embedding-bge-m3`  | $0.005        | open-source class; cheapest available  |
 
 ## Images rate card (v2, effective 2026-04-25)
 
 Images are priced per `(model, size, quality)`. The customer pays `n × usdPerImage` for a request that returns `n` images.
 
-| Model      | Size       | Quality  | $ / image | Cheapest commercial reference        |
-| ---------- | ---------- | -------- | --------- | ------------------------------------ |
-| `dall-e-3` | 1024×1024  | standard | $0.025    | OpenAI $0.040 — Cloud-SPE 1.6× cheaper |
-| `dall-e-3` | 1024×1024  | hd       | $0.050    | OpenAI $0.080 — Cloud-SPE 1.6× cheaper |
-| `dall-e-3` | 1024×1792  | standard | $0.040    | OpenAI $0.080 — Cloud-SPE 2× cheaper  |
-| `dall-e-3` | 1024×1792  | hd       | $0.075    | OpenAI $0.120 — Cloud-SPE 1.6× cheaper |
-| `dall-e-3` | 1792×1024  | standard | $0.040    | OpenAI $0.080 — Cloud-SPE 2× cheaper  |
-| `dall-e-3` | 1792×1024  | hd       | $0.075    | OpenAI $0.120 — Cloud-SPE 1.6× cheaper |
-| `sdxl`     | 1024×1024  | standard | $0.002    | Replicate / Together SDXL ~$0.003     |
+| Model      | Size      | Quality  | $ / image | Cheapest commercial reference          |
+| ---------- | --------- | -------- | --------- | -------------------------------------- |
+| `dall-e-3` | 1024×1024 | standard | $0.025    | OpenAI $0.040 — Cloud-SPE 1.6× cheaper |
+| `dall-e-3` | 1024×1024 | hd       | $0.050    | OpenAI $0.080 — Cloud-SPE 1.6× cheaper |
+| `dall-e-3` | 1024×1792 | standard | $0.040    | OpenAI $0.080 — Cloud-SPE 2× cheaper   |
+| `dall-e-3` | 1024×1792 | hd       | $0.075    | OpenAI $0.120 — Cloud-SPE 1.6× cheaper |
+| `dall-e-3` | 1792×1024 | standard | $0.040    | OpenAI $0.080 — Cloud-SPE 2× cheaper   |
+| `dall-e-3` | 1792×1024 | hd       | $0.075    | OpenAI $0.120 — Cloud-SPE 1.6× cheaper |
+| `sdxl`     | 1024×1024 | standard | $0.002    | Replicate / Together SDXL ~$0.003      |
 
 **Partial delivery.** If the node returns fewer images than `n`, the customer is billed for `data.length × usdPerImage` and the delta is refunded. A zero-image response is a node contract violation (503 + full refund). See `docs/references/worker-node-contract.md §5.3`.
 
@@ -164,10 +165,10 @@ Images are priced per `(model, size, quality)`. The customer pays `n × usdPerIm
 
 Speech (TTS) is priced per character of `input`. Char count is exact at the bridge boundary, so the upfront reservation equals the final commit — no reconciliation drift.
 
-| Model      | $ / 1M chars | Cheapest commercial reference        |
-| ---------- | ------------ | ------------------------------------ |
-| `tts-1`    | $5           | OpenAI $15 — Cloud-SPE 3× cheaper     |
-| `tts-1-hd` | $12          | OpenAI $30 — Cloud-SPE 2.5× cheaper   |
+| Model      | $ / 1M chars | Cheapest commercial reference                             |
+| ---------- | ------------ | --------------------------------------------------------- |
+| `tts-1`    | $5           | OpenAI $15 — Cloud-SPE 3× cheaper                         |
+| `tts-1-hd` | $12          | OpenAI $30 — Cloud-SPE 2.5× cheaper                       |
 | `kokoro`   | $1           | open-source class; ElevenLabs $30+ for comparable quality |
 
 Free tier is not available for `/v1/audio/speech` in v1 (matches embeddings + images precedent).
@@ -176,9 +177,9 @@ Free tier is not available for `/v1/audio/speech` in v1 (matches embeddings + im
 
 Transcriptions (STT) is priced per minute of audio. The upfront reservation is sized at a worst-case bitrate (64 kbps) capped at 60 minutes; the actual commit uses the duration the node reports via the `x-livepeer-audio-duration-seconds` response header.
 
-| Model       | $ / min   | Cheapest commercial reference                 |
-| ----------- | --------- | --------------------------------------------- |
-| `whisper-1` | $0.003    | OpenAI $0.006; Deepgram $0.0043; AssemblyAI $0.0065 — Cloud-SPE strictly cheaper than all three |
+| Model       | $ / min | Cheapest commercial reference                                                                   |
+| ----------- | ------- | ----------------------------------------------------------------------------------------------- |
+| `whisper-1` | $0.003  | OpenAI $0.006; Deepgram $0.0043; AssemblyAI $0.0065 — Cloud-SPE strictly cheaper than all three |
 
 If the worker omits the duration header on a 2xx response, the bridge returns `503 service_unavailable` and refunds the reservation in full (matches the universal "no usage = no bill" rule from 0007 — see `docs/references/worker-node-contract.md §7.3`).
 
@@ -199,7 +200,7 @@ denom  = MILLION × 10_000                                          // tokens ×
 cents  = ceil(microPerMillion / denom)
 ```
 
-**The bug this guards against (fixed in `2c40cbb`).** The earlier impl divided each side by `MILLION` *before* summing — for sub-cent amounts the per-side integer division floored to 0, the sum was 0, and the ceil over 0 stayed at 0 (a 5+3 token request returned 0 cents instead of 1). Sum the micros first; divide+ceil exactly once at the end. The same shape applies to embeddings (`computeInputOnlyCostCents`), images (`computePerImageCents`), speech (`computePerCharCents`), and transcriptions (`computePerSecondCents`) — each scaled by 10_000 micro-cents for the same precision-then-ceil pattern.
+**The bug this guards against (fixed in `2c40cbb`).** The earlier impl divided each side by `MILLION` _before_ summing — for sub-cent amounts the per-side integer division floored to 0, the sum was 0, and the ceil over 0 stayed at 0 (a 5+3 token request returned 0 cents instead of 1). Sum the micros first; divide+ceil exactly once at the end. The same shape applies to embeddings (`computeInputOnlyCostCents`), images (`computePerImageCents`), speech (`computePerCharCents`), and transcriptions (`computePerSecondCents`) — each scaled by 10_000 micro-cents for the same precision-then-ceil pattern.
 
 The customer-facing semantics: **every billable event rounds up to the nearest cent**. A 1-token chat request at the cheapest tier costs 1 cent. There is no fractional billing in v1 — the prepaid balance is integer cents and the ledger has no sub-cent units.
 

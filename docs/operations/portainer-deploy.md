@@ -16,14 +16,14 @@ The full feature surface — admin SPA, customer portal, operator-managed rate c
 
 Before touching Portainer, gather:
 
-| Required | Description |
-|---|---|
-| **Arbitrum One RPC URL** | Any provider — Alchemy, Infura, your own node. Set as `CHAIN_RPC`. The bridge passes it through to the payment-daemon and the service-registry-daemon. |
-| **Ethereum keystore (V3 JSON) + password** | The signing wallet for the bridge. The eth_address derived from this keystore must match `BRIDGE_ETH_ADDRESS` (sent as `?sender=` when the bridge probes worker `/quote` endpoints). Generated via `geth account new` if you don't have one. |
-| **Stripe secret + webhook signing keys** | `sk_live_...` (or `sk_test_...` for staging). Webhook secret from your Stripe Dashboard → Developers → Webhooks → endpoint signing secret. |
-| **Public hostname for the bridge** | Set as `BRIDGE_PUBLIC_HOST`. Traefik or your reverse proxy routes `Host(${BRIDGE_PUBLIC_HOST})` → the bridge container. |
-| **Service-registry overlay YAML** | One file describing the worker pool the bridge should route to. Format below. |
-| **Random-but-stable secrets** | `ADMIN_TOKEN` (≥ 32 chars), `API_KEY_PEPPER` (≥ 16 chars), `PGPASSWORD`. Generate once with `openssl rand -base64 32`; rotating these is non-trivial (`API_KEY_PEPPER` invalidates every customer key in the table; `PGPASSWORD` requires DB password rotation). |
+| Required                                   | Description                                                                                                                                                                                                                                                      |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Arbitrum One RPC URL**                   | Any provider — Alchemy, Infura, your own node. Set as `CHAIN_RPC`. The bridge passes it through to the payment-daemon and the service-registry-daemon.                                                                                                           |
+| **Ethereum keystore (V3 JSON) + password** | The signing wallet for the bridge. The eth_address derived from this keystore must match `BRIDGE_ETH_ADDRESS` (sent as `?sender=` when the bridge probes worker `/quote` endpoints). Generated via `geth account new` if you don't have one.                     |
+| **Stripe secret + webhook signing keys**   | `sk_live_...` (or `sk_test_...` for staging). Webhook secret from your Stripe Dashboard → Developers → Webhooks → endpoint signing secret.                                                                                                                       |
+| **Public hostname for the bridge**         | Set as `BRIDGE_PUBLIC_HOST`. Traefik or your reverse proxy routes `Host(${BRIDGE_PUBLIC_HOST})` → the bridge container.                                                                                                                                          |
+| **Service-registry overlay YAML**          | One file describing the worker pool the bridge should route to. Format below.                                                                                                                                                                                    |
+| **Random-but-stable secrets**              | `ADMIN_TOKEN` (≥ 32 chars), `API_KEY_PEPPER` (≥ 16 chars), `PGPASSWORD`. Generate once with `openssl rand -base64 32`; rotating these is non-trivial (`API_KEY_PEPPER` invalidates every customer key in the table; `PGPASSWORD` requires DB password rotation). |
 
 ## Step 1 — Place the registry overlay on the host
 
@@ -40,21 +40,21 @@ File format (one entry per orchestrator eth_address; pin nodes are the actual wo
 
 ```yaml
 overlay:
-  - eth_address: "0xd003..."           # orchestrator's payment recipient
+  - eth_address: '0xd003...' # orchestrator's payment recipient
     enabled: true
     tier_allowed: [free, prepaid]
     weight: 100
-    unsigned_allowed: true             # required when no on-chain manifest exists
+    unsigned_allowed: true # required when no on-chain manifest exists
     pin:
       - id: worker-1
-        url: "https://worker-1.example.com"
+        url: 'https://worker-1.example.com'
         weight: 100
         capabilities:
-          - name: "openai:/v1/chat/completions"
+          - name: 'openai:/v1/chat/completions'
             work_unit: token
             models:
-              - id: "Qwen3-32B"
-                price_per_work_unit_wei: "25000000"
+              - id: 'Qwen3-32B'
+                price_per_work_unit_wei: '25000000'
                 warm: true
         tier_allowed: [free, prepaid]
 ```
@@ -153,10 +153,10 @@ services:
     restart: unless-stopped
     depends_on:
       postgres: { condition: service_healthy }
-      redis:    { condition: service_healthy }
-      payment-daemon:          { condition: service_started }
+      redis: { condition: service_healthy }
+      payment-daemon: { condition: service_started }
       service-registry-daemon: { condition: service_started }
-      bridge-migrate:          { condition: service_completed_successfully }
+      bridge-migrate: { condition: service_completed_successfully }
     environment:
       HOST: '0.0.0.0'
       PORT: '8080'
@@ -175,13 +175,19 @@ services:
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:?set STRIPE_SECRET_KEY}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:?set STRIPE_WEBHOOK_SECRET}
       STRIPE_SUCCESS_URL: https://${BRIDGE_PUBLIC_HOST}/portal/billing/success
-      STRIPE_CANCEL_URL:  https://${BRIDGE_PUBLIC_HOST}/portal/billing/cancel
+      STRIPE_CANCEL_URL: https://${BRIDGE_PUBLIC_HOST}/portal/billing/cancel
       ADMIN_TOKEN: ${ADMIN_TOKEN:?set ADMIN_TOKEN (≥ 32 chars)}
       BRIDGE_AUTO_MIGRATE: 'false'
     volumes:
       - socket-dir:/var/run/livepeer
     healthcheck:
-      test: ['CMD', '/nodejs/bin/node', '-e', "require('http').get('http://127.0.0.1:8080/healthz',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      test:
+        [
+          'CMD',
+          '/nodejs/bin/node',
+          '-e',
+          "require('http').get('http://127.0.0.1:8080/healthz',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -306,27 +312,27 @@ curl -sS -H "x-admin-token: $ADMIN_TOKEN" https://$H/admin/registry/probe | jq .
 
 **Common root causes:**
 
-| Symptom | Cause | Fix |
-|---|---|---|
-| Daemon says `0 nodes loaded` | Overlay file path on host doesn't match `SERVICE_REGISTRY_CONFIG_PATH` env, or the file is empty | `ls -la /opt/livepeer-openai-gateway/`; verify the env var matches |
-| Pin nodes don't surface | `unsigned_allowed: false` in overlay (chainless mode requires `true`) | Edit overlay → `unsigned_allowed: true` → recreate daemon |
-| `chain.GetServiceURI` returns `NotFound` | Address not on Arbitrum BondingManager AND `unsigned_allowed: false`. Daemon `v1.3.0` synth path requires `unsigned_allowed: true` to surface pin entries | As above |
-| `payerDaemonHealthy: false` | Keystore path/password wrong, or `CHAIN_RPC` unreachable | `docker logs` the payment-daemon container |
-| `dbOk: false` | `PGPASSWORD` mismatch (likely after rotation without volume recreate) | Recreate the postgres volume (dev only) or rotate the DB's password through SQL |
+| Symptom                                  | Cause                                                                                                                                                     | Fix                                                                             |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Daemon says `0 nodes loaded`             | Overlay file path on host doesn't match `SERVICE_REGISTRY_CONFIG_PATH` env, or the file is empty                                                          | `ls -la /opt/livepeer-openai-gateway/`; verify the env var matches              |
+| Pin nodes don't surface                  | `unsigned_allowed: false` in overlay (chainless mode requires `true`)                                                                                     | Edit overlay → `unsigned_allowed: true` → recreate daemon                       |
+| `chain.GetServiceURI` returns `NotFound` | Address not on Arbitrum BondingManager AND `unsigned_allowed: false`. Daemon `v1.3.0` synth path requires `unsigned_allowed: true` to surface pin entries | As above                                                                        |
+| `payerDaemonHealthy: false`              | Keystore path/password wrong, or `CHAIN_RPC` unreachable                                                                                                  | `docker logs` the payment-daemon container                                      |
+| `dbOk: false`                            | `PGPASSWORD` mismatch (likely after rotation without volume recreate)                                                                                     | Recreate the postgres volume (dev only) or rotate the DB's password through SQL |
 
 ## Routine operations
 
-| Task | How |
-|---|---|
-| Add a worker | Edit `/opt/livepeer-openai-gateway/service-registry-config.yaml`; recreate the `service-registry-daemon` container in Portainer; restart the bridge container so it re-enumerates |
-| Add a model | Admin SPA → Rate card → Chat (or other capability) → + Add. No restart. |
-| Change tier prices | Admin SPA → Rate card → Chat → click Edit on the tier row. No restart. |
-| Refund a customer | Admin SPA → Customers → click customer → Refund. Requires the Stripe session id. |
-| Suspend / unsuspend | Admin SPA → Customers → click customer → Suspend (writes audit row, halts API access) |
-| Investigate a stuck reservation | Admin SPA → Reservations (oldest-first list, age in seconds). The fix is upstream — node health, payer-daemon. There's no "force close" button by design. |
-| Rotate `ADMIN_TOKEN` | Update env in Portainer stack → Update the stack. All open admin sessions are invalidated. |
-| Rotate `API_KEY_PEPPER` | **Destructive.** Invalidates every `api_key.hash` row. Coordinate with customers; reissue all keys after rotation. Tracked as `api-key-pepper-rotation-runbook` in tech-debt. |
-| Bump the bridge image | Update `tztcloud/livepeer-openai-gateway:v0.8.10` to a newer tag in the stack editor → Update the stack with **Re-pull image** ticked. Bridge migrations run automatically. |
+| Task                            | How                                                                                                                                                                               |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Add a worker                    | Edit `/opt/livepeer-openai-gateway/service-registry-config.yaml`; recreate the `service-registry-daemon` container in Portainer; restart the bridge container so it re-enumerates |
+| Add a model                     | Admin SPA → Rate card → Chat (or other capability) → + Add. No restart.                                                                                                           |
+| Change tier prices              | Admin SPA → Rate card → Chat → click Edit on the tier row. No restart.                                                                                                            |
+| Refund a customer               | Admin SPA → Customers → click customer → Refund. Requires the Stripe session id.                                                                                                  |
+| Suspend / unsuspend             | Admin SPA → Customers → click customer → Suspend (writes audit row, halts API access)                                                                                             |
+| Investigate a stuck reservation | Admin SPA → Reservations (oldest-first list, age in seconds). The fix is upstream — node health, payer-daemon. There's no "force close" button by design.                         |
+| Rotate `ADMIN_TOKEN`            | Update env in Portainer stack → Update the stack. All open admin sessions are invalidated.                                                                                        |
+| Rotate `API_KEY_PEPPER`         | **Destructive.** Invalidates every `api_key.hash` row. Coordinate with customers; reissue all keys after rotation. Tracked as `api-key-pepper-rotation-runbook` in tech-debt.     |
+| Bump the bridge image           | Update `tztcloud/livepeer-openai-gateway:v0.8.10` to a newer tag in the stack editor → Update the stack with **Re-pull image** ticked. Bridge migrations run automatically.       |
 
 ## Image upgrade — what to expect
 

@@ -2,10 +2,10 @@
 
 @layer reset, tokens, base, layout, components, utilities;
 
-@import url("../shared/css/reset.css") layer(reset);
-@import url("../shared/css/tokens.css") layer(tokens);
-@import url("../shared/css/base.css") layer(base);
-@import url("../shared/css/utilities.css") layer(utilities);
+@import url('../shared/css/reset.css') layer(reset);
+@import url('../shared/css/tokens.css') layer(tokens);
+@import url('../shared/css/base.css') layer(base);
+@import url('../shared/css/utilities.css') layer(utilities);
 
 @layer layout {
   admin-app {
@@ -36,15 +36,24 @@
     text-transform: uppercase;
     letter-spacing: 0.08em;
   }
-  admin-app header.app-bar .nav { display: flex; gap: var(--space-1); flex-wrap: wrap; }
+  admin-app header.app-bar .nav {
+    display: flex;
+    gap: var(--space-1);
+    flex-wrap: wrap;
+  }
   admin-app header.app-bar .nav button {
     padding: var(--space-2) var(--space-3);
     border-radius: var(--radius-md);
     font-size: var(--font-size-sm);
     color: var(--text-2);
-    transition: background var(--duration-fast), color var(--duration-fast);
+    transition:
+      background var(--duration-fast),
+      color var(--duration-fast);
   }
-  admin-app header.app-bar .nav button:hover { background: var(--surface-2); color: var(--text-1); }
+  admin-app header.app-bar .nav button:hover {
+    background: var(--surface-2);
+    color: var(--text-1);
+  }
   admin-app header.app-bar .nav button[aria-current='page'] {
     background: var(--accent-tint);
     color: var(--accent);
@@ -76,7 +85,12 @@
 
 @layer components {
   /* Sign-in */
-  admin-login { display: grid; place-items: center; min-height: 100dvh; padding: var(--space-5); }
+  admin-login {
+    display: grid;
+    place-items: center;
+    min-height: 100dvh;
+    padding: var(--space-5);
+  }
   admin-login .card {
     background: var(--surface-1);
     border: 1px solid var(--border-1);
@@ -87,10 +101,22 @@
     display: grid;
     gap: var(--space-4);
   }
-  admin-login h1 { font-size: var(--font-size-2xl); margin: 0; }
-  admin-login .field { display: grid; gap: var(--space-2); }
-  admin-login label { font-size: var(--font-size-sm); color: var(--text-2); }
-  admin-login input { font-family: var(--font-mono); font-size: var(--font-size-sm); }
+  admin-login h1 {
+    font-size: var(--font-size-2xl);
+    margin: 0;
+  }
+  admin-login .field {
+    display: grid;
+    gap: var(--space-2);
+  }
+  admin-login label {
+    font-size: var(--font-size-sm);
+    color: var(--text-2);
+  }
+  admin-login input {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-sm);
+  }
   admin-login .error {
     color: var(--danger);
     background: var(--danger-tint);
@@ -112,10 +138,25 @@
     border-radius: var(--radius-lg);
     padding: var(--space-5);
   }
-  admin-health .tile:has([data-status='down']) { border-color: var(--danger); background: var(--danger-tint); }
-  admin-health .tile:has([data-status='warn']) { border-color: var(--warning); background: var(--warning-tint); }
-  admin-health .tile .label { font-size: var(--font-size-sm); color: var(--text-3); margin-bottom: var(--space-2); }
-  admin-health .tile .value { font-size: var(--font-size-xl); font-weight: 700; color: var(--text-1); font-family: var(--font-mono); }
+  admin-health .tile:has([data-status='down']) {
+    border-color: var(--danger);
+    background: var(--danger-tint);
+  }
+  admin-health .tile:has([data-status='warn']) {
+    border-color: var(--warning);
+    background: var(--warning-tint);
+  }
+  admin-health .tile .label {
+    font-size: var(--font-size-sm);
+    color: var(--text-3);
+    margin-bottom: var(--space-2);
+  }
+  admin-health .tile .value {
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    color: var(--text-1);
+    font-family: var(--font-mono);
+  }
   admin-health .metrics-link {
     background: var(--surface-1);
     border: 1px solid var(--border-1);
@@ -124,7 +165,9 @@
     display: grid;
     gap: var(--space-3);
   }
-  admin-health .metrics-link p { margin: 0; }
+  admin-health .metrics-link p {
+    margin: 0;
+  }
   admin-health .grafana-link {
     display: inline-flex;
     align-items: center;
@@ -138,7 +181,9 @@
     text-decoration: none;
     transition: background var(--duration-fast) var(--ease-standard);
   }
-  admin-health .grafana-link:hover { background: var(--accent-hover); }
+  admin-health .grafana-link:hover {
+    background: var(--accent-hover);
+  }
   admin-health .grafana-link:focus-visible {
     outline: 0;
     box-shadow: 0 0 0 3px var(--accent-tint);
@@ -157,11 +202,20 @@
     letter-spacing: 0.04em;
   }
   .badge[data-status='healthy'],
-  .badge[data-status='active'] { background: var(--success-tint); color: var(--success); }
+  .badge[data-status='active'] {
+    background: var(--success-tint);
+    color: var(--success);
+  }
   .badge[data-status='degraded'],
-  .badge[data-status='suspended'] { background: var(--warning-tint); color: var(--warning); }
+  .badge[data-status='suspended'] {
+    background: var(--warning-tint);
+    color: var(--warning);
+  }
   .badge[data-status='circuit_broken'],
-  .badge[data-status='closed'] { background: var(--danger-tint); color: var(--danger); }
+  .badge[data-status='closed'] {
+    background: var(--danger-tint);
+    color: var(--danger);
+  }
 
   admin-customer-detail .actions {
     display: flex;
@@ -182,8 +236,13 @@
     gap: var(--space-2) var(--space-4);
     margin: 0;
   }
-  admin-customer-detail dt { color: var(--text-3); font-size: var(--font-size-sm); }
-  admin-customer-detail dd { margin: 0; }
+  admin-customer-detail dt {
+    color: var(--text-3);
+    font-size: var(--font-size-sm);
+  }
+  admin-customer-detail dd {
+    margin: 0;
+  }
 
   /* Page header */
   .page-header {
@@ -193,7 +252,9 @@
     gap: var(--space-3);
     margin-bottom: var(--space-5);
   }
-  .page-header h1 { margin: 0; }
+  .page-header h1 {
+    margin: 0;
+  }
 
   admin-node-detail .timeline {
     display: grid;
@@ -215,5 +276,7 @@
     color: var(--text-3);
     white-space: nowrap;
   }
-  admin-node-detail .event .kind { font-weight: 600; }
+  admin-node-detail .event .kind {
+    font-weight: 600;
+  }
 }

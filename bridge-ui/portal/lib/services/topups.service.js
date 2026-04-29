@@ -1,11 +1,13 @@
 import { BehaviorSubject, interval, Subscription } from 'rxjs';
 import { api } from '../api.js';
 
-const _topups = new BehaviorSubject(/** @type {Array<unknown>|null} */(null));
+const _topups = new BehaviorSubject(/** @type {Array<unknown>|null} */ (null));
 
 export const topupsService = {
   topups$: _topups.asObservable(),
-  get value() { return _topups.getValue(); },
+  get value() {
+    return _topups.getValue();
+  },
 
   async refresh() {
     const { topups } = await api.get('/v1/account/topups');
@@ -28,7 +30,10 @@ export const topupsService = {
     const start = Date.now();
     return new Promise((resolve) => {
       let sub = new Subscription();
-      const finish = (value) => { sub.unsubscribe(); resolve(value); };
+      const finish = (value) => {
+        sub.unsubscribe();
+        resolve(value);
+      };
       sub = interval(2000).subscribe(async () => {
         if (Date.now() - start > timeoutMs) return finish(null);
         try {
@@ -43,5 +48,7 @@ export const topupsService = {
     });
   },
 
-  reset() { _topups.next(null); },
+  reset() {
+    _topups.next(null);
+  },
 };

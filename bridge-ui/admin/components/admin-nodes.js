@@ -14,13 +14,21 @@ export class AdminNodes extends LitElement {
     this.nodes = new ObservableController(this, nodesService.nodes$);
   }
 
-  createRenderRoot() { return this; }
+  createRenderRoot() {
+    return this;
+  }
 
   async connectedCallback() {
     super.connectedCallback();
     if (!nodesService.value) {
-      try { await nodesService.refresh(); }
-      catch (err) { showToast({ kind: 'error', message: err instanceof Error ? err.message : 'Failed to load nodes.' }); }
+      try {
+        await nodesService.refresh();
+      } catch (err) {
+        showToast({
+          kind: 'error',
+          message: err instanceof Error ? err.message : 'Failed to load nodes.',
+        });
+      }
     }
   }
 
@@ -47,12 +55,22 @@ export class AdminNodes extends LitElement {
 
   _columns() {
     return [
-      { field: 'id', header: 'ID', render: (r) => html`<a href="#nodes/${r.id}" @click=${(e) => this._goDetail(e, r.id)}>${r.id}</a>` },
-      { field: 'url', header: 'URL', render: (r) => html`<span class="mono text-xs">${r.url}</span>` },
+      {
+        field: 'id',
+        header: 'ID',
+        render: (r) =>
+          html`<a href="#nodes/${r.id}" @click=${(e) => this._goDetail(e, r.id)}>${r.id}</a>`,
+      },
+      {
+        field: 'url',
+        header: 'URL',
+        render: (r) => html`<span class="mono text-xs">${r.url}</span>`,
+      },
       {
         field: 'status',
         header: 'Status',
-        render: (r) => html`<span class="badge" data-status=${r.status}>${r.status.replace('_', ' ')}</span>`,
+        render: (r) =>
+          html`<span class="badge" data-status=${r.status}>${r.status.replace('_', ' ')}</span>`,
       },
       {
         field: 'tierAllowed',
@@ -62,7 +80,7 @@ export class AdminNodes extends LitElement {
       {
         field: 'enabled',
         header: 'Enabled',
-        render: (r) => r.enabled ? 'yes' : html`<span class="muted">no</span>`,
+        render: (r) => (r.enabled ? 'yes' : html`<span class="muted">no</span>`),
       },
       { field: 'weight', header: 'Weight' },
     ];

@@ -5,8 +5,12 @@ const _nodes = new BehaviorSubject(null);
 
 export const nodesService = {
   nodes$: _nodes.asObservable(),
-  get value() { return _nodes.getValue(); },
-  set(value) { _nodes.next(value); },
+  get value() {
+    return _nodes.getValue();
+  },
+  set(value) {
+    _nodes.next(value);
+  },
 
   async refresh() {
     const { nodes } = await api.get('/admin/nodes');
@@ -31,5 +35,7 @@ export const nodesService = {
     return api.get(`/admin/nodes/${encodeURIComponent(id)}/events${q ? `?${q}` : ''}`);
   },
 
-  reset() { _nodes.next(null); },
+  reset() {
+    _nodes.next(null);
+  },
 };

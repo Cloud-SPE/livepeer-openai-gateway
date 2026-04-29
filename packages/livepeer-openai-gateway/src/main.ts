@@ -107,7 +107,9 @@ async function main(): Promise<void> {
     ? new PrometheusRecorder({
         maxSeriesPerMetric: metricsConfig.maxSeriesPerMetric,
         onCapExceeded: (name, observed, cap) => {
-          logger.warn(`metric cardinality cap exceeded: name=${name} observed=${observed} cap=${cap}`);
+          logger.warn(
+            `metric cardinality cap exceeded: name=${name} observed=${observed} cap=${cap}`,
+          );
         },
       })
     : new NoopRecorder();
@@ -213,7 +215,8 @@ async function main(): Promise<void> {
   // Recorder type alias here only declares the new surface — narrow back to
   // the concrete class via the dual interface. Phase 2 deletes the legacy
   // emissions; until then both surfaces stay live.
-  const recorderAsSink = recorder as unknown as import('@cloudspe/livepeer-openai-gateway-core/providers/metrics.js').MetricsSink;
+  const recorderAsSink =
+    recorder as unknown as import('@cloudspe/livepeer-openai-gateway-core/providers/metrics.js').MetricsSink;
   const tokenAudit = createTokenAuditService({ tokenizer, metrics: recorderAsSink, recorder });
   const adminService = createAdminService({
     db,
@@ -230,8 +233,10 @@ async function main(): Promise<void> {
     listen: metricsConfig.listen,
     recorder,
     logger: {
-      info: (msg, ctx) => logger.info(`[metrics] ${msg}`, ctx as Record<string, unknown> | undefined),
-      warn: (msg, ctx) => logger.warn(`[metrics] ${msg}`, ctx as Record<string, unknown> | undefined),
+      info: (msg, ctx) =>
+        logger.info(`[metrics] ${msg}`, ctx as Record<string, unknown> | undefined),
+      warn: (msg, ctx) =>
+        logger.warn(`[metrics] ${msg}`, ctx as Record<string, unknown> | undefined),
     },
   });
   await metricsServer.start();
@@ -350,9 +355,7 @@ async function main(): Promise<void> {
   // true + BRIDGE_OPS_USER/PASS for HTTP basic auth.
   if (env.BRIDGE_DASHBOARD_ENABLED) {
     if (!env.BRIDGE_OPS_USER || !env.BRIDGE_OPS_PASS) {
-      throw new Error(
-        'BRIDGE_DASHBOARD_ENABLED=true requires BRIDGE_OPS_USER and BRIDGE_OPS_PASS',
-      );
+      throw new Error('BRIDGE_DASHBOARD_ENABLED=true requires BRIDGE_OPS_USER and BRIDGE_OPS_PASS');
     }
     registerOperatorDashboard(server.app, {
       adminAuthResolver: createBasicAdminAuthResolver({

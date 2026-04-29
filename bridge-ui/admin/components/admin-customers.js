@@ -31,13 +31,21 @@ export class AdminCustomers extends LitElement {
     this._createError = '';
   }
 
-  createRenderRoot() { return this; }
+  createRenderRoot() {
+    return this;
+  }
 
   async connectedCallback() {
     super.connectedCallback();
     if (!customersService.results) {
-      try { await customersService.search({ limit: 50 }); }
-      catch (err) { showToast({ kind: 'error', message: err instanceof Error ? err.message : 'Search failed.' }); }
+      try {
+        await customersService.search({ limit: 50 });
+      } catch (err) {
+        showToast({
+          kind: 'error',
+          message: err instanceof Error ? err.message : 'Search failed.',
+        });
+      }
     }
   }
 
@@ -62,12 +70,13 @@ export class AdminCustomers extends LitElement {
           <bridge-button @click=${() => this._openCreate()}>+ New customer</bridge-button>
         </div>
       </div>
-      ${r === null ? html`<bridge-spinner></bridge-spinner>` :
-        html`<bridge-table
-          .columns=${this._columns()}
-          .rows=${r.customers}
-          empty="No customers match this query."
-        ></bridge-table>`}
+      ${r === null
+        ? html`<bridge-spinner></bridge-spinner>`
+        : html`<bridge-table
+            .columns=${this._columns()}
+            .rows=${r.customers}
+            empty="No customers match this query."
+          ></bridge-table>`}
 
       <bridge-dialog
         ?open=${this._createOpen}
@@ -97,33 +106,35 @@ export class AdminCustomers extends LitElement {
               <option value="free">free</option>
             </select>
           </label>
-          ${this._createForm.tier === 'prepaid' ? html`
-            <label>
-              Initial balance (USD cents — optional, default 0)
-              <input
-                type="text"
-                inputmode="numeric"
-                pattern="[0-9]*"
-                style="width: 100%"
-                placeholder="0"
-                .value=${this._createForm.balance_usd_cents}
-                @input=${(e) => this._setField('balance_usd_cents', e.target.value)}
-              />
-            </label>
-          ` : html`
-            <label>
-              Monthly token allowance (optional, blank = no limit)
-              <input
-                type="text"
-                inputmode="numeric"
-                pattern="[0-9]*"
-                style="width: 100%"
-                placeholder="1000000"
-                .value=${this._createForm.quota_monthly_allowance}
-                @input=${(e) => this._setField('quota_monthly_allowance', e.target.value)}
-              />
-            </label>
-          `}
+          ${this._createForm.tier === 'prepaid'
+            ? html`
+                <label>
+                  Initial balance (USD cents — optional, default 0)
+                  <input
+                    type="text"
+                    inputmode="numeric"
+                    pattern="[0-9]*"
+                    style="width: 100%"
+                    placeholder="0"
+                    .value=${this._createForm.balance_usd_cents}
+                    @input=${(e) => this._setField('balance_usd_cents', e.target.value)}
+                  />
+                </label>
+              `
+            : html`
+                <label>
+                  Monthly token allowance (optional, blank = no limit)
+                  <input
+                    type="text"
+                    inputmode="numeric"
+                    pattern="[0-9]*"
+                    style="width: 100%"
+                    placeholder="1000000"
+                    .value=${this._createForm.quota_monthly_allowance}
+                    @input=${(e) => this._setField('quota_monthly_allowance', e.target.value)}
+                  />
+                </label>
+              `}
           <label>
             Rate-limit tier (optional, default 'default')
             <input
@@ -135,11 +146,15 @@ export class AdminCustomers extends LitElement {
               @input=${(e) => this._setField('rate_limit_tier', e.target.value)}
             />
           </label>
-          ${this._createError ? html`<p class="error text-sm" role="alert">${this._createError}</p>` : ''}
+          ${this._createError
+            ? html`<p class="error text-sm" role="alert">${this._createError}</p>`
+            : ''}
         </div>
         <div slot="actions">
           <bridge-button variant="ghost" @click=${() => this._closeCreate()}>Cancel</bridge-button>
-          <bridge-button @click=${this._submitCreate} ?loading=${this._createBusy}>Create customer</bridge-button>
+          <bridge-button @click=${this._submitCreate} ?loading=${this._createBusy}
+            >Create customer</bridge-button
+          >
         </div>
       </bridge-dialog>
     `;
@@ -197,9 +212,10 @@ export class AdminCustomers extends LitElement {
     } catch (err) {
       // 409 surfaces a structured shape; any other error gets the message verbatim.
       const msg = err instanceof Error ? err.message : 'Create failed.';
-      this._createError = msg.includes('EmailAlreadyExists') || msg.includes('409')
-        ? 'A customer with that email already exists.'
-        : msg;
+      this._createError =
+        msg.includes('EmailAlreadyExists') || msg.includes('409')
+          ? 'A customer with that email already exists.'
+          : msg;
     } finally {
       this._createBusy = false;
     }
@@ -209,22 +225,41 @@ export class AdminCustomers extends LitElement {
     this._q = e.target.value;
     if (this._debounce) clearTimeout(this._debounce);
     this._debounce = setTimeout(() => {
-      void customersService.search({ q: this._q.trim() || undefined, limit: 50 })
-        .catch((err) => showToast({ kind: 'error', message: err instanceof Error ? err.message : 'Search failed.' }));
+      void customersService.search({ q: this._q.trim() || undefined, limit: 50 }).catch((err) =>
+        showToast({
+          kind: 'error',
+          message: err instanceof Error ? err.message : 'Search failed.',
+        }),
+      );
     }, 300);
   }
 
   _columns() {
     return [
-      { field: 'email', header: 'Email', render: (r) => html`<a href="#customers/${r.id}" @click=${(e) => this._goDetail(e, r.id)}>${r.email}</a>` },
+      {
+        field: 'email',
+        header: 'Email',
+        render: (r) =>
+          html`<a href="#customers/${r.id}" @click=${(e) => this._goDetail(e, r.id)}
+            >${r.email}</a
+          >`,
+      },
       { field: 'tier', header: 'Tier', render: (r) => r.tier },
       {
         field: 'status',
         header: 'Status',
         render: (r) => html`<span class="badge" data-status=${r.status}>${r.status}</span>`,
       },
-      { field: 'balance_usd_cents', header: 'Balance', render: (r) => `$${(Number(r.balance_usd_cents) / 100).toFixed(2)}` },
-      { field: 'created_at', header: 'Joined', render: (r) => new Date(r.created_at).toLocaleDateString() },
+      {
+        field: 'balance_usd_cents',
+        header: 'Balance',
+        render: (r) => `$${(Number(r.balance_usd_cents) / 100).toFixed(2)}`,
+      },
+      {
+        field: 'created_at',
+        header: 'Joined',
+        render: (r) => new Date(r.created_at).toLocaleDateString(),
+      },
     ];
   }
 
@@ -234,4 +269,5 @@ export class AdminCustomers extends LitElement {
   }
 }
 
-if (!customElements.get('admin-customers')) customElements.define('admin-customers', AdminCustomers);
+if (!customElements.get('admin-customers'))
+  customElements.define('admin-customers', AdminCustomers);

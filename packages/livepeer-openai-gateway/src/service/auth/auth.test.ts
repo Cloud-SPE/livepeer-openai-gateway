@@ -102,7 +102,9 @@ describe('service/auth', () => {
     const customerId = await seedActiveCustomer();
     const { plaintext } = await issueKey(pg.db, { customerId, envPrefix: 'test', pepper });
 
-    await pg.db.execute(sql`UPDATE app.customers SET status = 'suspended' WHERE id = ${customerId}`);
+    await pg.db.execute(
+      sql`UPDATE app.customers SET status = 'suspended' WHERE id = ${customerId}`,
+    );
 
     const auth = createAuthService({ db: pg.db, config });
     await expect(auth.authenticate(`Bearer ${plaintext}`)).rejects.toBeInstanceOf(

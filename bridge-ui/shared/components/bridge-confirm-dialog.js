@@ -55,7 +55,9 @@ export class BridgeConfirmDialog extends LitElement {
     adoptStyles('bridge-confirm-dialog', STYLES);
   }
 
-  createRenderRoot() { return this; }
+  createRenderRoot() {
+    return this;
+  }
 
   willUpdate(changed) {
     if (changed.has('open') && this.open) this._typed = '';
@@ -76,19 +78,21 @@ export class BridgeConfirmDialog extends LitElement {
         close-on-backdrop
       >
         ${this.body ? html`<p class="body">${this.body}</p>` : ''}
-        ${this.requiredText ? html`
-          <p class="type-prompt">
-            Type <code>${this.requiredText}</code> to confirm:
-          </p>
-          <input
-            class="confirm-input"
-            type="text"
-            autocomplete="off"
-            spellcheck="false"
-            .value=${this._typed}
-            @input=${(e) => { this._typed = e.target.value; }}
-          />
-        ` : ''}
+        ${this.requiredText
+          ? html`
+              <p class="type-prompt">Type <code>${this.requiredText}</code> to confirm:</p>
+              <input
+                class="confirm-input"
+                type="text"
+                autocomplete="off"
+                spellcheck="false"
+                .value=${this._typed}
+                @input=${(e) => {
+                  this._typed = e.target.value;
+                }}
+              />
+            `
+          : ''}
         <div slot="actions">
           <bridge-button variant="ghost" @click=${this._cancel}>${this.cancelLabel}</bridge-button>
           <bridge-button
@@ -96,7 +100,8 @@ export class BridgeConfirmDialog extends LitElement {
             ?disabled=${!this._confirmEnabled}
             ?loading=${this.loading}
             @click=${this._confirm}
-          >${this.confirmLabel}</bridge-button>
+            >${this.confirmLabel}</bridge-button
+          >
         </div>
       </bridge-dialog>
     `;

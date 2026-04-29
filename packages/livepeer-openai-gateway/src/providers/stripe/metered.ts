@@ -18,7 +18,11 @@ import type {
   StripeClient,
   StripeEventMinimal,
 } from '../stripe.js';
-import { OUTCOME_ERROR, OUTCOME_OK, type Recorder } from '@cloudspe/livepeer-openai-gateway-core/providers/metrics/recorder.js';
+import {
+  OUTCOME_ERROR,
+  OUTCOME_OK,
+  type Recorder,
+} from '@cloudspe/livepeer-openai-gateway-core/providers/metrics/recorder.js';
 
 const OP_CHECKOUT_CREATE = 'checkout_create';
 const OP_WEBHOOK_CONSTRUCT = 'webhook_construct';

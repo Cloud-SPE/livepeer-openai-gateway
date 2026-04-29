@@ -49,19 +49,21 @@ export class BridgePopoverMenu extends LitElement {
     adoptStyles('bridge-popover-menu', STYLES);
   }
 
-  createRenderRoot() { return this; }
+  createRenderRoot() {
+    return this;
+  }
 
   render() {
     return html`
       <bridge-button variant="ghost" popovertarget=${this._popoverId}>${this.label}</bridge-button>
       <div id=${this._popoverId} popover>
-        ${this.items.map((it) => html`
-          <button
-            class="item"
-            ?data-danger=${it.danger}
-            @click=${() => this._select(it.value)}
-          >${it.label}</button>
-        `)}
+        ${this.items.map(
+          (it) => html`
+            <button class="item" ?data-danger=${it.danger} @click=${() => this._select(it.value)}>
+              ${it.label}
+            </button>
+          `,
+        )}
       </div>
     `;
   }

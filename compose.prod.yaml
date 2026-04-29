@@ -213,13 +213,13 @@ services:
       # Adjust TRAEFIK_ENTRYPOINT / TRAEFIK_CERTRESOLVER in .env if your
       # Traefik uses different names. Common defaults: `websecure` for
       # the :443 entrypoint, `letsencrypt` for the ACME resolver.
-      - "traefik.enable=true"
-      - "traefik.docker.network=ingress"
-      - "traefik.http.routers.livepeer-bridge.rule=Host(`${BRIDGE_PUBLIC_HOST:?set BRIDGE_PUBLIC_HOST (e.g. openai-sea.cloudspe.cin)}`)"
-      - "traefik.http.routers.livepeer-bridge.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
-      - "traefik.http.routers.livepeer-bridge.tls=true"
-      - "traefik.http.routers.livepeer-bridge.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}"
-      - "traefik.http.services.livepeer-bridge.loadbalancer.server.port=8080"
+      - 'traefik.enable=true'
+      - 'traefik.docker.network=ingress'
+      - 'traefik.http.routers.livepeer-bridge.rule=Host(`${BRIDGE_PUBLIC_HOST:?set BRIDGE_PUBLIC_HOST (e.g. openai-sea.cloudspe.cin)}`)'
+      - 'traefik.http.routers.livepeer-bridge.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}'
+      - 'traefik.http.routers.livepeer-bridge.tls=true'
+      - 'traefik.http.routers.livepeer-bridge.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}'
+      - 'traefik.http.services.livepeer-bridge.loadbalancer.server.port=8080'
     healthcheck:
       test:
         - 'CMD'

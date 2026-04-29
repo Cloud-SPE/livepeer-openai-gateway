@@ -6,17 +6,17 @@ last-reviewed: 2026-04-26
 
 # Admin endpoints
 
-Operator-only surface for inspecting bridge state and performing manual interventions. Returns JSON; the operator console at `/admin/console/*` is a separate browser app that *consumes* this surface (see [`operator-admin.md`](./operator-admin.md)).
+Operator-only surface for inspecting bridge state and performing manual interventions. Returns JSON; the operator console at `/admin/console/*` is a separate browser app that _consumes_ this surface (see [`operator-admin.md`](./operator-admin.md)).
 
 ## Authentication
 
-|                  |                                                                                          |
-| ---------------- | ---------------------------------------------------------------------------------------- |
-| Header           | `X-Admin-Token: <ADMIN_TOKEN>`                                                           |
-| Compare          | `timingSafeEqual` on `sha256(token)` bytes                                               |
-| IP allowlist     | `ADMIN_IP_ALLOWLIST` env (comma-separated exact IPs; empty = allow all)                  |
-| Operator handle  | `X-Admin-Actor: <handle>` — optional, validated `^[a-z0-9._-]{1,64}$`                   |
-| Audit trail      | Every request (success or failure) writes a row to `admin_audit_event`                  |
+|                 |                                                                         |
+| --------------- | ----------------------------------------------------------------------- |
+| Header          | `X-Admin-Token: <ADMIN_TOKEN>`                                          |
+| Compare         | `timingSafeEqual` on `sha256(token)` bytes                              |
+| IP allowlist    | `ADMIN_IP_ALLOWLIST` env (comma-separated exact IPs; empty = allow all) |
+| Operator handle | `X-Admin-Actor: <handle>` — optional, validated `^[a-z0-9._-]{1,64}$`   |
+| Audit trail     | Every request (success or failure) writes a row to `admin_audit_event`  |
 
 The token is **never** logged in plaintext.
 
@@ -108,8 +108,14 @@ Search by `q` (email substring or exact UUID), `tier` (`free|prepaid`), `status`
 ```json
 {
   "customers": [
-    { "id": "...", "email": "...", "tier": "prepaid", "status": "active",
-      "balance_usd_cents": "1234", "created_at": "..." }
+    {
+      "id": "...",
+      "email": "...",
+      "tier": "prepaid",
+      "status": "active",
+      "balance_usd_cents": "1234",
+      "created_at": "..."
+    }
   ],
   "next_cursor": null
 }
@@ -132,11 +138,22 @@ Paginated `admin_audit_event` feed. `from`/`to` are ISO timestamps (malformed da
 Open / committed / refunded reservations, ascending by `created_at`. Each row includes `age_seconds` for direct on-call use (the page on-call hits when `livepeer_bridge_reservation_open_oldest_seconds` alerts).
 
 ```json
-{ "reservations": [
-  { "id": "...", "customer_id": "...", "work_id": "...", "kind": "prepaid",
-    "amount_usd_cents": "100", "amount_tokens": null, "state": "open",
-    "created_at": "...", "age_seconds": 125 }
-], "next_cursor": null }
+{
+  "reservations": [
+    {
+      "id": "...",
+      "customer_id": "...",
+      "work_id": "...",
+      "kind": "prepaid",
+      "amount_usd_cents": "100",
+      "amount_tokens": null,
+      "state": "open",
+      "created_at": "...",
+      "age_seconds": 125
+    }
+  ],
+  "next_cursor": null
+}
 ```
 
 Read-only. A stuck reservation is a symptom; the fix is upstream (PayerDaemon, node health). A "manually close reservation" button would either bypass Invariant 5 (atomic ledger debits) or invent a parallel reconciliation path — neither is in scope.
@@ -170,15 +187,15 @@ Editing the worker pool from the UI is **out of scope in v1** — operators edit
 
 Every admin request (success or failure) writes a row to `admin_audit_event`:
 
-| Column        | Notes                                                                                   |
-| ------------- | --------------------------------------------------------------------------------------- |
-| `id`          | UUID                                                                                    |
+| Column        | Notes                                                                                                                                          |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`          | UUID                                                                                                                                           |
 | `actor`       | `X-Admin-Actor` handle when present + valid; otherwise first 16 hex chars of `sha256(ADMIN_TOKEN)`; `"unknown"` for missing/bad-token requests |
-| `action`      | `<METHOD> <path>`                                                                       |
-| `target_id`   | Route param `:id` when present                                                          |
-| `payload`     | JSON-stringified request body (or null)                                                 |
-| `status_code` | HTTP response code                                                                      |
-| `occurred_at` | timestamp                                                                               |
+| `action`      | `<METHOD> <path>`                                                                                                                              |
+| `target_id`   | Route param `:id` when present                                                                                                                 |
+| `payload`     | JSON-stringified request body (or null)                                                                                                        |
+| `status_code` | HTTP response code                                                                                                                             |
+| `occurred_at` | timestamp                                                                                                                                      |
 
 Retention is indefinite in v1. A scheduled purge is tech-debt.
 
@@ -219,13 +236,11 @@ Calls `serviceRegistry.listKnown()` against the running daemon, bypassing the br
 
 ```json
 {
-  "healthy": true,            // serviceRegistry.isHealthy() — bridge's gRPC channel state
-  "cachedCount": 1,           // bridge's start-time nodeIndex.length
-  "liveCount": 1,             // current daemon-reported count
+  "healthy": true, // serviceRegistry.isHealthy() — bridge's gRPC channel state
+  "cachedCount": 1, // bridge's start-time nodeIndex.length
+  "liveCount": 1, // current daemon-reported count
   "durationMs": 6,
-  "live": [
-    { "id": "side-channel-1", "url": "https://...", "capabilities": ["chat"] }
-  ]
+  "live": [{ "id": "side-channel-1", "url": "https://...", "capabilities": ["chat"] }]
 }
 ```
 
@@ -256,11 +271,11 @@ The 4 tier names (`starter`, `standard`, `pro`, `premium`) are fixed; only their
 
 Same shape, different price field:
 
-| Capability | POST body | Path |
-|---|---|---|
-| Embeddings | `{ model_or_pattern, is_pattern, usd_per_million_tokens, sort_order? }` | `/admin/pricing/embeddings` |
-| Speech | `{ model_or_pattern, is_pattern, usd_per_million_chars, sort_order? }` | `/admin/pricing/speech` |
-| Transcriptions | `{ model_or_pattern, is_pattern, usd_per_minute, sort_order? }` | `/admin/pricing/transcriptions` |
+| Capability     | POST body                                                               | Path                            |
+| -------------- | ----------------------------------------------------------------------- | ------------------------------- |
+| Embeddings     | `{ model_or_pattern, is_pattern, usd_per_million_tokens, sort_order? }` | `/admin/pricing/embeddings`     |
+| Speech         | `{ model_or_pattern, is_pattern, usd_per_million_chars, sort_order? }`  | `/admin/pricing/speech`         |
+| Transcriptions | `{ model_or_pattern, is_pattern, usd_per_minute, sort_order? }`         | `/admin/pricing/transcriptions` |
 
 GET → list, POST → 201/409, DELETE `:id` → 204/404 for all three.
 

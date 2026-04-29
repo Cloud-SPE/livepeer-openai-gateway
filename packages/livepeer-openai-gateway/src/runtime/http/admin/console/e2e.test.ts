@@ -48,14 +48,24 @@ afterAll(async () => {
 
 function mockPayerDaemon(): PayerDaemonClient {
   return {
-    async startSession() { return { workId: 'wrk' }; },
-    async createPayment() { return { paymentBytes: new Uint8Array([1]), ticketsCreated: 1, expectedValueWei: 10n }; },
-    async closeSession() { /* noop */ },
-    async getDepositInfo() { return { depositWei: 1n, reserveWei: 1n, withdrawRound: 0n }; },
+    async startSession() {
+      return { workId: 'wrk' };
+    },
+    async createPayment() {
+      return { paymentBytes: new Uint8Array([1]), ticketsCreated: 1, expectedValueWei: 10n };
+    },
+    async closeSession() {
+      /* noop */
+    },
+    async getDepositInfo() {
+      return { depositWei: 1n, reserveWei: 1n, withdrawRound: 0n };
+    },
     isHealthy: () => true,
     startHealthLoop: () => undefined,
     stopHealthLoop: () => undefined,
-    async close() { /* noop */ },
+    async close() {
+      /* noop */
+    },
   };
 }
 
@@ -77,14 +87,23 @@ async function buildBridge() {
     adminService,
     authConfig: { pepper: 'admin-e2e-pepper-000', envPrefix: 'test', cacheTtlMs: 60_000 },
     serviceRegistry: {
-      async select() { return []; },
-      async listKnown() { return []; },
+      async select() {
+        return [];
+      },
+      async listKnown() {
+        return [];
+      },
       isHealthy: () => true,
     },
   });
   await registerAdminConsoleStatic(server.app, { rootDir: ADMIN_DIST });
   const address = await server.listen({ host: '127.0.0.1', port: 0 });
-  return { baseUrl: address, async close() { await server.close(); } };
+  return {
+    baseUrl: address,
+    async close() {
+      await server.close();
+    },
+  };
 }
 
 describe.skipIf(!HAS_DIST)('admin E2E', () => {
@@ -139,17 +158,21 @@ describe.skipIf(!HAS_DIST)('admin E2E', () => {
       await page.waitForSelector('admin-health');
 
       // Navigate directly to the customer detail page via hash
-      await page.evaluate((id) => { location.hash = `#customers/${id}`; }, customer.id);
+      await page.evaluate((id) => {
+        location.hash = `#customers/${id}`;
+      }, customer.id);
       await page.waitForSelector('admin-customer-detail h1', { timeout: 10_000 });
-      await expect(
-        await page.locator('admin-customer-detail h1').innerText(),
-      ).toBe('suspendme@example.com');
+      await expect(await page.locator('admin-customer-detail h1').innerText()).toBe(
+        'suspendme@example.com',
+      );
 
       // Open suspend confirm dialog. Be specific about the danger variant —
       // the dialog's "Suspend" submit button (which renders later) also has
       // that text, but it's inside the dialog and we don't want to match it.
       await page
-        .locator('admin-customer-detail .actions bridge-button[variant="danger"]:has-text("Suspend")')
+        .locator(
+          'admin-customer-detail .actions bridge-button[variant="danger"]:has-text("Suspend")',
+        )
         .click();
       // The bridge-confirm-dialog mounts when _action is set; wait for it
       // to actually be open (the open attribute reflects after the next render).
@@ -170,10 +193,7 @@ describe.skipIf(!HAS_DIST)('admin E2E', () => {
       expect(initiallyDisabled).toBe(true);
 
       // Type the customer email to enable confirm
-      await page.fill(
-        'bridge-confirm-dialog[open] input.confirm-input',
-        'suspendme@example.com',
-      );
+      await page.fill('bridge-confirm-dialog[open] input.confirm-input', 'suspendme@example.com');
       // Click confirm
       await page.locator(confirmBtnSelector).click();
 
@@ -190,8 +210,8 @@ describe.skipIf(!HAS_DIST)('admin E2E', () => {
       // The audit row carries the X-Admin-Actor handle "bob"
       await new Promise((r) => setTimeout(r, 200));
       const audit = await adminAuditEventsRepo.search(pg.db, { limit: 50 });
-      const suspendRow = audit.find((r) =>
-        r.action.includes('/admin/customers/') && r.action.includes('suspend'),
+      const suspendRow = audit.find(
+        (r) => r.action.includes('/admin/customers/') && r.action.includes('suspend'),
       );
       expect(suspendRow).toBeDefined();
       expect(suspendRow?.actor).toBe('bob');
@@ -204,7 +224,5 @@ describe.skipIf(!HAS_DIST)('admin E2E', () => {
 });
 
 if (!HAS_DIST) {
-  console.warn(
-    `[admin E2E] skipping: ${ADMIN_DIST} not built. Run \`npm run build:ui\` first.`,
-  );
+  console.warn(`[admin E2E] skipping: ${ADMIN_DIST} not built. Run \`npm run build:ui\` first.`);
 }

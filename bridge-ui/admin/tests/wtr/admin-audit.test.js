@@ -6,10 +6,22 @@ import { api } from '../../lib/api.js';
 
 const sampleEvents = {
   events: [
-    { id: 'e1', actor: 'alice', action: 'GET /admin/health', target_id: null,
-      status_code: 200, occurred_at: '2026-04-26T08:00:00.000Z' },
-    { id: 'e2', actor: 'bob', action: 'POST /admin/customers/c1/refund',
-      target_id: 'c1', status_code: 200, occurred_at: '2026-04-26T08:01:00.000Z' },
+    {
+      id: 'e1',
+      actor: 'alice',
+      action: 'GET /admin/health',
+      target_id: null,
+      status_code: 200,
+      occurred_at: '2026-04-26T08:00:00.000Z',
+    },
+    {
+      id: 'e2',
+      actor: 'bob',
+      action: 'POST /admin/customers/c1/refund',
+      target_id: 'c1',
+      status_code: 200,
+      occurred_at: '2026-04-26T08:01:00.000Z',
+    },
   ],
   next_cursor: null,
 };
@@ -21,7 +33,10 @@ beforeEach(() => {
   getStub = sinon.stub(api, 'get').resolves(sampleEvents);
 });
 
-afterEach(() => { sinon.restore(); auditService.reset(); });
+afterEach(() => {
+  sinon.restore();
+  auditService.reset();
+});
 
 describe('admin-audit', () => {
   it('queries on connect and renders the feed', async () => {
@@ -51,11 +66,14 @@ describe('admin-audit', () => {
     await aTimeout(0);
     await el.updateComplete;
     el.querySelectorAll('input[type="text"]')[0].value = 'alice';
-    el.querySelectorAll('input[type="text"]')[0].dispatchEvent(new Event('input', { bubbles: true }));
+    el.querySelectorAll('input[type="text"]')[0].dispatchEvent(
+      new Event('input', { bubbles: true }),
+    );
     await aTimeout(350);
 
-    const clearBtn = [...el.querySelectorAll('bridge-button')]
-      .find((b) => b.textContent.trim() === 'Clear');
+    const clearBtn = [...el.querySelectorAll('bridge-button')].find(
+      (b) => b.textContent.trim() === 'Clear',
+    );
     clearBtn.click();
     await aTimeout(0);
     expect(getStub.lastCall.args[0]).to.not.include('actor=');

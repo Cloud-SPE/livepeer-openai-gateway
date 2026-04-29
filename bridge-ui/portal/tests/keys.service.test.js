@@ -29,7 +29,9 @@ afterEach(() => {
 describe('keysService.refresh', () => {
   it('populates keys$ from /v1/account/api-keys', async () => {
     api.get.mockResolvedValueOnce({
-      keys: [{ id: 'k1', label: 'a', created_at: '2026-04-20', last_used_at: null, revoked_at: null }],
+      keys: [
+        { id: 'k1', label: 'a', created_at: '2026-04-20', last_used_at: null, revoked_at: null },
+      ],
     });
     const out = await keysService.refresh();
     expect(out).toHaveLength(1);
@@ -43,7 +45,9 @@ describe('keysService.create', () => {
     keysService.reset();
     // seed initial list
     api.get.mockResolvedValueOnce({
-      keys: [{ id: 'k0', label: 'old', created_at: '2026-04-19', last_used_at: null, revoked_at: null }],
+      keys: [
+        { id: 'k0', label: 'old', created_at: '2026-04-19', last_used_at: null, revoked_at: null },
+      ],
     });
     await keysService.refresh();
 
@@ -58,7 +62,7 @@ describe('keysService.create', () => {
 
     const list = keysService.value;
     expect(list).toHaveLength(2);
-    expect(list[0].id).toBe('k1');                 // prepended
+    expect(list[0].id).toBe('k1'); // prepended
     expect(list[0].revoked_at).toBeNull();
     expect(list[1].id).toBe('k0');
   });

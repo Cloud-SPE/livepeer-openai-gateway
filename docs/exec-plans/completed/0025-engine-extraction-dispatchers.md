@@ -26,7 +26,7 @@ By the end of this stage the route handlers are 20–40 lines each and call into
 - No schema changes (stage 3).
 - No public repo or npm publish (stage 4).
 - No file moves into `packages/` (stage 3).
-- No replacement of `bridge-ui/admin/` — this dashboard is the *engine's* OSS-adopter dashboard, separate from the shell's full operator console. Different audience, different stack.
+- No replacement of `bridge-ui/admin/` — this dashboard is the _engine's_ OSS-adopter dashboard, separate from the shell's full operator console. Different audience, different stack.
 - No action surface on the engine dashboard. Read-only v1; circuit-break/refresh-quote/etc. defer to a follow-up plan.
 - No Lit, no RxJS, no Vite for the engine dashboard — keeps engine peer-dep footprint minimal.
 - No splitting of `bridge-ui/admin/` itself; that stays one shell-side SPA.
@@ -114,16 +114,19 @@ The `ServiceRegistryClient` interface from stage 1 ([`0024`](../completed/0024-e
 **4c. Retire `src/service/nodes/`.**
 
 Delete:
+
 - `src/service/nodes/nodebook.ts` and `nodebook.test.ts`
 - `src/service/nodes/loader.ts`
 - `src/service/nodes/nodebookRegistry.ts` (the stage-1 wrap; replaced by the gRPC client)
 
 Move:
+
 - `src/service/nodes/quoteRefresher.ts` → `src/service/routing/quoteRefresher.ts`. Reshape: iterate over `serviceRegistry.listKnown()` instead of `nodeBook.allNodes()`. Quote cache becomes a separate module.
 - `src/service/nodes/circuitBreaker.ts` → `src/service/routing/circuitBreaker.ts`. Now keyed by `nodeId` from the registry; tracks per-process exclusion timestamps. Default: 3 consecutive failures → 5-minute exclusion.
 - `src/service/nodes/scheduler.ts` → `src/service/routing/scheduler.ts`. No content change.
 
 Extract:
+
 - New `src/service/routing/quoteCache.ts` — quote storage by `(nodeId, capabilityString)`; freshness TTL; getter used by dispatchers; setter used by `quoteRefresher`.
 
 **4d. Reshape `src/service/routing/router.ts`.**
@@ -132,7 +135,11 @@ The `pickNode` function changes shape to use daemon-side selection with bridge-l
 
 ```ts
 export async function pickNode(
-  deps: { serviceRegistry: ServiceRegistryClient; circuitBreaker: CircuitBreaker; rng?: () => number },
+  deps: {
+    serviceRegistry: ServiceRegistryClient;
+    circuitBreaker: CircuitBreaker;
+    rng?: () => number;
+  },
   capability: Capability,
   model: string,
   callerTier: string,
@@ -141,7 +148,9 @@ export async function pickNode(
   const excludeIds = deps.circuitBreaker.currentExclusions();
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     const nodes = await deps.serviceRegistry.select({
-      capability, model, tier: callerTier,
+      capability,
+      model,
+      tier: callerTier,
       excludeIds: [...excludeIds, ...deps.circuitBreaker.currentExclusions()],
     });
     if (nodes.length === 0) {

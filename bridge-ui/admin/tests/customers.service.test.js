@@ -47,7 +47,10 @@ describe('customersService.select / actions', () => {
   it('refund POSTs the body', async () => {
     api.post.mockResolvedValueOnce({ ok: true });
     await customersService.refund('c1', { stripeSessionId: 'cs_x', reason: 'why' });
-    expect(api.post).toHaveBeenCalledWith('/admin/customers/c1/refund', { stripeSessionId: 'cs_x', reason: 'why' });
+    expect(api.post).toHaveBeenCalledWith('/admin/customers/c1/refund', {
+      stripeSessionId: 'cs_x',
+      reason: 'why',
+    });
   });
 
   it('suspend / unsuspend POST empty body', async () => {
@@ -61,7 +64,12 @@ describe('customersService.select / actions', () => {
   });
 
   it('issueKey POSTs a label', async () => {
-    api.post.mockResolvedValueOnce({ id: 'k1', label: 'op', key: 'sk-test-x', created_at: '2026-04-26T00:00:00Z' });
+    api.post.mockResolvedValueOnce({
+      id: 'k1',
+      label: 'op',
+      key: 'sk-test-x',
+      created_at: '2026-04-26T00:00:00Z',
+    });
     const out = await customersService.issueKey('c1', 'op');
     expect(api.post).toHaveBeenCalledWith('/admin/customers/c1/api-keys', { label: 'op' });
     expect(out.key).toBe('sk-test-x');

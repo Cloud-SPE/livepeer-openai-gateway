@@ -19,8 +19,20 @@ afterEach(() => {
 });
 
 const sampleKeys = [
-  { id: 'k-1', label: 'production', created_at: '2026-04-20T00:00:00.000Z', last_used_at: null, revoked_at: null },
-  { id: 'k-2', label: 'staging',    created_at: '2026-04-19T00:00:00.000Z', last_used_at: '2026-04-21T08:00:00.000Z', revoked_at: null },
+  {
+    id: 'k-1',
+    label: 'production',
+    created_at: '2026-04-20T00:00:00.000Z',
+    last_used_at: null,
+    revoked_at: null,
+  },
+  {
+    id: 'k-2',
+    label: 'staging',
+    created_at: '2026-04-19T00:00:00.000Z',
+    last_used_at: '2026-04-21T08:00:00.000Z',
+    revoked_at: null,
+  },
 ];
 
 describe('portal-keys', () => {
@@ -130,10 +142,16 @@ describe('portal-keys', () => {
     expect(delStub.firstCall.args[0]).to.match(/^\/v1\/account\/api-keys\/k-/);
   });
 
-  it("guards against revoking the only active key (assumes session = that key)", async () => {
+  it('guards against revoking the only active key (assumes session = that key)', async () => {
     // Only one active key — revoking it should be blocked client-side
     const single = [
-      { id: 'k-only', label: 'sole', created_at: '2026-04-20T00:00:00.000Z', last_used_at: null, revoked_at: null },
+      {
+        id: 'k-only',
+        label: 'sole',
+        created_at: '2026-04-20T00:00:00.000Z',
+        last_used_at: null,
+        revoked_at: null,
+      },
     ];
     getStub.resolves({ keys: single });
     sessionStorage.setItem('bridge.portal.session', JSON.stringify({ apiKey: 'sk-test-anything' }));

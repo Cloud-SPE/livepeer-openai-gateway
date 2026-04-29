@@ -19,17 +19,18 @@ An OpenAI-compatible API service that fronts a pool of Livepeer WorkerNodes. Cus
 
 The engine has since been carved out and published as the public OSS package [`@cloudspe/livepeer-openai-gateway-core`](https://github.com/Cloud-SPE/livepeer-openai-gateway-core) on npm. This monorepo is now the proprietary shell — billing, Stripe, customer portal, admin SPA — that consumes the engine via its npm dep.
 
-| Plan group | What it ships |
-|---|---|
+| Plan group                 | What it ships                                                                                                                                                                                                                           |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0001 – 0016 (foundational) | Repo scaffold, types, ledger, auth, NodeBook→registry, payer-daemon, chat completions (streaming + non-streaming), rate limiter, Stripe top-ups, tokenizer, admin endpoints, deployment, lint plugins, doc-gardener, prod compose stack |
-| 0017 – 0023 | Embeddings + images + audio (speech, transcriptions), worker-wire-format alignment, per-capability NodeBook, metrics phase 1, customer portal SPA, operator admin SPA |
-| 0024 – 0028 | Engine extraction (interfaces, dispatchers, workspace conversion, public release as `@cloudspe/livepeer-openai-gateway-core@0.1.0/0.1.1`, OSS readiness — LICENSE/CONTRIBUTING/SECURITY/CoC/CHANGELOG/GOVERNANCE) |
-| 0029 | Admin customer onboarding — `POST /admin/customers` + admin SPA "+ New customer" form |
-| 0030 | Operator-managed rate card — DB-backed pricing for all 5 capabilities (chat tiered + embeddings/images/speech/transcriptions per-model) with glob-pattern rules; engine 0.2.0 with `RateCardResolver` adapter |
+| 0017 – 0023                | Embeddings + images + audio (speech, transcriptions), worker-wire-format alignment, per-capability NodeBook, metrics phase 1, customer portal SPA, operator admin SPA                                                                   |
+| 0024 – 0028                | Engine extraction (interfaces, dispatchers, workspace conversion, public release as `@cloudspe/livepeer-openai-gateway-core@0.1.0/0.1.1`, OSS readiness — LICENSE/CONTRIBUTING/SECURITY/CoC/CHANGELOG/GOVERNANCE)                       |
+| 0029                       | Admin customer onboarding — `POST /admin/customers` + admin SPA "+ New customer" form                                                                                                                                                   |
+| 0030                       | Operator-managed rate card — DB-backed pricing for all 5 capabilities (chat tiered + embeddings/images/speech/transcriptions per-model) with glob-pattern rules; engine 0.2.0 with `RateCardResolver` adapter                           |
 
 **Test suite:** 264 tests across the shell (90.62 % stmt / 81.31 % branch coverage); 215 in the engine (89.25 % / 88.29 %). Both gated at the 75 % floor per [core belief #11](docs/design-docs/core-beliefs.md).
 
 **Current published artifacts:**
+
 - npm: `@cloudspe/livepeer-openai-gateway-core@0.2.0`
 - Docker Hub: `tztcloud/livepeer-openai-gateway:v0.8.10` (rolling tag, current digest `sha256:9aac7480cffe…`)
 - Daemons (sidecars): `tztcloud/livepeer-payment-daemon:v1.4.0`, `tztcloud/livepeer-service-registry-daemon:v1.4.0`

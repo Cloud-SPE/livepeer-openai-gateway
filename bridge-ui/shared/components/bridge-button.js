@@ -84,11 +84,7 @@ export class BridgeButton extends LitElement {
 
   render() {
     return html`
-      <button
-        type=${this.type}
-        ?disabled=${this.disabled || this.loading}
-        @click=${this._onClick}
-      >
+      <button type=${this.type} ?disabled=${this.disabled || this.loading} @click=${this._onClick}>
         ${this.loading ? html`<bridge-spinner size="14"></bridge-spinner>` : ''}
         <slot></slot>
       </button>

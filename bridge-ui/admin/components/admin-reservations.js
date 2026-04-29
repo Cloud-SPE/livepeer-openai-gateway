@@ -12,13 +12,21 @@ export class AdminReservations extends LitElement {
     this.state = new ObservableController(this, reservationsService.state$);
   }
 
-  createRenderRoot() { return this; }
+  createRenderRoot() {
+    return this;
+  }
 
   async connectedCallback() {
     super.connectedCallback();
     if (!reservationsService.value) {
-      try { await reservationsService.search({ state: 'open', limit: 100 }); }
-      catch (err) { showToast({ kind: 'error', message: err instanceof Error ? err.message : 'Failed to load reservations.' }); }
+      try {
+        await reservationsService.search({ state: 'open', limit: 100 });
+      } catch (err) {
+        showToast({
+          kind: 'error',
+          message: err instanceof Error ? err.message : 'Failed to load reservations.',
+        });
+      }
     }
   }
 
@@ -31,8 +39,8 @@ export class AdminReservations extends LitElement {
         <span class="muted text-sm">${s.reservations.length} open · oldest first</span>
       </div>
       <p class="muted text-sm" style="margin-top: 0; margin-bottom: var(--space-4)">
-        Read-only investigation view. Stuck reservations are a symptom; fix upstream
-        (PayerDaemon, node health) and let reconciliation close them.
+        Read-only investigation view. Stuck reservations are a symptom; fix upstream (PayerDaemon,
+        node health) and let reconciliation close them.
       </p>
       <bridge-table
         .columns=${this._columns()}
@@ -44,12 +52,24 @@ export class AdminReservations extends LitElement {
 
   _columns() {
     return [
-      { field: 'work_id', header: 'Work ID', render: (r) => html`<span class="mono text-xs">${r.work_id}</span>` },
-      { field: 'customer_id', header: 'Customer', render: (r) => html`<span class="mono text-xs">${r.customer_id.slice(0, 8)}…</span>` },
+      {
+        field: 'work_id',
+        header: 'Work ID',
+        render: (r) => html`<span class="mono text-xs">${r.work_id}</span>`,
+      },
+      {
+        field: 'customer_id',
+        header: 'Customer',
+        render: (r) => html`<span class="mono text-xs">${r.customer_id.slice(0, 8)}…</span>`,
+      },
       { field: 'kind', header: 'Kind' },
       { field: 'amount_usd_cents', header: 'Amount', render: (r) => formatAmount(r) },
       { field: 'age_seconds', header: 'Age', render: (r) => formatAge(r.age_seconds) },
-      { field: 'created_at', header: 'Started', render: (r) => new Date(r.created_at).toLocaleString() },
+      {
+        field: 'created_at',
+        header: 'Started',
+        render: (r) => new Date(r.created_at).toLocaleString(),
+      },
     ];
   }
 }
@@ -68,4 +88,5 @@ function formatAge(seconds) {
   return `${h}h ${m}m`;
 }
 
-if (!customElements.get('admin-reservations')) customElements.define('admin-reservations', AdminReservations);
+if (!customElements.get('admin-reservations'))
+  customElements.define('admin-reservations', AdminReservations);
