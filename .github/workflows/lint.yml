@@ -49,17 +49,11 @@ jobs:
       - run: npm ci --ignore-scripts || npm install --ignore-scripts
       - run: npm run doc-lint
 
-  proto-drift:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-      - run: npm ci --ignore-scripts || npm install --ignore-scripts
-      - name: regen + assert no drift against committed stubs
-        run: npm run proto:check
+  # proto-drift removed in v3.0.0: this repo no longer ships its own
+  # proto stubs. The resolver client lives in
+  # @cloudspe/livepeer-openai-gateway-core (npm), which has its own
+  # proto-drift CI in that repo. Bridge consumers pin via package-lock
+  # against a published version.
 
   secret-scan:
     runs-on: ubuntu-latest
