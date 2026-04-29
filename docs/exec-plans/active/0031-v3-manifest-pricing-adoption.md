@@ -33,41 +33,52 @@ routing decisions.
 
 ## Approach
 
-- [ ] Regenerate resolver proto stubs against modules v3.0.0 (run the
-      `buf.gen.registry.yaml`-equivalent under `packages/livepeer-openai-gateway/`).
-- [ ] Rename `models` → `offerings` and `Model` → `Offering` in
-      `packages/livepeer-openai-gateway/src/main.ts` and the
-      gateway-core resolver client under
-      `packages/livepeer-gateway-core/src/`.
-- [ ] Update the `SelectRequest` call sites — `model` parameter →
-      `offering` per modules v3.0.0 proto rename.
-- [ ] Replace the Postgres wholesale-rate read in
-      `packages/livepeer-openai-gateway/src/service/pricing/rateCard.ts`
-      (the `V1_RATE_CARD` / wholesale-tier lookup path) with a read of
-      `offerings[i].pricePerWorkUnitWei` from the resolver `Select`
-      response.
-- [ ] Workers with empty / absent offering price are skipped
-      (fail-closed) — same pattern as the vtuber-gateway. No "free
-      tier" semantics on missing wholesale price.
-- [ ] Keep the customer-facing USD rate card read paths
-      (`packages/livepeer-openai-gateway/src/service/pricing/rateCard.ts`
-      retail tier resolution) untouched — retail margin remains
-      bridge-controlled.
-- [ ] Update `DESIGN.md` and `docs/design-docs/pricing-model.md`:
-      "customer pricing remains bridge-controlled USD rate card; orch
-      wholesale pricing is read from manifest
-      `offerings[].pricePerWorkUnitWei` and used as the routing-decision
-      input."
-- [ ] Update tests in
-      `packages/livepeer-openai-gateway/src/service/pricing/rateCard.test.ts`
-      and any resolver-mocked tests to drive wholesale price from the
-      manifest, not from a Postgres fixture.
-- [ ] Smoke: route a chat completion through a v3.0.0
-      service-registry-daemon resolver socket and confirm the
-      wholesale price logged in the audit trail matches the
-      manifest's `offerings[].pricePerWorkUnitWei`, not the Postgres
-      column.
-- [ ] Tag `v3.0.0`.
+The bulk of plan 0031's work landed in the **`@cloudspe/livepeer-openai-gateway-core`**
+upstream package's v3.0.0 cut — proto regen, `Model`→`Offering`
+rename, and `SelectRequest.model` → `.offering` all sit there. This
+repo (the bridge shell) consumes the package; the bridge's
+consumer-facing `SelectQuery.model` shape was preserved in gateway-core
+v3 for backwards compat, so the bridge code keeps working unchanged.
+
+**Reality-check** (2026-04-29): the original plan claimed the bridge
+had a *Postgres-stored wholesale rate card* to replace with manifest
+reads. Audit shows otherwise — the bridge has only a customer-facing
+USD rate card (`src/service/pricing/rateCard.ts`); wholesale prices
+already flow through gateway-core's `nodeClient.getQuote` via the
+worker's HTTP `/quote` response (`model_prices[].price_per_work_unit_wei`).
+There is no wholesale-rate Postgres table to replace. The "manifest
+pricing adoption" header in plan 0031 was speculative and
+inapplicable.
+
+What's actually needed in this repo for v3 alignment:
+
+- [x] Proto regen + rename — landed in gateway-core v3.0.0 (commit
+      `9e0bd8b`, tag pushed). Bridge inherits.
+- [x] `SelectRequest` call sites — gateway-core's `SelectQuery.model`
+      input parameter preserved as backwards-compat alias mapping to
+      `offering` on the wire. No bridge code change required.
+- [x] Customer-facing USD rate card — explicitly kept untouched, by
+      design.
+- [ ] Bump `@cloudspe/livepeer-openai-gateway-core` dep from `^0.2.0`
+      to `^3.0.0` in `packages/livepeer-openai-gateway/package.json`
+      once gateway-core is published to the `@cloudspe` npm scope
+      (operator-driven; requires npm credentials).
+- [ ] Until npm publish lands, the bridge keeps consuming v0.2.0 from
+      the registry — and continues to pass all 264 tests because the
+      gateway-core v3 consumer API is wire-compatible with v0.2.0
+      (verified via `npm test --workspace=livepeer-openai-gateway`
+      2026-04-29).
+- [ ] After the dep bump, tag this repo `v3.0.0`.
+
+## Postgres wholesale rate card (was: §Approach.4) — STRUCK
+
+The plan mistakenly claimed `src/service/pricing/rateCard.ts` had a
+wholesale-tier read path. Audit on 2026-04-29 confirmed the rate card
+is purely customer-facing (USD). The wholesale wire path already lives
+in `@cloudspe/livepeer-openai-gateway-core`'s `nodeClient.getQuote`,
+which reads `price_per_work_unit_wei` directly from each worker's
+`/quote` HTTP response. No bridge-side change needed for "manifest
+pricing adoption."
 
 ## Decisions log
 
