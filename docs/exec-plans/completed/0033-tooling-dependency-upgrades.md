@@ -5,6 +5,7 @@ title: Upgrade tooling and test dependencies
 status: completed
 owner: codex
 opened: 2026-04-30
+closed: 2026-04-30
 ---
 
 ## Goal
