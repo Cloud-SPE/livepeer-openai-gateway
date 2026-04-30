@@ -142,7 +142,9 @@ describe('admin pricing — retail prices and aliases', () => {
 
       await new Promise((r) => setTimeout(r, 50));
       expect(
-        rateCardService.current().embeddingsRateCard.entries.some((e) => e.model === 'text-embedding-3-small-v2'),
+        rateCardService
+          .current()
+          .embeddingsRateCard.entries.some((e) => e.model === 'text-embedding-3-small-v2'),
       ).toBe(true);
     } finally {
       await server.close();

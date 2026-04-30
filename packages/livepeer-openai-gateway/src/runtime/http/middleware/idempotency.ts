@@ -1,5 +1,10 @@
 import { createHash } from 'node:crypto';
-import type { FastifyReply, FastifyRequest, onSendHookHandler, preHandlerAsyncHookHandler } from 'fastify';
+import type {
+  FastifyReply,
+  FastifyRequest,
+  onSendHookHandler,
+  preHandlerAsyncHookHandler,
+} from 'fastify';
 import type { Db } from '../../../repo/db.js';
 import type { AuthService } from '../../../service/auth/authenticate.js';
 import * as idempotencyRepo from '../../../repo/idempotency.js';
@@ -41,14 +46,26 @@ export function idempotencyPreHandler(deps: IdempotencyDeps): preHandlerAsyncHoo
     if (!SUPPORTED_JSON_PATHS.has(path) && !UNSUPPORTED_MULTIPART_PATHS.has(path)) return;
 
     if (UNSUPPORTED_MULTIPART_PATHS.has(path)) {
-      await reply.code(400).send(errorEnvelope('idempotency_unsupported', 'Idempotency-Key is not yet supported for multipart endpoints.'));
+      await reply
+        .code(400)
+        .send(
+          errorEnvelope(
+            'idempotency_unsupported',
+            'Idempotency-Key is not yet supported for multipart endpoints.',
+          ),
+        );
       return;
     }
 
     if (path === '/v1/chat/completions' && isStreamingChat(req.body)) {
       await reply
         .code(400)
-        .send(errorEnvelope('idempotency_unsupported', 'Idempotency-Key is not yet supported for streaming chat completions.'));
+        .send(
+          errorEnvelope(
+            'idempotency_unsupported',
+            'Idempotency-Key is not yet supported for streaming chat completions.',
+          ),
+        );
       return;
     }
 
@@ -56,14 +73,21 @@ export function idempotencyPreHandler(deps: IdempotencyDeps): preHandlerAsyncHoo
     if (!contentType.includes('application/json')) {
       await reply
         .code(400)
-        .send(errorEnvelope('idempotency_unsupported', 'Idempotency-Key currently requires an application/json request body.'));
+        .send(
+          errorEnvelope(
+            'idempotency_unsupported',
+            'Idempotency-Key currently requires an application/json request body.',
+          ),
+        );
       return;
     }
 
     const caller = await deps.authService.authenticate(req.headers.authorization).catch(() => null);
     if (!caller) return;
 
-    const requestHash = sha256(stableStringify({ method: req.method, path, body: req.body ?? null }));
+    const requestHash = sha256(
+      stableStringify({ method: req.method, path, body: req.body ?? null }),
+    );
     const existing = await idempotencyRepo.findByCustomerAndKey(
       deps.db,
       caller.customer.id,
@@ -85,7 +109,11 @@ export function idempotencyPreHandler(deps: IdempotencyDeps): preHandlerAsyncHoo
       req.idempotencyContext = { rowId: inserted.id };
     } catch (err) {
       if (!isUniqueViolation(err)) throw err;
-      const raced = await idempotencyRepo.findByCustomerAndKey(deps.db, caller.customer.id, idempotencyKey);
+      const raced = await idempotencyRepo.findByCustomerAndKey(
+        deps.db,
+        caller.customer.id,
+        idempotencyKey,
+      );
       if (!raced) throw err;
       await handleExisting(raced, requestHash, reply);
     }
@@ -164,9 +192,7 @@ function decodeStoredBody(row: idempotencyRepo.IdempotencyRow): Buffer | string 
   return row.responseBody ?? '';
 }
 
-function serializePayload(
-  payload: unknown,
-): { encoding: 'utf8' | 'base64'; body: string } | null {
+function serializePayload(payload: unknown): { encoding: 'utf8' | 'base64'; body: string } | null {
   if (payload === undefined || payload === null) return { encoding: 'utf8', body: '' };
   if (typeof payload === 'string') return { encoding: 'utf8', body: payload };
   if (Buffer.isBuffer(payload)) return { encoding: 'base64', body: payload.toString('base64') };
@@ -198,7 +224,12 @@ function sha256(input: string): string {
 }
 
 function isStreamingChat(body: unknown): boolean {
-  return Boolean(body && typeof body === 'object' && 'stream' in body && (body as { stream?: unknown }).stream === true);
+  return Boolean(
+    body &&
+    typeof body === 'object' &&
+    'stream' in body &&
+    (body as { stream?: unknown }).stream === true,
+  );
 }
 
 function header(req: FastifyRequest, name: string): string | undefined {
@@ -216,6 +247,9 @@ function isUniqueViolation(err: unknown): boolean {
   );
 }
 
-function errorEnvelope(code: string, message: string): { error: { code: string; type: string; message: string } } {
+function errorEnvelope(
+  code: string,
+  message: string,
+): { error: { code: string; type: string; message: string } } {
   return { error: { code, type: 'IdempotencyError', message } };
 }

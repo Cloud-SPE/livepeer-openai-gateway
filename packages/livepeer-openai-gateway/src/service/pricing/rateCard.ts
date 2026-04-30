@@ -324,7 +324,9 @@ function retailRowsToSnapshot(
     };
   });
   const distinctPairs = Array.from(
-    new Map(chatPairs.map((p) => [`${p.input}:${p.output}`, { input: p.input, output: p.output }])).values(),
+    new Map(
+      chatPairs.map((p) => [`${p.input}:${p.output}`, { input: p.input, output: p.output }]),
+    ).values(),
   ).sort((a, b) => a.input + a.output - (b.input + b.output));
   if (distinctPairs.length > TIER_VALUES.length) {
     throw new Error(
@@ -332,7 +334,10 @@ function retailRowsToSnapshot(
     );
   }
   const pairToTier = new Map(
-    distinctPairs.map((pair, index) => [`${pair.input}:${pair.output}`, TIER_VALUES[index] as PricingTier]),
+    distinctPairs.map((pair, index) => [
+      `${pair.input}:${pair.output}`,
+      TIER_VALUES[index] as PricingTier,
+    ]),
   );
 
   const chatEntries: ChatRateCardEntry[] = TIER_VALUES.map((tier, index) => {
@@ -407,14 +412,16 @@ function retailRowsToSnapshot(
     },
     modelToTierExact,
     modelToTierPatterns,
-    embeddingsPatterns: capabilityPatternEntries(priceRows, aliasRows, 'embeddings').map((entry) => ({
-      pattern: entry.pattern,
-      entry: {
-        model: entry.pattern,
-        usdPerMillionTokens: unitToPerMillion(entry.usdPerUnit),
-      },
-      sortOrder: entry.sortOrder,
-    })),
+    embeddingsPatterns: capabilityPatternEntries(priceRows, aliasRows, 'embeddings').map(
+      (entry) => ({
+        pattern: entry.pattern,
+        entry: {
+          model: entry.pattern,
+          usdPerMillionTokens: unitToPerMillion(entry.usdPerUnit),
+        },
+        sortOrder: entry.sortOrder,
+      }),
+    ),
     imagesPatterns: capabilityPatternEntries(priceRows, aliasRows, 'images')
       .filter((entry) => isValidSize(entry.size) && isValidQuality(entry.quality))
       .map((entry) => ({
@@ -437,18 +444,16 @@ function retailRowsToSnapshot(
       },
       sortOrder: entry.sortOrder,
     })),
-    transcriptionsPatterns: capabilityPatternEntries(
-      priceRows,
-      aliasRows,
-      'transcriptions',
-    ).map((entry) => ({
-      pattern: entry.pattern,
-      entry: {
-        model: entry.pattern,
-        usdPerMinute: entry.usdPerUnit,
-      },
-      sortOrder: entry.sortOrder,
-    })),
+    transcriptionsPatterns: capabilityPatternEntries(priceRows, aliasRows, 'transcriptions').map(
+      (entry) => ({
+        pattern: entry.pattern,
+        entry: {
+          model: entry.pattern,
+          usdPerMinute: entry.usdPerUnit,
+        },
+        sortOrder: entry.sortOrder,
+      }),
+    ),
   };
 }
 
@@ -475,7 +480,13 @@ function capabilityPatternEntries(
   priceRows: Array<typeof retailPriceCatalog.$inferSelect>,
   aliasRows: Array<typeof retailPriceAliases.$inferSelect>,
   capability: 'embeddings' | 'images' | 'speech' | 'transcriptions',
-): Array<{ pattern: string; usdPerUnit: number; size: string; quality: string; sortOrder: number }> {
+): Array<{
+  pattern: string;
+  usdPerUnit: number;
+  size: string;
+  quality: string;
+  sortOrder: number;
+}> {
   const priceByOffering = new Map(
     priceRows
       .filter((r) => r.capability === capability && r.priceKind === 'default')

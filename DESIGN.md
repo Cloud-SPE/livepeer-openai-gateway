@@ -46,43 +46,43 @@ Dependency rule: each layer may import only layers **below** it, plus `providers
 
 ## Domains
 
-| Domain               | Purpose                                                       |
-| -------------------- | ------------------------------------------------------------- |
-| `service/auth`       | API-key validation, customer lookup, tier resolution          |
-| `service/billing`    | CustomerLedger reads/writes, top-up flow, refund              |
-| `service/routing`    | Router: pick a WorkerNode, handle failover and retry          |
+| Domain               | Purpose                                                                       |
+| -------------------- | ----------------------------------------------------------------------------- |
+| `service/auth`       | API-key validation, customer lookup, tier resolution                          |
+| `service/billing`    | CustomerLedger reads/writes, top-up flow, refund                              |
+| `service/routing`    | Router: pick a WorkerNode, handle failover and retry                          |
 | `service/routing`    | Resolver-driven routing + bridge-local quote refresh / health / circuit state |
-| `service/pricing`    | Rate card lookup, margin calculation, drift metric            |
-| `service/tokenAudit` | LocalTokenizer orchestration (v1 metric-only)                 |
-| `service/rateLimit`  | Redis sliding window, per-customer limits                     |
-| `service/payments`   | payment-daemon wrapper: CreatePayment, WorkID, session lifecycle |
+| `service/pricing`    | Rate card lookup, margin calculation, drift metric                            |
+| `service/tokenAudit` | LocalTokenizer orchestration (v1 metric-only)                                 |
+| `service/rateLimit`  | Redis sliding window, per-customer limits                                     |
+| `service/payments`   | payment-daemon wrapper: CreatePayment, WorkID, session lifecycle              |
 
 ## Runtime surfaces
 
-| Path                                   | Purpose                                                                 |
-| -------------------------------------- | ----------------------------------------------------------------------- |
-| `src/runtime/http/chat/completions.ts` | OpenAI-compatible `/v1/chat/completions`, non-streaming                 |
-| `src/runtime/http/chat/streaming.ts`   | OpenAI-compatible `/v1/chat/completions` SSE streaming variant          |
-| `src/runtime/http/embeddings/`         | OpenAI-compatible `/v1/embeddings`                                      |
-| `src/runtime/http/images/`             | OpenAI-compatible `/v1/images/generations`                              |
-| `src/runtime/http/billing/`            | Customer-facing balance + top-up endpoints                              |
-| `src/runtime/http/stripe/`             | Stripe webhook (`payment_intent.succeeded`, disputes)                   |
+| Path                                   | Purpose                                                                      |
+| -------------------------------------- | ---------------------------------------------------------------------------- |
+| `src/runtime/http/chat/completions.ts` | OpenAI-compatible `/v1/chat/completions`, non-streaming                      |
+| `src/runtime/http/chat/streaming.ts`   | OpenAI-compatible `/v1/chat/completions` SSE streaming variant               |
+| `src/runtime/http/embeddings/`         | OpenAI-compatible `/v1/embeddings`                                           |
+| `src/runtime/http/images/`             | OpenAI-compatible `/v1/images/generations`                                   |
+| `src/runtime/http/billing/`            | Customer-facing balance + top-up endpoints                                   |
+| `src/runtime/http/stripe/`             | Stripe webhook (`payment_intent.succeeded`, disputes)                        |
 | `src/runtime/http/admin/`              | Ops endpoints (health, registry/node status, customer lookup, manual refund) |
-| `src/runtime/http/middleware/`         | Auth + rate-limit middleware shared by paid routes                      |
+| `src/runtime/http/middleware/`         | Auth + rate-limit middleware shared by paid routes                           |
 
 ## Providers
 
-| Provider            | Interface role                                                                     | Default implementation                            |
-| ------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------- |
-| `PayerDaemonClient` | gRPC client to local payment-daemon                                                | `@grpc/grpc-js` stub                              |
-| `NodeClient`        | HTTP client to WorkerNode `/health`, `/v1/*`, plus the current quote-refresh path  | `fetch`-based impl in `src/providers/nodeClient/` |
-| `StripeClient`      | Top-ups, webhooks, disputes, refunds                                               | `stripe` SDK                                      |
-| `RedisClient`       | Rate-limit state                                                                   | `ioredis`                                         |
-| `Database`          | Postgres pool                                                                      | `pg` + Drizzle                                    |
-| `Tokenizer`         | Model-aware token counting (drift audit)                                           | `tiktoken` for OpenAI-compat; per-family plugins  |
-| `ChainInfo`         | Read-only Eth for admin views                                                      | `viem`                                            |
-| `MetricsSink`       | Counter / Gauge / Histogram                                                        | No-op default; Prometheus later                   |
-| `Logger`            | Structured log                                                                     | `pino`                                            |
+| Provider            | Interface role                                                                    | Default implementation                            |
+| ------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------- |
+| `PayerDaemonClient` | gRPC client to local payment-daemon                                               | `@grpc/grpc-js` stub                              |
+| `NodeClient`        | HTTP client to WorkerNode `/health`, `/v1/*`, plus the current quote-refresh path | `fetch`-based impl in `src/providers/nodeClient/` |
+| `StripeClient`      | Top-ups, webhooks, disputes, refunds                                              | `stripe` SDK                                      |
+| `RedisClient`       | Rate-limit state                                                                  | `ioredis`                                         |
+| `Database`          | Postgres pool                                                                     | `pg` + Drizzle                                    |
+| `Tokenizer`         | Model-aware token counting (drift audit)                                          | `tiktoken` for OpenAI-compat; per-family plugins  |
+| `ChainInfo`         | Read-only Eth for admin views                                                     | `viem`                                            |
+| `MetricsSink`       | Counter / Gauge / Histogram                                                       | No-op default; Prometheus later                   |
+| `Logger`            | Structured log                                                                    | `pino`                                            |
 
 ## What this does NOT do
 

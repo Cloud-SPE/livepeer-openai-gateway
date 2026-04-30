@@ -142,7 +142,11 @@ export class AdminRetailPricingCapability extends LitElement {
       { field: 'customer_tier', header: 'Tier', render: (r) => r.customer_tier },
       { field: 'price_kind', header: 'Kind', render: (r) => r.price_kind },
       { field: 'unit', header: 'Unit', render: (r) => r.unit },
-      { field: 'usd_per_unit', header: 'USD / unit', render: (r) => Number(r.usd_per_unit).toFixed(8) },
+      {
+        field: 'usd_per_unit',
+        header: 'USD / unit',
+        render: (r) => Number(r.usd_per_unit).toFixed(8),
+      },
       {
         field: 'actions',
         header: '',
@@ -284,7 +288,9 @@ export class AdminRetailPricingCapability extends LitElement {
               @input=${(e) => this._setAlias('model_or_pattern', e.target.value)}
             />
             ${this._aliasForm.is_pattern && this._aliasForm.model_or_pattern
-              ? html`<p class="muted text-sm" style="margin: var(--space-1) 0 0;">${this._preview()}</p>`
+              ? html`<p class="muted text-sm" style="margin: var(--space-1) 0 0;">
+                  ${this._preview()}
+                </p>`
               : ''}
           </label>
           <label>

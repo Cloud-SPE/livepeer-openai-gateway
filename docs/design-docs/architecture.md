@@ -78,16 +78,16 @@ Enforced by the custom ESLint rules in `lint/` (`layer-check`, `no-cross-cutting
 
 ## Domain inventory
 
-| Path                      | Purpose                                                                                  |
-| ------------------------- | ---------------------------------------------------------------------------------------- |
-| `src/service/auth/`       | API-key validation, customer record lookup, tier resolution                              |
-| `src/service/billing/`    | CustomerLedger reads/writes, top-up orchestration, refund on failure                     |
-| `src/service/routing/`    | Router: node selection, failover/retry, request dispatch                                 |
-| `src/service/routing/`    | Resolver selection, quote refresh/cache, circuit breaker, retry orchestration             |
-| `src/service/pricing/`    | Rate card lookup, margin calculation, drift metrics                                      |
-| `src/service/tokenAudit/` | LocalTokenizer coordination — v1 emits drift metrics only                                |
-| `src/service/rateLimit/`  | Redis sliding window + concurrent-request semaphore                                      |
-| `src/service/payments/`   | Wraps payment-daemon gRPC calls (current session bootstrap + CreatePayment flow)         |
+| Path                      | Purpose                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------- |
+| `src/service/auth/`       | API-key validation, customer record lookup, tier resolution                      |
+| `src/service/billing/`    | CustomerLedger reads/writes, top-up orchestration, refund on failure             |
+| `src/service/routing/`    | Router: node selection, failover/retry, request dispatch                         |
+| `src/service/routing/`    | Resolver selection, quote refresh/cache, circuit breaker, retry orchestration    |
+| `src/service/pricing/`    | Rate card lookup, margin calculation, drift metrics                              |
+| `src/service/tokenAudit/` | LocalTokenizer coordination — v1 emits drift metrics only                        |
+| `src/service/rateLimit/`  | Redis sliding window + concurrent-request semaphore                              |
+| `src/service/payments/`   | Wraps payment-daemon gRPC calls (current session bootstrap + CreatePayment flow) |
 
 ## Runtime surfaces
 
@@ -99,10 +99,10 @@ Enforced by the custom ESLint rules in `lint/` (`layer-check`, `no-cross-cutting
 | `src/runtime/http/images/`             | OpenAI-compatible `/v1/images/generations`                                                           |
 | `src/runtime/http/billing/`            | `/v1/billing/topup` for the customer-facing portal                                                   |
 | `src/runtime/http/account/`            | `/v1/account/*` — profile, API-keys CRUD, usage rollups, top-up history (powers the customer portal) |
-| `src/runtime/http/portal/`             | `@fastify/static` mount serving `frontend/portal/dist/` at `/portal/*`                              |
+| `src/runtime/http/portal/`             | `@fastify/static` mount serving `frontend/portal/dist/` at `/portal/*`                               |
 | `src/runtime/http/stripe/`             | Stripe webhook (`payment_intent.succeeded`, disputes)                                                |
 | `src/runtime/http/admin/`              | Health, registry/node inspection, customer ops, search/feed routes (powers the operator console)     |
-| `src/runtime/http/admin/console/`      | `@fastify/static` mount serving `frontend/admin/dist/` at `/admin/console/*`                        |
+| `src/runtime/http/admin/console/`      | `@fastify/static` mount serving `frontend/admin/dist/` at `/admin/console/*`                         |
 | `src/runtime/http/middleware/`         | Auth + rate-limit middleware shared by every paid route                                              |
 | `src/runtime/http/healthz.ts`          | Liveness probe                                                                                       |
 | `src/runtime/http/errors.ts`           | Typed error → OpenAI-style response envelope mapping                                                 |
@@ -113,17 +113,17 @@ Enforced by the custom ESLint rules in `lint/` (`layer-check`, `no-cross-cutting
 
 All cross-cutting concerns enter through `src/providers/`. One interface per concern; one or more implementations.
 
-| Provider                | Interface role                                                                     | Default implementation                                                                                                                              |
-| ----------------------- | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PayerDaemonClient`     | gRPC client to local payment-daemon (`livepeer.payments.v1`)                       | `@grpc/grpc-js` with generated stubs                                                                                                                |
-| `NodeClient`            | HTTP client to WorkerNode `/health`, `/v1/*`, and the current quote-refresh path   | `fetch`-based impl in `src/providers/nodeClient/`                                                                                                   |
-| `StripeClient`          | Top-ups, webhooks, disputes                                                        | `stripe` SDK                                                                                                                                        |
-| `RedisClient`           | Rate-limit state, ephemeral counters                                               | `ioredis`                                                                                                                                           |
-| `Database`              | Postgres connection pool                                                           | `pg` + Drizzle ORM                                                                                                                                  |
-| `Tokenizer`             | Model-aware token counting (drift audit only — no enforcement in v1)               | `tiktoken` default; per-model-family plugins                                                                                                        |
-| `ChainInfo`             | Read-only Eth for admin views (escrow status)                                      | `viem`                                                                                                                                              |
-| `MetricsSink`           | Counter / Gauge / Histogram                                                        | No-op default; Prometheus later                                                                                                                     |
-| `ServiceRegistryClient` | Engine-internal node discovery + selection (NOT operator-overridable)              | gRPC client to `livepeer-modules/service-registry-daemon`                                                                                           |
+| Provider                | Interface role                                                                   | Default implementation                                    |
+| ----------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `PayerDaemonClient`     | gRPC client to local payment-daemon (`livepeer.payments.v1`)                     | `@grpc/grpc-js` with generated stubs                      |
+| `NodeClient`            | HTTP client to WorkerNode `/health`, `/v1/*`, and the current quote-refresh path | `fetch`-based impl in `src/providers/nodeClient/`         |
+| `StripeClient`          | Top-ups, webhooks, disputes                                                      | `stripe` SDK                                              |
+| `RedisClient`           | Rate-limit state, ephemeral counters                                             | `ioredis`                                                 |
+| `Database`              | Postgres connection pool                                                         | `pg` + Drizzle ORM                                        |
+| `Tokenizer`             | Model-aware token counting (drift audit only — no enforcement in v1)             | `tiktoken` default; per-model-family plugins              |
+| `ChainInfo`             | Read-only Eth for admin views (escrow status)                                    | `viem`                                                    |
+| `MetricsSink`           | Counter / Gauge / Histogram                                                      | No-op default; Prometheus later                           |
+| `ServiceRegistryClient` | Engine-internal node discovery + selection (NOT operator-overridable)            | gRPC client to `livepeer-modules/service-registry-daemon` |
 
 Providers are wired in `src/runtime/` entry points and injected into `service/` and `repo/`.
 

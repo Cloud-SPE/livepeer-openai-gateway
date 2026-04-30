@@ -60,9 +60,7 @@ export class AdminRateCard extends LitElement {
           `,
         )}
       </nav>
-      <admin-retail-pricing-capability
-        .capability=${active}
-      ></admin-retail-pricing-capability>
+      <admin-retail-pricing-capability .capability=${active}></admin-retail-pricing-capability>
     `;
   }
 }

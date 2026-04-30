@@ -32,39 +32,23 @@ and `livepeer-modules` boundaries.
       landed, while the deeper v3.0.1 runtime rewrite belongs to a new plan.
 - [x] Sweep stale repo docs (`README.md`, `DESIGN.md`,
       `docs/design-docs/architecture.md`, deployment/ops docs as needed)
-      so they stop claiming:
-      - worker `/quote` and `/quotes` are part of the v3.0.1 contract
-      - old engine versions (`0.1.x`, `0.2.0`) are current
-      - `livepeer-payment-library` / `livepeer-modules-project` are the
-        canonical names
-      - the shell has no active exec-plans
+      so they stop claiming: - worker `/quote` and `/quotes` are part of the v3.0.1 contract - old engine versions (`0.1.x`, `0.2.0`) are current - `livepeer-payment-library` / `livepeer-modules-project` are the
+      canonical names - the shell has no active exec-plans
 - [x] Add a shell-local design note describing the runtime gap between
       the current installed engine and the v3.0.1 suite protocol:
       `Resolver.Select(capability, offering, tier)` +
       gateway-computed `face_value` + worker-reported `actual_units_used`.
 - [x] Record the repo-local changes that remain once the external
-      dependencies are ready:
-      - retail pricing schema reshape to `(capability, offering, tier)`
-      - optional request idempotency storage and header handling
-      - hot-wallet degraded-mode UX verification
-      - suspension / cancellation doc alignment
-- [x] Land shell-local idempotency support:
-      - persist `Idempotency-Key` rows in Postgres
-      - replay completed JSON / binary responses on duplicate requests
-      - reject unsafe current-runtime cases (streaming chat, multipart
-        uploads)
-      - delete failed 5xx attempts so callers can retry with the same key
+      dependencies are ready: - retail pricing schema reshape to `(capability, offering, tier)` - optional request idempotency storage and header handling - hot-wallet degraded-mode UX verification - suspension / cancellation doc alignment
+- [x] Land shell-local idempotency support: - persist `Idempotency-Key` rows in Postgres - replay completed JSON / binary responses on duplicate requests - reject unsafe current-runtime cases (streaming chat, multipart
+      uploads) - delete failed 5xx attempts so callers can retry with the same key
 - [x] Run validation on the doc sweep (`doc-lint`, targeted type/build
       checks if touched files require it).
-- [x] Land shell-native retail pricing storage and admin/API surfaces:
-      - persist retail prices as
-        `(capability, offering, customer_tier[, price_kind])`
-      - persist request-selector aliases that map current OpenAI request
-        shapes to offerings
-      - synthesize the installed engine's older rate-card snapshot from
-        the `prepaid` retail view so the current runtime keeps working
-      - switch the admin SPA pricing page to the shell-native retail
-        model and document the compatibility boundary
+- [x] Land shell-native retail pricing storage and admin/API surfaces: - persist retail prices as
+      `(capability, offering, customer_tier[, price_kind])` - persist request-selector aliases that map current OpenAI request
+      shapes to offerings - synthesize the installed engine's older rate-card snapshot from
+      the `prepaid` retail view so the current runtime keeps working - switch the admin SPA pricing page to the shell-native retail
+      model and document the compatibility boundary
 
 ## Decisions log
 
