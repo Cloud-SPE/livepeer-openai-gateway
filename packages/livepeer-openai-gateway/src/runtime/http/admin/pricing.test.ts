@@ -54,6 +54,23 @@ async function buildServer() {
 
 const auth = { 'x-admin-token': ADMIN_TOKEN, 'content-type': 'application/json' };
 
+async function waitFor(assertion: () => void, opts?: { timeoutMs?: number; intervalMs?: number }) {
+  const timeoutMs = opts?.timeoutMs ?? 2_000;
+  const intervalMs = opts?.intervalMs ?? 25;
+  const deadline = Date.now() + timeoutMs;
+  let lastError: unknown;
+  while (Date.now() < deadline) {
+    try {
+      assertion();
+      return;
+    } catch (error) {
+      lastError = error;
+      await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    }
+  }
+  throw lastError;
+}
+
 describe('admin pricing — auth', () => {
   it('401 when token is missing on a GET', async () => {
     const { server } = await buildServer();
@@ -140,12 +157,13 @@ describe('admin pricing — retail prices and aliases', () => {
       });
       expect(alias.statusCode).toBe(201);
 
-      await new Promise((r) => setTimeout(r, 50));
-      expect(
-        rateCardService
-          .current()
-          .embeddingsRateCard.entries.some((e) => e.model === 'text-embedding-3-small-v2'),
-      ).toBe(true);
+      await waitFor(() => {
+        expect(
+          rateCardService
+            .current()
+            .embeddingsRateCard.entries.some((e) => e.model === 'text-embedding-3-small-v2'),
+        ).toBe(true);
+      });
     } finally {
       await server.close();
     }
@@ -212,13 +230,13 @@ describe('admin pricing — chat tiers', () => {
       });
       expect(res.statusCode).toBe(200);
 
-      // Give the post-write invalidate refresh a moment.
-      await new Promise((r) => setTimeout(r, 50));
-      const after = rateCardService
-        .current()
-        .chatRateCard.entries.find((e) => e.tier === 'starter');
-      expect(after?.inputUsdPerMillion).toBe(0.07);
-      expect(after?.outputUsdPerMillion).toBe(0.14);
+      await waitFor(() => {
+        const after = rateCardService
+          .current()
+          .chatRateCard.entries.find((e) => e.tier === 'starter');
+        expect(after?.inputUsdPerMillion).toBe(0.07);
+        expect(after?.outputUsdPerMillion).toBe(0.14);
+      });
     } finally {
       await server.close();
     }
@@ -258,8 +276,9 @@ describe('admin pricing — chat models CRUD', () => {
       const body = res.json() as { id: string; tier: string };
       expect(body.tier).toBe('standard');
 
-      await new Promise((r) => setTimeout(r, 50));
-      expect(rateCardService.current().modelToTierExact.get('Qwen3.6-27B')).toBe('standard');
+      await waitFor(() => {
+        expect(rateCardService.current().modelToTierExact.get('Qwen3.6-27B')).toBe('standard');
+      });
     } finally {
       await server.close();
     }
@@ -381,9 +400,10 @@ describe('admin pricing — embeddings/speech/transcriptions parity', () => {
         }),
       });
       expect(r.statusCode).toBe(201);
-      await new Promise((r) => setTimeout(r, 50));
-      const snap = rateCardService.current();
-      expect(snap.embeddingsRateCard.entries[0]?.model).toBe('text-embedding-3-large');
+      await waitFor(() => {
+        const snap = rateCardService.current();
+        expect(snap.embeddingsRateCard.entries[0]?.model).toBe('text-embedding-3-large');
+      });
     } finally {
       await server.close();
     }
@@ -515,11 +535,12 @@ describe('admin pricing — pattern entries', () => {
         }),
       });
       expect(r.statusCode).toBe(201);
-      await new Promise((r) => setTimeout(r, 50));
-      const patterns = rateCardService.current().modelToTierPatterns;
-      expect(patterns).toHaveLength(1);
-      expect(patterns[0]?.pattern).toBe('Qwen3.*');
-      expect(patterns[0]?.sortOrder).toBe(50);
+      await waitFor(() => {
+        const patterns = rateCardService.current().modelToTierPatterns;
+        expect(patterns).toHaveLength(1);
+        expect(patterns[0]?.pattern).toBe('Qwen3.*');
+        expect(patterns[0]?.sortOrder).toBe(50);
+      });
     } finally {
       await server.close();
     }

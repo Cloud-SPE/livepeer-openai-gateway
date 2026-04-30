@@ -5,6 +5,23 @@ import { createRateCardService } from './rateCard.js';
 
 let pg: TestPg;
 
+async function waitFor(assertion: () => void, opts?: { timeoutMs?: number; intervalMs?: number }) {
+  const timeoutMs = opts?.timeoutMs ?? 2_000;
+  const intervalMs = opts?.intervalMs ?? 25;
+  const deadline = Date.now() + timeoutMs;
+  let lastError: unknown;
+  while (Date.now() < deadline) {
+    try {
+      assertion();
+      return;
+    } catch (error) {
+      lastError = error;
+      await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    }
+  }
+  throw lastError;
+}
+
 beforeAll(async () => {
   pg = await startTestPg();
 });
@@ -154,12 +171,10 @@ describe('RateCardService.invalidate', () => {
     // Without invalidate, hot-path read may still return the cached snapshot
     // depending on TTL — invalidate forces a reload.
     svc.invalidate();
-    // Give the background refresh a moment.
-    await new Promise((r) => setTimeout(r, 50));
-    // Trigger a read; the snapshot is whatever was loaded by the
-    // invalidate-driven refresh.
-    const snap = svc.current();
-    expect(snap.modelToTierExact.get('Qwen3.6-27B')).toBe('standard');
+    await waitFor(() => {
+      const snap = svc.current();
+      expect(snap.modelToTierExact.get('Qwen3.6-27B')).toBe('standard');
+    });
   });
 });
 
