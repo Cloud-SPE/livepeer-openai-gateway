@@ -20,7 +20,7 @@
     "typecheck": "npm run typecheck --workspaces",
     "test": "npm run test --workspaces && npm run test:ui",
     "test:nocov": "npm --workspace=livepeer-openai-gateway run test:watch -- run",
-    "test:ui": "cd frontend && npm run test:all",
+    "test:ui": "cd frontend && npm ci && npm run test:all",
     "lint": "npm run lint --workspaces",
     "fmt": "prettier --write .",
     "fmt:check": "prettier --check .",

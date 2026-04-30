@@ -94,7 +94,7 @@ export function idempotencyPreHandler(deps: IdempotencyDeps): preHandlerAsyncHoo
       idempotencyKey,
     );
     if (existing) {
-      await handleExisting(existing, requestHash, reply);
+      await respondForExistingKey(existing, requestHash, reply);
       return;
     }
 
@@ -115,7 +115,7 @@ export function idempotencyPreHandler(deps: IdempotencyDeps): preHandlerAsyncHoo
         idempotencyKey,
       );
       if (!raced) throw err;
-      await handleExisting(raced, requestHash, reply);
+      await respondForExistingKey(raced, requestHash, reply);
     }
   };
 }
@@ -148,7 +148,7 @@ export function idempotencyOnSend(deps: IdempotencyDeps): onSendHookHandler {
   };
 }
 
-async function handleExisting(
+async function respondForExistingKey(
   existing: idempotencyRepo.IdempotencyRow,
   requestHash: string,
   reply: FastifyReply,
