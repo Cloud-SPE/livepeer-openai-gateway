@@ -14,7 +14,7 @@ ETH via the `payment-daemon` sidecar from
 - **Routes every request** to a Livepeer WorkerNode from a config-driven pool, builds a micropayment via `payment-daemon`, forwards the call, commits billing from the node's reported usage.
 - **Fail-closed on payment-daemon outage.** Never proceeds without payment.
 - **Observation-only token audit**: `tiktoken`-based local counts cross-checked against node-reported counts; drift is metered, not enforced.
-- **Optional `Idempotency-Key` support** on supported customer POSTs. The shell persists completed responses and replays them on duplicate requests; unsafe current-runtime cases (streaming chat, multipart transcriptions) are rejected.
+- **Optional `Idempotency-Key` support** on supported customer POSTs. The shell persists completed responses and replays them on duplicate requests for non-streaming JSON POSTs. Unsafe current-runtime cases are explicitly rejected today: streaming chat completions and multipart transcription uploads.
 - **Operator endpoints** under `/admin/*` for health, node inspection, customer lookup, manual refund, suspend/unsuspend, escrow view.
 
 ## Status

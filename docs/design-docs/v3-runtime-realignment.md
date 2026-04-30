@@ -71,9 +71,13 @@ runtime cut cleanly:
 - `livepeer-openai-gateway-core` removes quote-refreshing and adopts the
   new resolver/payment flow
 - `payment-daemon` exposes and documents the sender/receiver contract the
-  new flow depends on
-- `payment-daemon` completes the `Model -> Offering` rename in its shared
-  `worker.yaml` parsing
+  new flow depends on, replacing the current sender-side
+  `StartSession(...) + CreatePayment(work_id, work_units)` flow with the
+  v3 target `CreatePayment(face_value, recipient)`
+
+The shared `worker.yaml` `Model -> Offering` rename in `payment-daemon`
+is already landed. The remaining external gap is the sender payment
+contract revision plus the engine/runtime changes needed to consume it.
 
 ### Repo-local follow-ons
 
@@ -81,10 +85,15 @@ Once the external boundary is ready, this shell still needs:
 
 - retail pricing schema migration toward
   `(capability, offering, tier) -> retail_usd_per_unit`
-- optional request idempotency storage keyed by
-  `(customer_id, idempotency_key)`
+- final route coverage for the complete OpenAI surface, including any
+  engine-provided `/v1/images/edits` handler once upstream exists
 - doc and UX verification for hot-wallet degraded mode
 - doc and behavior verification for suspend/cancel semantics
+
+Idempotency storage keyed by `(customer_id, idempotency_key)` is already
+implemented in this repo for supported JSON POSTs. Current-runtime
+limitations remain explicit: multipart requests and streaming chat are
+not replayable and are rejected when `Idempotency-Key` is supplied.
 
 ## Source of truth
 
