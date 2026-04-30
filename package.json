@@ -1,6 +1,6 @@
 {
   "name": "livepeer-openai-gateway-monorepo",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "private": true,
   "description": "Monorepo root for the livepeer-openai-gateway shell (built on @cloudspe/livepeer-openai-gateway-core) + frontend SPAs.",
   "license": "MIT",

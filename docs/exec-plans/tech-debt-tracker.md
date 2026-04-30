@@ -148,7 +148,8 @@ Append-only list of known debt. Strike through when resolved; include the PR or 
 - Severity: low
 - Area: ci
 - Description: `Dockerfile` builds cleanly, but no GitHub Actions workflow builds/pushes on merge. Blocked on a registry decision (GHCR, Docker Hub, private).
-- Update 2026-04-26: local recipe now in place via `npm run docker:{build,tag,push,release}` (see `docs/operations/deployment.md` "Building the production image"). Defaults to `tztcloud/livepeer-openai-gateway:v0.8.10`; overridable via `$BRIDGE_VERSION` and `$BRIDGE_IMAGE_REPO`. The remaining gap is the GitHub Actions workflow that wraps these scripts on tag push — sketched in the deployment doc, awaiting the registry decision.
+- Update 2026-04-26: local recipe now in place via `npm run docker:{build,tag,push,release}` (see `docs/operations/deployment.md` "Building the production image"). Defaults to `tztcloud/livepeer-openai-gateway:v0.8.10`; overridable via `$BRIDGE_VERSION` and `$BRIDGE_IMAGE_REPO`.
+- Resolved: 2026-04-30 in exec-plan 0034. `.github/workflows/release.yml` now publishes `tztcloud/livepeer-openai-gateway` on semver tag push after re-running format, lint, typecheck, docs, and tests. Release tags emitted: `3.0.1`, `3.0`, and `latest`.
 - Remediation: one workflow file once the registry is picked. Skeleton already documented; copy and fill the registry login step.
 - Resolved: _(open — manual recipe in place; CI workflow remains)_
 

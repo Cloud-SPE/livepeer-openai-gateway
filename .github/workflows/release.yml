@@ -1,0 +1,110 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: tztcloud/livepeer-openai-gateway
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      TEST_PG_HOST: localhost
+      TEST_PG_PORT: '5432'
+      TEST_PG_USER: postgres
+      TEST_PG_PASSWORD: postgres
+      TEST_PG_DATABASE: postgres
+      TEST_REDIS_HOST: localhost
+      TEST_REDIS_PORT: '6379'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+
+      - name: Verify git tag matches package version
+        run: |
+          PKG_VERSION="v$(node -p "JSON.parse(require('fs').readFileSync('./package.json', 'utf8')).version")"
+          if [[ "${{ github.ref_name }}" != "$PKG_VERSION" ]]; then
+            echo "::error::git tag '${{ github.ref_name }}' does not match package.json version '$PKG_VERSION'"
+            exit 1
+          fi
+
+      - run: npm ci --ignore-scripts || npm install --ignore-scripts
+      - run: npm run fmt:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run doc-lint
+      - run: npm test
+
+  publish:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Compute image tags + labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

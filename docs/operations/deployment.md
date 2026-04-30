@@ -153,7 +153,7 @@ Three npm scripts wrap the `docker build / tag / push` cycle so the recipe is in
 
 ```bash
 npm run docker:build       # → livepeer-openai-gateway:local
-npm run docker:tag         # → tztcloud/livepeer-openai-gateway:v0.8.10
+npm run docker:tag         # → tztcloud/livepeer-openai-gateway:3.0.1
 npm run docker:push        # pushes the tag above
 ```
 
@@ -165,16 +165,16 @@ npm run docker:release     # build + tag + push, in order
 
 ### Overriding the version
 
-Two equivalent ways to override the default `v0.8.10`:
+Two equivalent ways to override the default `3.0.1`:
 
 ```bash
 # Positional arg (repeats — pass to both tag and push)
-npm run docker:tag -- v0.8.11
-npm run docker:push -- v0.8.11
+npm run docker:tag -- 3.0.2
+npm run docker:push -- 3.0.2
 
 # Or via env (no -- needed; sticks for the whole shell)
-BRIDGE_VERSION=v0.8.11 npm run docker:tag
-BRIDGE_VERSION=v0.8.11 npm run docker:push
+BRIDGE_VERSION=3.0.2 npm run docker:tag
+BRIDGE_VERSION=3.0.2 npm run docker:push
 ```
 
 ### Overriding the registry
@@ -190,19 +190,14 @@ The push assumes you're already authenticated to the registry (`docker login` fo
 
 ### CI hookup
 
-Manual recipe today, CI workflow later. A future GitHub Actions workflow can wrap the same npm scripts on tag push:
+GitHub Actions now publishes on semver tag push via
+[`../../.github/workflows/release.yml`](../../.github/workflows/release.yml).
+Pushing `v3.0.1` re-runs format, lint, typecheck, docs, and test gates,
+then publishes:
 
-```yaml
-# .github/workflows/release.yml — sketch, not committed
-- run: npm ci
-- run: npm test
-- run: npm run docker:build
-- uses: docker/login-action@v3
-  with: { ... }
-- run: BRIDGE_VERSION=${GITHUB_REF_NAME} npm run docker:release
-```
-
-Tracked as [`tech-debt`](../exec-plans/tech-debt-tracker.md) — local recipe is in place; the workflow is the remaining gap.
+- `tztcloud/livepeer-openai-gateway:3.0.1`
+- `tztcloud/livepeer-openai-gateway:3.0`
+- `tztcloud/livepeer-openai-gateway:latest`
 
 ## Smoke a built image (no daemon, no Stripe)
 
@@ -286,7 +281,7 @@ docker compose -f compose.smoke.yaml down --volumes
 
 Additional prerequisites:
 
-- A tagged, pushed bridge image — see "Building the production image" above. Set `BRIDGE_IMAGE` in `.env` to whatever you tagged (`tztcloud/livepeer-openai-gateway:v0.8.10` by default).
+- A tagged, pushed bridge image — see "Building the production image" above. Set `BRIDGE_IMAGE` in `.env` to whatever you tagged (`tztcloud/livepeer-openai-gateway:3.0.1` by default).
 - Rotate every `REQUIRED-*` placeholder in `.env` to a live value (especially `API_KEY_PEPPER`, `ADMIN_TOKEN`, Stripe live keys).
 
 Boot:

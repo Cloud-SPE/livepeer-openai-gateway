@@ -45,7 +45,7 @@ The engine has since been carved out and published as the public OSS package [`@
 **Current published artifacts:**
 
 - npm: `@cloudspe/livepeer-openai-gateway-core@3.0.0`
-- Docker Hub: `tztcloud/livepeer-openai-gateway:v0.8.10` (rolling tag, current digest `sha256:9aac7480cffe…`)
+- Docker Hub: `tztcloud/livepeer-openai-gateway:3.0.1` plus `3.0` and `latest` on tag-triggered releases
 - Daemons (sidecars): `tztcloud/livepeer-payment-daemon:v1.4.0`, `tztcloud/livepeer-service-registry-daemon:v1.4.0`
 
 **Important runtime note:** the current shell still consumes the engine's
