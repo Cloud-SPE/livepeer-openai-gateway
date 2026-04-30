@@ -10,11 +10,11 @@ closed: 2026-04-26
 
 ## Goal
 
-Build the operator-facing admin web app at `bridge-ui/admin/`, sibling to `bridge-ui/portal/` and `bridge-ui/shared/` from [`0022-customer-portal.md`](./0022-customer-portal.md), mirroring the structural pattern in `livepeer-cloud-openai-ui/admin`. Same toolchain — Lit `LitElement` with light DOM, RxJS services as `BehaviorSubject` owners, ObservableController-bridged subscriptions, hash routing, modern CSS 2026 (`@layer`, native nesting, OKLCH + `light-dark()`, `@container`, `@scope`, View Transitions, Popover API for action dialogs, `@starting-style` for entry animations, `:user-invalid` for forms, `:has()` parent state). Auth: paste `ADMIN_TOKEN` + optional operator name → sessionStorage → `X-Admin-Token` and `X-Admin-Actor` headers on every request.
+Build the operator-facing admin web app at `frontend/admin/`, sibling to `frontend/portal/` and `frontend/shared/` from [`0022-customer-portal.md`](./0022-customer-portal.md), mirroring the structural pattern in `livepeer-cloud-openai-ui/admin`. Same toolchain — Lit `LitElement` with light DOM, RxJS services as `BehaviorSubject` owners, ObservableController-bridged subscriptions, hash routing, modern CSS 2026 (`@layer`, native nesting, OKLCH + `light-dark()`, `@container`, `@scope`, View Transitions, Popover API for action dialogs, `@starting-style` for entry animations, `:user-invalid` for forms, `:has()` parent state). Auth: paste `ADMIN_TOKEN` + optional operator name → sessionStorage → `X-Admin-Token` and `X-Admin-Actor` headers on every request.
 
-**Imports from `bridge-ui/shared/` from the first commit** — no copy-and-extract-later. 0022 stood the shared module up; this plan is its second consumer and validates the `createApi(...)` factory's auth-strategy boundary by passing a different strategy (admin token + actor) than the portal's (Bearer key). Anything portal needed first that admin now also needs that _isn't_ in `shared/` is a signal to move it — call those out in the Decisions log as discovered.
+**Imports from `frontend/shared/` from the first commit** — no copy-and-extract-later. 0022 stood the shared module up; this plan is its second consumer and validates the `createApi(...)` factory's auth-strategy boundary by passing a different strategy (admin token + actor) than the portal's (Bearer key). Anything portal needed first that admin now also needs that _isn't_ in `shared/` is a signal to move it — call those out in the Decisions log as discovered.
 
-Reuses from `bridge-ui/shared/` (imported via relative `../shared/...` paths, not duplicated):
+Reuses from `frontend/shared/` (imported via relative `../shared/...` paths, not duplicated):
 
 - `shared/css/{reset,tokens,base,utilities}.css` via `@import url(...) layer(...)` in `admin.css`.
 - `shared/controllers/observable-controller.js`.
@@ -24,10 +24,10 @@ Reuses from `bridge-ui/shared/` (imported via relative `../shared/...` paths, no
 
 Reuses from 0022's plan-level decisions:
 
-- `bridge-ui/` sibling-of-`src/` layout.
+- `frontend/` sibling-of-`src/` layout.
 - Per-module `package.json`, plain JS, Vite, no shadow DOM, no UI TypeScript.
 - Cascade layer order, OKLCH + `light-dark()`, `@scope` blocks per page component.
-- `@fastify/static` mount pattern — second registration at `/admin/console/*` serving `bridge-ui/admin/dist/`.
+- `@fastify/static` mount pattern — second registration at `/admin/console/*` serving `frontend/admin/dist/`.
 
 Backend fills gaps in `/admin/*` to support **list / search / feed** views (existing routes cover single-record reads and the three state-changing actions: refund / suspend / unsuspend). State-changing routes gain an optional `X-Admin-Actor` header that is written into `admin_audit_events.actor` so the audit feed can attribute the human (today every row writes a constant `"admin"`). Full RBAC stays Phase 2.
 
@@ -48,10 +48,10 @@ The pitch: today an on-call operator opening a node investigation has to `curl /
 
 ## Approach
 
-### Workspace layout (joins 0022's `bridge-ui/`)
+### Workspace layout (joins 0022's `frontend/`)
 
 ```
-bridge-ui/
+frontend/
 ├── shared/                       # 0022 stood it up; admin imports from here
 ├── portal/                       # 0022
 └── admin/                        # this plan — no controllers/, no css/{reset,tokens,base,utilities}.css duplicated
@@ -89,11 +89,11 @@ Notably **absent** vs. 0022's portal tree: no `controllers/observable-controller
 
 Tasks:
 
-- [x] `bridge-ui/admin/package.json` — `lit ^3.3`, `rxjs ^7.8`, `vite ^8`. Versions exactly match `bridge-ui/shared/`'s `peerDependencies`.
-- [x] `vite.config.js` — dev `5174`, build to `bridge-ui/admin/dist/`, base `/admin/console/`, dev proxy `/admin` → bridge. No alias config.
-- [x] Top-level `package.json` `build` script extends to `tsc && (cd bridge-ui/portal && npm ci && npm run build) && (cd bridge-ui/admin && npm ci && npm run build)`.
-- [x] `Dockerfile` adds `bridge-ui/admin/dist/` alongside the portal output in the runtime image.
-- [x] `npm run doc-lint` rule from 0022 also applies here: `bridge-ui/admin/lib/` may not redefine anything that exists in `bridge-ui/shared/lib/`.
+- [x] `frontend/admin/package.json` — `lit ^3.3`, `rxjs ^7.8`, `vite ^8`. Versions exactly match `frontend/shared/`'s `peerDependencies`.
+- [x] `vite.config.js` — dev `5174`, build to `frontend/admin/dist/`, base `/admin/console/`, dev proxy `/admin` → bridge. No alias config.
+- [x] Top-level `package.json` `build` script extends to `tsc && (cd frontend/portal && npm ci && npm run build) && (cd frontend/admin && npm ci && npm run build)`.
+- [x] `Dockerfile` adds `frontend/admin/dist/` alongside the portal output in the runtime image.
+- [x] `npm run doc-lint` rule from 0022 also applies here: `frontend/admin/lib/` may not redefine anything that exists in `frontend/shared/lib/`.
 
 ### CSS architecture
 
@@ -155,7 +155,7 @@ Files:
 - [x] `src/runtime/http/admin/routes.ts` (extend) — register the seven new routes.
 - [x] `src/runtime/http/admin/actor.ts` — middleware reads `X-Admin-Actor`, validates `^[a-z0-9._-]{1,64}$`, attaches to `request.adminActor`. Reads default to `"unknown"`; writes (refund / suspend / unsuspend / key issue) require it.
 - [x] `src/repo/admin/search.ts` — search SQL for customers / audit / reservations / topups / node-events. Cursor-encoding helper.
-- [x] `src/runtime/http/admin/console/static.ts` — `@fastify/static` registration at `/admin/console/*` serving `bridge-ui/admin/dist/`.
+- [x] `src/runtime/http/admin/console/static.ts` — `@fastify/static` registration at `/admin/console/*` serving `frontend/admin/dist/`.
 
 ### Pages
 
@@ -182,13 +182,13 @@ Files:
 
 - [x] **Update** `docs/product-specs/admin-endpoints.md` — append the seven new routes; document `X-Admin-Actor` semantics (read default `"unknown"`, writes require, server validation regex).
 - [x] **New** `docs/product-specs/operator-admin.md` — page-by-page UX, action confirmation rules, Grafana embedding configuration.
-- [x] **Update** `docs/operations/deployment.md` — `GRAFANA_DASHBOARD_URL` env entry; `bridge-ui/admin/` build step in the Docker UI stage.
-- [x] **Update** `docs/design-docs/architecture.md` — `bridge-ui/admin/` joins `bridge-ui/portal/` in the sibling-of-`src/` UI section established by [`0022`](./0022-customer-portal.md).
+- [x] **Update** `docs/operations/deployment.md` — `GRAFANA_DASHBOARD_URL` env entry; `frontend/admin/` build step in the Docker UI stage.
+- [x] **Update** `docs/design-docs/architecture.md` — `frontend/admin/` joins `frontend/portal/` in the sibling-of-`src/` UI section established by [`0022`](./0022-customer-portal.md).
 - [x] **Update** `AGENTS.md` "Where to look for X" — add `operator-admin.md` row.
 
 ## Decisions log
 
-### 2026-04-26 — Import from `bridge-ui/shared/`, do not copy
+### 2026-04-26 — Import from `frontend/shared/`, do not copy
 
 Reverses an earlier draft of this plan that proposed copy-verbatim with rule-of-three extraction at a hypothetical third consumer. Project standard: when 2+ consumers are co-designed, stand up the shared module from day one. 0022 stood it up; this plan validates it by being a second, structurally-different consumer (admin token + `X-Admin-Actor` strategy vs. portal's Bearer-key strategy). Anything portal got first that admin now also needs that _isn't_ in shared is a signal to move it — call those out as discovered while implementing.
 
@@ -234,7 +234,7 @@ A stuck reservation is a symptom (PayerDaemon outage, node death mid-call). The 
 - **Operator search scale.** `GET /admin/customers?q=email-substring` is `ILIKE '%q%'` on `customers.email`. Fine to ~100 k customers. Past that, a trigram index (`pg_trgm`) or a search service. Note in route docstring; revisit when the customer table crosses 50 k.
 - **Audit-log retention.** No retention story today. The admin exposes the full table. Out of scope here, but flag a tech-debt entry: `admin-audit-retention` — partition by month, archive after N months.
 - **Anchor positioning fallback.** `position-anchor` is the most cutting-edge feature in this plan. Fall through to absolute positioning where unsupported; the visual difference is minor (action menus slightly less precisely placed).
-- **Should `bridge-ui/admin/` be its own GitHub repo?** Reference UI (`livepeer-cloud-openai-ui`) is a separate repo. Trade: separate repo = clean deploy decoupling, separate auth surface for the build pipeline; same repo = atomic changes when `/admin/*` API shapes shift. Defer; v1 stays in this repo.
+- **Should `frontend/admin/` be its own GitHub repo?** Reference UI (`livepeer-cloud-openai-ui`) is a separate repo. Trade: separate repo = clean deploy decoupling, separate auth surface for the build pipeline; same repo = atomic changes when `/admin/*` API shapes shift. Defer; v1 stays in this repo.
 
 ## Artifacts produced
 
@@ -253,10 +253,10 @@ Implementation in progress (status remains `active` — see "What's still pendin
   - `GET /admin/nodes/:id/events` (circuit timeline)
   - `GET /admin/config/nodes` (read-only nodes.yaml view with `path`, `mtime`, `sha256`, `contents`, loaded NodeBook)
   - Repo extensions: `customersRepo.search`, `topupsRepo.search`, `reservationsRepo.listByState`, `adminAuditEventsRepo.search`, `nodeHealthRepo.searchEventsForNode`.
-- **`bridge-ui/admin/`** — third workspace member: `package.json`, Vite + vitest + WTR configs, `index.html`, `main.js`, `admin.css`, `lib/{api,session,schemas}.js`, `lib/services/{health,nodes,customers,reservations,topups,audit,config}.service.js`, `components/{admin-app,admin-login,admin-health,admin-nodes,admin-node-detail,admin-customers,admin-customer-detail,admin-reservations,admin-topups,admin-audit,admin-config}.js`.
+- **`frontend/admin/`** — third workspace member: `package.json`, Vite + vitest + WTR configs, `index.html`, `main.js`, `admin.css`, `lib/{api,session,schemas}.js`, `lib/services/{health,nodes,customers,reservations,topups,audit,config}.service.js`, `components/{admin-app,admin-login,admin-health,admin-nodes,admin-node-detail,admin-customers,admin-customer-detail,admin-reservations,admin-topups,admin-audit,admin-config}.js`.
 - **Static mount** — `src/runtime/http/admin/console/static.ts` registers `@fastify/static` at `/admin/console/*`. Wired in `src/main.ts`.
-- **Tests** — Backend: `src/runtime/http/admin/admin-search.test.ts` (16 happy-path) + `src/runtime/http/admin/admin-routes-branches.test.ts` (19 sad-path / branch coverage) + `src/runtime/http/admin/console/static.test.ts` (2). UI: `bridge-ui/admin/tests/customers.service.test.js` (vitest, 6) + `bridge-ui/admin/tests/wtr/{admin-login,admin-customer-detail,admin-reservations,admin-topups,admin-audit,admin-config}.test.js` (Web Test Runner + Chromium, 23). Validates the `bridge-ui/shared/` `createApi(...)` factory's auth-strategy boundary by passing `X-Admin-Token` + `X-Admin-Actor` instead of the portal's `Bearer ...`.
-- **Workspace scripts** — `bridge-ui/package.json` gains `build:admin`, `dev:admin`, `test:admin`, `build:all`, `test:all`. Top-level `package.json` chains through `build:all` / `test:all`.
+- **Tests** — Backend: `src/runtime/http/admin/admin-search.test.ts` (16 happy-path) + `src/runtime/http/admin/admin-routes-branches.test.ts` (19 sad-path / branch coverage) + `src/runtime/http/admin/console/static.test.ts` (2). UI: `frontend/admin/tests/customers.service.test.js` (vitest, 6) + `frontend/admin/tests/wtr/{admin-login,admin-customer-detail,admin-reservations,admin-topups,admin-audit,admin-config}.test.js` (Web Test Runner + Chromium, 23). Validates the `frontend/shared/` `createApi(...)` factory's auth-strategy boundary by passing `X-Admin-Token` + `X-Admin-Actor` instead of the portal's `Bearer ...`.
+- **Workspace scripts** — `frontend/package.json` gains `build:admin`, `dev:admin`, `test:admin`, `build:all`, `test:all`. Top-level `package.json` chains through `build:all` / `test:all`.
 - **Dockerfile** — `ui` stage builds both portal and admin in one workspace `npm ci`; runtime image stages both `dist/` outputs.
 
 ### What's still pending

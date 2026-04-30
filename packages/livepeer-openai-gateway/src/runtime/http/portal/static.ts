@@ -4,7 +4,7 @@ import type { FastifyInstance } from 'fastify';
 import fastifyStatic from '@fastify/static';
 
 export interface PortalStaticOptions {
-  /** Filesystem path to the built portal dist/. Defaults to <cwd>/bridge-ui/portal/dist. */
+  /** Filesystem path to the built portal dist/. Defaults to <cwd>/frontend/portal/dist. */
   rootDir?: string;
   /** URL prefix the portal is mounted at. Defaults to /portal. */
   prefix?: string;
@@ -20,7 +20,7 @@ export async function registerPortalStatic(
   app: FastifyInstance,
   options: PortalStaticOptions = {},
 ): Promise<void> {
-  const rootDir = options.rootDir ?? resolve(process.cwd(), 'bridge-ui/portal/dist');
+  const rootDir = options.rootDir ?? resolve(process.cwd(), 'frontend/portal/dist');
   const prefix = options.prefix ?? '/portal/';
 
   if (!existsSync(rootDir)) {

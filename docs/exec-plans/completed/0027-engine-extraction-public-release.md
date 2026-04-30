@@ -236,7 +236,7 @@ After publish, in this repo (now `livepeer-openai-gateway`):
   ```
   (was `"workspace:*"`)
 - `git rm -r packages/livepeer-gateway-core/`
-- Root `package.json` workspaces no longer include `packages/livepeer-gateway-core` (only `packages/livepeer-openai-gateway` and `bridge-ui/*`).
+- Root `package.json` workspaces no longer include `packages/livepeer-gateway-core` (only `packages/livepeer-openai-gateway` and `frontend/*`).
 - `npm install` resolves the engine from the registry.
 - All tests, lint, typecheck pass. The shell now consumes the published engine.
 

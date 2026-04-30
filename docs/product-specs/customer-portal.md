@@ -6,7 +6,7 @@ last-reviewed: 2026-04-26
 
 # Customer portal
 
-Self-service web app served at `/portal/*`. Authenticated by an existing API key (operator-issued today, self-service signup is its own plan). Built from `bridge-ui/portal/`; consumes `/v1/account/*` (profile, keys CRUD, usage, top-ups, limits) and `/v1/billing/topup`.
+Self-service web app served at `/portal/*`. Authenticated by an existing API key (operator-issued today, self-service signup is its own plan). Built from `frontend/portal/`; consumes `/v1/account/*` (profile, keys CRUD, usage, top-ups, limits) and `/v1/billing/topup`.
 
 This spec is the canonical UX contract — the page-by-page behavior the implementation must match. For _how_ the SPA is built (Lit + RxJS + modern CSS, light DOM, hash routing, npm workspaces), see [`ui-architecture.md`](../design-docs/ui-architecture.md).
 

@@ -262,17 +262,17 @@ Append-only list of known debt. Strike through when resolved; include the PR or 
 
 - Opened: 2026-04-26
 - Severity: low
-- Area: bridge-ui / auth
+- Area: frontend / auth
 - Description: The customer portal (0022) auths by having the user paste their bridge API key, which is then stored in `sessionStorage` and sent as `Authorization: Bearer` on every request. Pragmatic for v1 (no new auth protocol, no email-link sender, no session table) but the credential held in storage IS the live API key (full account scope). The portal's strict CSP mitigates the XSS angle. Long-term, a short-lived console session token issued after a one-time API-key validation gives narrower exposure.
 - Remediation: backend issues a `POST /v1/portal/session` endpoint that takes an API key and returns a 24h JWT scoped to the customer. Portal stores the JWT in sessionStorage, refreshes on activity. Don't pursue until the v1 model causes a real incident or compliance ask.
 - Resolved: _(open)_
 
-### bridge-ui-shared-zod-codegen
+### frontend-shared-zod-codegen
 
 - Opened: 2026-04-26
 - Severity: low
-- Area: bridge-ui / types
-- Description: The portal and admin UIs ship hand-mirrored runtime validators (`bridge-ui/portal/lib/schemas.js`, `bridge-ui/admin/lib/schemas.js`) that mirror server-side Zod schemas in `src/types/` + `src/runtime/http/*/routes.ts` field-by-field. The `npm run doc-lint` rule catches consumer/lib redefinition of shared/lib filenames, but does not diff schema _fields_ — drift between server Zod and client validators is silent until a type-mismatch surfaces in a request. Codegen UI validators from the server schemas would close that gap.
+- Area: frontend / types
+- Description: The portal and admin UIs ship hand-mirrored runtime validators (`frontend/portal/lib/schemas.js`, `frontend/admin/lib/schemas.js`) that mirror server-side Zod schemas in `src/types/` + `src/runtime/http/*/routes.ts` field-by-field. The `npm run doc-lint` rule catches consumer/lib redefinition of shared/lib filenames, but does not diff schema _fields_ — drift between server Zod and client validators is silent until a type-mismatch surfaces in a request. Codegen UI validators from the server schemas would close that gap.
 - Remediation: pick a codegen path (zod-to-json-schema → zod-from-json-schema in JS, or a custom emitter that walks the Zod object tree). Wire into `npm run build:ui` so client validators regenerate on each build. Defer until the first drift incident or when the route count grows past ~20.
 - Resolved: _(open)_
 
@@ -296,7 +296,7 @@ Append-only list of known debt. Strike through when resolved; include the PR or 
 
 - Opened: 2026-04-28
 - Severity: low
-- Area: bridge-ui / portal
+- Area: frontend / portal
 - Description: The customer portal (`/portal/`) doesn't expose a "here is what you pay per model" page. Customers learn pricing by sending a request and observing the cost in the response. A read-only pricing page reading the operator-managed rate card would reduce support load and help conversion ("compare to OpenAI list price").
 - Remediation: dedicated exec-plan `0031-portal-pricing-page.md` when picked up. UI piggybacks on `GET /admin/pricing/*` (read-only — no auth needed for a public pricing page; expose a public mirror endpoint or have the bridge serve the data unauthenticated).
 - Resolved: _(open)_
@@ -305,7 +305,7 @@ Append-only list of known debt. Strike through when resolved; include the PR or 
 
 - Opened: 2026-04-28
 - Severity: medium
-- Area: bridge-ui / admin / pricing
+- Area: frontend / admin / pricing
 - Description: Operators don't have visibility into per-model margin. They charge customers via the rate card (in USD) and pay workers in wei via the registry overlay's `price_per_work_unit_wei`. Computing margin requires an ETH/USD oracle to convert wei → USD.
 - Remediation: dedicated exec-plan `0032-margin-dashboard.md`. Six design questions captured in chat 2026-04-28 (ETH oracle source, worker-cost source, SPA placement, snapshot vs time-series, capability scope, refresh cadence). On hold per operator decision.
 - Resolved: _(open)_

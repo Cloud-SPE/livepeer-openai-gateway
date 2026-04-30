@@ -12,7 +12,7 @@ How WorkerNodes enter, run in, and leave the bridge's routing pool.
 
 > **2026-04-28:** the bridge no longer reads a local `nodes.yaml`. The
 > service-registry-daemon (sibling project at
-> `livepeer-modules-project/service-registry-daemon`) owns node config
+> `livepeer-modules/service-registry-daemon`) owns node config
 > via its `--static-overlay=...` YAML and exposes them through gRPC
 > `Resolver.ListKnown` / `Select` over a unix socket. The bridge's
 > `serviceRegistry` provider is the gRPC client; it enumerates once at

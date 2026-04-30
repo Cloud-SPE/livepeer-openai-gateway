@@ -7,7 +7,7 @@ export default {
   // Popover API, dialog focus traps). Chromium covers the modern-CSS surface
   // we ship — Firefox and WebKit can be added once features stabilize.
   browsers: [playwrightLauncher({ product: 'chromium' })],
-  // rootDir at bridge-ui/ so cross-directory imports (../shared/...) work in
+  // rootDir at frontend/ so cross-directory imports (../shared/...) work in
   // browser file URLs; nodeResolve walks up from portal/ for bare specifiers
   // and finds @open-wc/testing in portal/node_modules.
   rootDir: '..',

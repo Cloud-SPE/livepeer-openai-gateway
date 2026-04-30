@@ -6,7 +6,7 @@
 // customer-detail suspend flow. Verifies that the X-Admin-Actor handle
 // ends up in the admin_audit_event row that the action produces.
 //
-// Skips gracefully if `bridge-ui/admin/dist/` is missing (fresh checkouts
+// Skips gracefully if `frontend/admin/dist/` is missing (fresh checkouts
 // haven't built the UI yet).
 
 import { existsSync } from 'node:fs';
@@ -25,7 +25,7 @@ import { registerAdminRoutes } from '../routes.js';
 import { registerAdminConsoleStatic } from './static.js';
 import type { PayerDaemonClient } from '@cloudspe/livepeer-openai-gateway-core/providers/payerDaemon.js';
 
-const ADMIN_DIST = resolve(process.cwd(), 'bridge-ui/admin/dist');
+const ADMIN_DIST = resolve(process.cwd(), 'frontend/admin/dist');
 const HAS_DIST = existsSync(ADMIN_DIST);
 
 const ADMIN_TOKEN = 'a'.repeat(40);

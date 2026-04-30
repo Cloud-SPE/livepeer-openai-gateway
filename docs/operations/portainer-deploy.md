@@ -1,12 +1,22 @@
 ---
 title: Portainer production deployment walkthrough
 status: accepted
-last-reviewed: 2026-04-28
+last-reviewed: 2026-04-30
 ---
 
 # Portainer production deployment walkthrough
 
-Step-by-step deploy of the bridge stack on a Portainer-managed host. Reflects post-engine-extraction architecture (`@cloudspe/livepeer-openai-gateway-core@0.2.0`, service-registry-daemon `v1.3.0`, payment-daemon `v1.2.0`, bridge image `tztcloud/livepeer-openai-gateway:v0.8.10`).
+Step-by-step deploy of the bridge stack on a Portainer-managed host. Reflects the
+currently published shell/runtime combination
+(`@cloudspe/livepeer-openai-gateway-core@3.0.0`,
+`tztcloud/livepeer-payment-daemon:v1.4.0`,
+`tztcloud/livepeer-service-registry-daemon:v1.4.0`,
+bridge image `tztcloud/livepeer-openai-gateway:v0.8.10`).
+
+> **Runtime note:** the shell image described here still uses the
+> engine's current quote-refresh/session-bootstrap flow. The suite's
+> later v3.0.1 quote-free protocol cut is tracked separately in
+> [`../design-docs/v3-runtime-realignment.md`](../design-docs/v3-runtime-realignment.md).
 
 The full feature surface — admin SPA, customer portal, operator-managed rate card, customer onboarding, registry-driven node pool, Stripe billing, Prometheus metrics — is in this image. Everything operators need is reachable from `/admin/console/`.
 
@@ -19,7 +29,7 @@ Before touching Portainer, gather:
 | Required                                   | Description                                                                                                                                                                                                                                                      |
 | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Arbitrum One RPC URL**                   | Any provider — Alchemy, Infura, your own node. Set as `CHAIN_RPC`. The bridge passes it through to the payment-daemon and the service-registry-daemon.                                                                                                           |
-| **Ethereum keystore (V3 JSON) + password** | The signing wallet for the bridge. The eth_address derived from this keystore must match `BRIDGE_ETH_ADDRESS` (sent as `?sender=` when the bridge probes worker `/quote` endpoints). Generated via `geth account new` if you don't have one.                     |
+| **Ethereum keystore (V3 JSON) + password** | The signing wallet for the bridge. The eth_address derived from this keystore must match `BRIDGE_ETH_ADDRESS`. Generated via `geth account new` if you don't have one.                                                                                           |
 | **Stripe secret + webhook signing keys**   | `sk_live_...` (or `sk_test_...` for staging). Webhook secret from your Stripe Dashboard → Developers → Webhooks → endpoint signing secret.                                                                                                                       |
 | **Public hostname for the bridge**         | Set as `BRIDGE_PUBLIC_HOST`. Traefik or your reverse proxy routes `Host(${BRIDGE_PUBLIC_HOST})` → the bridge container.                                                                                                                                          |
 | **Service-registry overlay YAML**          | One file describing the worker pool the bridge should route to. Format below.                                                                                                                                                                                    |
@@ -59,7 +69,7 @@ overlay:
         tier_allowed: [free, prepaid]
 ```
 
-**Authoritative reference:** `livepeer-modules-project/service-registry-daemon/registry.example.yaml` and `examples/static-overlay-only/nodes.yaml`. The shape above mirrors that example.
+**Authoritative reference:** `livepeer-modules/service-registry-daemon/registry.example.yaml` and `examples/static-overlay-only/nodes.yaml`. The shape above mirrors that example.
 
 ## Step 2 — Create the Portainer stack
 
@@ -254,7 +264,7 @@ If you get `model_not_found`, your worker advertises a model the rate card doesn
 
 ## Step 5 — Add the worker's model to the rate card
 
-The rate card (added in [exec-plan 0030](../exec-plans/completed/0030-operator-managed-rate-card.md)) decides what to charge customers per model. Engine 0.1.x had hardcoded entries; 0.2.0 reads from operator-managed DB tables seeded with V1 defaults.
+The rate card (added in [exec-plan 0030](../exec-plans/completed/0030-operator-managed-rate-card.md)) decides what to charge customers per model. Earlier engine releases had hardcoded entries; the current shell reads operator-managed DB tables seeded with defaults.
 
 `bridge-migrate` already populated the seed: starter/standard/pro/premium tiers + the engine's pre-existing models (`gemma4:26b`, `text-embedding-3-*`, `dall-e-3`, etc.). To add your own model:
 
@@ -347,7 +357,7 @@ The `tztcloud/livepeer-openai-gateway:v0.8.10` tag is **rolling** during active 
 
 ## What's NOT covered here (cross-references)
 
-- **Stripe webhook setup** — `livepeer-payment-library/docs/operations/running-with-docker.md` and Stripe's Dashboard.
+- **Stripe webhook setup** — `livepeer-modules/payment-daemon/docs/operations/running-with-docker.md` and Stripe's Dashboard.
 - **Reverse proxy / TLS** — assumes you already run Traefik (or similar) on the host. The bridge speaks plain HTTP on `:8080`; the proxy terminates TLS.
 - **Prometheus scraping** — see `deployment.md` § Observability.
 - **Customer portal usage** — see `docs/product-specs/customer-portal.md` for the customer-side flows.

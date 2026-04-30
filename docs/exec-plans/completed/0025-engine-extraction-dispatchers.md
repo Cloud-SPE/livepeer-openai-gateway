@@ -16,7 +16,7 @@ This stage also splits the existing `AdminService` into an engine half (node + p
 
 This stage also retires the engine's static node registry. The `ServiceRegistryClient` interface defined in [`0024`](../completed/0024-engine-extraction-interfaces.md) gets its real implementation: a gRPC client to `livepeer-modules-project/service-registry-daemon`. `NodeBook`, `loader.ts`, `nodes.yaml`, and the `src/service/nodes/` directory retire. Selection moves daemon-side via `Select(capability, model, tier, geo, excludeIds)` calls. Quote refresh and circuit-breaker stay bridge-side (they're per-process state, not shared). The `service/nodes/` files that aren't strictly node-discovery (`quoteRefresher`, `circuitBreaker`, `scheduler`) move into `service/routing/`. The bridge now requires both daemons (payment + service-registry) as sidecars.
 
-Finally, this stage scaffolds the engine's optional read-only operator dashboard at `src/dashboard/` (vanilla TS, server-rendered HTML + minimal client JS, no Lit/RxJS dependencies, no shared code with `bridge-ui/`). Mounted via a Fastify plugin at `/admin/ops/*`. v1 is read-only (node health, quote freshness, payer-daemon status, recent dispatches, build info). Action surface deferred to backlog.
+Finally, this stage scaffolds the engine's optional read-only operator dashboard at `src/dashboard/` (vanilla TS, server-rendered HTML + minimal client JS, no Lit/RxJS dependencies, no shared code with `frontend/`). Mounted via a Fastify plugin at `/admin/ops/*`. v1 is read-only (node health, quote freshness, payer-daemon status, recent dispatches, build info). Action surface deferred to backlog.
 
 By the end of this stage the route handlers are 20–40 lines each and call into the dispatcher; dispatcher unit tests run without HTTP; `nodes.yaml` is gone; the bridge resolves nodes via the registry-daemon; the engine dashboard shows up at `/admin/ops/` behind the `AdminAuthResolver` adapter; all existing tests pass.
 
@@ -26,10 +26,10 @@ By the end of this stage the route handlers are 20–40 lines each and call into
 - No schema changes (stage 3).
 - No public repo or npm publish (stage 4).
 - No file moves into `packages/` (stage 3).
-- No replacement of `bridge-ui/admin/` — this dashboard is the _engine's_ OSS-adopter dashboard, separate from the shell's full operator console. Different audience, different stack.
+- No replacement of `frontend/admin/` — this dashboard is the _engine's_ OSS-adopter dashboard, separate from the shell's full operator console. Different audience, different stack.
 - No action surface on the engine dashboard. Read-only v1; circuit-break/refresh-quote/etc. defer to a follow-up plan.
 - No Lit, no RxJS, no Vite for the engine dashboard — keeps engine peer-dep footprint minimal.
-- No splitting of `bridge-ui/admin/` itself; that stays one shell-side SPA.
+- No splitting of `frontend/admin/` itself; that stays one shell-side SPA.
 - No fallback to static `nodes.yaml` once the registry-daemon client lands. The engine commits to the daemon as the canonical discovery source; OSS adopters who can't run the daemon are out of scope for v1.
 - No daemon-side circuit-breaker or daemon-side quote cache. Both stay bridge-local.
 - No registry-daemon installation, configuration, or deployment changes inside this repo's compose — those are stage 3 (workspace) where compose layouts get touched.

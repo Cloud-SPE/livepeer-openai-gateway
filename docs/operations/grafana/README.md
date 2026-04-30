@@ -1,6 +1,6 @@
 # Grafana dashboard
 
-Pre-built dashboard covering everything `livepeer-openai-gateway` emits to Prometheus, plus a top-row that joins bridge metrics against `livepeer-payment-library` daemon metrics and `livepeer-byoc` worker metrics for cross-repo reconciliation. Mirrors the metric catalog in [`docs/design-docs/metrics.md`](../../design-docs/metrics.md).
+Pre-built dashboard covering everything `livepeer-openai-gateway` emits to Prometheus, plus a top-row that joins bridge metrics against `payment-daemon` metrics and worker metrics for cross-repo reconciliation. Mirrors the metric catalog in [`docs/design-docs/metrics.md`](../../design-docs/metrics.md).
 
 ## Files
 
@@ -61,7 +61,7 @@ providers:
 
 This is the row most operators won't have anywhere else. The bridge is the only place USD, customer identity, and node identity all meet, so it's also the only place these joins can live without dragging customer IDs into other services.
 
-The row expects all three services (`livepeer-openai-gateway`, `livepeer-payment-library`'s daemon, `livepeer-byoc`'s worker) to be scraped by the same Prometheus. Cross-environment scrapes also work as long as the metric names line up.
+The row expects all three services (`livepeer-openai-gateway`, the `payment-daemon`, and the worker) to be scraped by the same Prometheus. Cross-environment scrapes also work as long as the metric names line up.
 
 | Panel                                        | What it answers                                            | What to do when it diverges                                                                                                                                                                                                                                                                                                |
 | -------------------------------------------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

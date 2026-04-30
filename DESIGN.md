@@ -8,6 +8,16 @@ In the payment-architecture vocabulary this service is a specialized **PayerApp*
 
 Full architectural reference: [docs/references/openai-bridge-architecture.md](docs/references/openai-bridge-architecture.md).
 
+## Current runtime note
+
+This repo currently consumes the published
+`@cloudspe/livepeer-openai-gateway-core@3.0.0` package. The suite's
+later v3.0.1 protocol cut removes worker `/quote` and `/quotes`,
+switches resolver input naming to `offering`, and moves ticket sizing to
+the gateway (`CreatePayment(face_value, recipient)` based on manifest
+wholesale price). That follow-on is not complete in this shell yet; see
+[docs/design-docs/v3-runtime-realignment.md](docs/design-docs/v3-runtime-realignment.md).
+
 ## Layer stack
 
 ```
@@ -41,11 +51,11 @@ Dependency rule: each layer may import only layers **below** it, plus `providers
 | `service/auth`       | API-key validation, customer lookup, tier resolution          |
 | `service/billing`    | CustomerLedger reads/writes, top-up flow, refund              |
 | `service/routing`    | Router: pick a WorkerNode, handle failover and retry          |
-| `service/nodes`      | NodeBook loader + QuoteRefresher + health checks              |
+| `service/routing`    | Resolver-driven routing + bridge-local quote refresh / health / circuit state |
 | `service/pricing`    | Rate card lookup, margin calculation, drift metric            |
 | `service/tokenAudit` | LocalTokenizer orchestration (v1 metric-only)                 |
 | `service/rateLimit`  | Redis sliding window, per-customer limits                     |
-| `service/payments`   | PayerDaemon wrapper: CreatePayment, WorkID, session lifecycle |
+| `service/payments`   | payment-daemon wrapper: CreatePayment, WorkID, session lifecycle |
 
 ## Runtime surfaces
 
@@ -57,15 +67,15 @@ Dependency rule: each layer may import only layers **below** it, plus `providers
 | `src/runtime/http/images/`             | OpenAI-compatible `/v1/images/generations`                              |
 | `src/runtime/http/billing/`            | Customer-facing balance + top-up endpoints                              |
 | `src/runtime/http/stripe/`             | Stripe webhook (`payment_intent.succeeded`, disputes)                   |
-| `src/runtime/http/admin/`              | Ops endpoints (health, NodeBook status, customer lookup, manual refund) |
+| `src/runtime/http/admin/`              | Ops endpoints (health, registry/node status, customer lookup, manual refund) |
 | `src/runtime/http/middleware/`         | Auth + rate-limit middleware shared by paid routes                      |
 
 ## Providers
 
 | Provider            | Interface role                                                                     | Default implementation                            |
 | ------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------- |
-| `PayerDaemonClient` | gRPC client to local Livepeer payment daemon                                       | `@grpc/grpc-js` stub                              |
-| `NodeClient`        | HTTP client to WorkerNode `/health`, `/capabilities`, `/quote`, `/quotes`, `/v1/*` | `fetch`-based impl in `src/providers/nodeClient/` |
+| `PayerDaemonClient` | gRPC client to local payment-daemon                                                | `@grpc/grpc-js` stub                              |
+| `NodeClient`        | HTTP client to WorkerNode `/health`, `/v1/*`, plus the current quote-refresh path  | `fetch`-based impl in `src/providers/nodeClient/` |
 | `StripeClient`      | Top-ups, webhooks, disputes, refunds                                               | `stripe` SDK                                      |
 | `RedisClient`       | Rate-limit state                                                                   | `ioredis`                                         |
 | `Database`          | Postgres pool                                                                      | `pg` + Drizzle                                    |
@@ -77,6 +87,6 @@ Dependency rule: each layer may import only layers **below** it, plus `providers
 ## What this does NOT do
 
 - Does not run inference. WorkerNodes do that.
-- Does not hold or validate tickets. The payment daemon does that.
+- Does not hold or validate tickets. The payment-daemon does that.
 - Does not manage on-chain escrow. Operator does that via direct TicketBroker calls.
 - Does not implement all of the OpenAI API. v1 covers `/v1/chat/completions` (streaming + non-streaming), `/v1/embeddings`, and `/v1/images/generations`. `/v1/audio/speech` and `/v1/audio/transcriptions` are in flight (exec-plan 0019). Realtime, batch, and fine-tuning are out of scope for v1.

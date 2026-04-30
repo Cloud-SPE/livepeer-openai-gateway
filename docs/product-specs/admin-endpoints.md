@@ -248,7 +248,39 @@ On daemon failure: `503` with `{ healthy: false, cachedCount, liveCount: null, d
 
 The `/admin/health` response also includes `serviceRegistryHealthy` for at-a-glance dashboards.
 
-## Operator-managed rate card (added in 0030)
+## Shell-native retail pricing (added in 0032)
+
+The operator console now edits shell-native retail pricing through the
+following surfaces:
+
+- `GET /admin/pricing/retail/prices/:capability`
+- `POST /admin/pricing/retail/prices`
+- `DELETE /admin/pricing/retail/prices/:id`
+- `GET /admin/pricing/retail/aliases/:capability`
+- `POST /admin/pricing/retail/aliases`
+- `DELETE /admin/pricing/retail/aliases/:id`
+
+Retail prices are keyed by:
+
+- `capability` ∈ `chat | embeddings | images | speech | transcriptions`
+- `offering`
+- `customer_tier` ∈ `free | prepaid`
+- `price_kind` ∈ `default | input | output`
+  Chat currently uses `input` and `output` because the installed engine
+  still prices prompt/completion separately; the upstream v3 runtime cut
+  is expected to collapse this back down.
+- `unit`
+- `usd_per_unit`
+
+Aliases are the temporary shell-owned compatibility layer that maps the
+current OpenAI request selectors (`model`, and for images also
+`size`/`quality`) onto offerings.
+
+Every retail-price or alias write calls `rateCardService.invalidate()`
+so the current runtime refreshes its prepaid compatibility snapshot on
+this instance immediately.
+
+## Legacy rate card (0030 compatibility surface)
 
 The bridge's pricing — historically hardcoded in the engine's `V1_RATE_CARD` / `V1_MODEL_TO_TIER` constants — is now operator-managed via the admin SPA + the surface below. Resolution is exact-match → glob patterns by `sort_order` ascending → `null` (caller throws `ModelNotFoundError`). Pattern wildcards: `*` (zero-or-more chars), `?` (exactly one). No regex.
 
@@ -287,4 +319,4 @@ GET → list, POST → 201/409, DELETE `:id` → 204/404 for all three.
 
 ### Seed defaults
 
-A fresh deploy runs migration `0002_seed_rate_card.sql` once, populating the 4 tiers and the engine's pre-0.2.0 V1 model entries. Operators edit/delete via SPA after that. Migration is idempotent through `public.bridge_schema_migrations`.
+A fresh deploy runs migration `0002_seed_rate_card.sql` once, populating the 4 tiers and the initial model entries bundled with this shell. Operators edit/delete via SPA after that. Migration is idempotent through `public.bridge_schema_migrations`.

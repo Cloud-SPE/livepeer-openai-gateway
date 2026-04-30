@@ -1,7 +1,7 @@
 ---
 title: Deployment — full-stack docker compose (reference)
 status: accepted
-last-reviewed: 2026-04-28
+last-reviewed: 2026-04-30
 ---
 
 # Deployment
@@ -15,7 +15,7 @@ How to run the bridge + payment daemon + postgres + redis stack end-to-end, for 
 ## Prerequisites
 
 - Docker 20.10+ with Buildkit (Compose v2).
-- A V3 JSON Ethereum keystore for the signer wallet. If you don't have one, the payment library's docker guide (`livepeer-payment-library/docs/operations/running-with-docker.md`) explains how to generate one with `geth account new`.
+- A V3 JSON Ethereum keystore for the signer wallet. If you don't have one, the payment-daemon docker guide in `livepeer-modules` explains how to generate one with `geth account new`.
 - A funded EVM RPC endpoint for the chain you're running on. Arbitrum One is the default (only `CHAIN_RPC` needs to be set); any other chain requires the full override block (see `.env.example`).
 - Stripe test keys (for dev) or live keys (for prod), plus a webhook signing secret.
 
@@ -404,10 +404,10 @@ to disable. Tune up before tuning off.
 
 ## UI modules (customer portal + operator admin)
 
-The bridge ships two browser apps from `bridge-ui/`:
+The bridge ships two browser apps from `frontend/`:
 
-- `bridge-ui/portal/` → mounted at `/portal/*` (customer self-service: balance, API keys, top-up, usage, settings).
-- `bridge-ui/admin/` → mounted at `/admin/console/*` (operator: health, nodes, customers, refund/suspend/issue-key, audit, reservations, top-ups, nodes.yaml view).
+- `frontend/portal/` → mounted at `/portal/*` (customer self-service: balance, API keys, top-up, usage, settings).
+- `frontend/admin/` → mounted at `/admin/console/*` (operator: health, nodes, customers, refund/suspend/issue-key, audit, reservations, top-ups, nodes.yaml view).
 
 Both are static SPAs served by `@fastify/static` from inside the same Fastify instance that hosts `/v1/*` and `/admin/*` JSON. `existsSync(<dist>)` guards each registration — if a UI's `dist/` is missing the bridge logs a warn and skips the mount; HTTP routes still serve.
 
@@ -416,17 +416,17 @@ Both are static SPAs served by `@fastify/static` from inside the same Fastify in
 The top-level `npm run build` chains:
 
 1. `tsc -p tsconfig.json` (server)
-2. `cd bridge-ui && npm ci && npm run build:all` (workspace `npm ci` hoists `lit` + `rxjs` into `bridge-ui/node_modules`; `build:all` runs Vite for portal then admin)
+2. `cd frontend && npm ci && npm run build:all` (workspace `npm ci` hoists `lit` + `rxjs` into `frontend/node_modules`; `build:all` runs Vite for portal then admin)
 
-Output: `dist/` (server) + `bridge-ui/portal/dist/` + `bridge-ui/admin/dist/`.
+Output: `dist/` (server) + `frontend/portal/dist/` + `frontend/admin/dist/`.
 
 ### Docker
 
 The `Dockerfile` has a dedicated `ui` build stage that runs the workspace `npm ci` + `build:all` once, then the runtime stage copies both `dist/` outputs:
 
 ```dockerfile
-COPY --from=ui /ui/portal/dist ./bridge-ui/portal/dist
-COPY --from=ui /ui/admin/dist ./bridge-ui/admin/dist
+COPY --from=ui /ui/portal/dist ./frontend/portal/dist
+COPY --from=ui /ui/admin/dist ./frontend/admin/dist
 ```
 
 devDeps (`vite`, `@web/test-runner`, `@open-wc/testing`, `playwright`, etc.) stay in the build stage and never reach the runtime image.
@@ -452,7 +452,7 @@ npm run dev:ui:admin       # → http://localhost:5174/admin/console/
 
 The Health page renders a styled "Open Grafana dashboard ↗" link when `window.GRAFANA_DASHBOARD_URL` is set on the served `index.html` (via a build-time env, a small bootstrap script, or a reverse-proxy injection); otherwise the panel collapses to a "configure to enable" hint. The link opens in a new tab — operators stay on the console for audit / customer / node investigations and pop out to Grafana for metrics drill-down.
 
-This deliberately does **not** embed Grafana via `<iframe>`. Embedding would force one of three setup costs (anonymous read-only role on the dashboard, a shared auth proxy across both surfaces, or signed-iframe URLs from a bridge backend route) plus `allow_embedding = true` on Grafana's side. None of those are necessary for the workflow — a link gives the same single-tab feel for nine investigations out of ten and zero infrastructure cost. If embedding ever becomes load-bearing, this section + `bridge-ui/admin/components/admin-health.js` are the two places to revisit.
+This deliberately does **not** embed Grafana via `<iframe>`. Embedding would force one of three setup costs (anonymous read-only role on the dashboard, a shared auth proxy across both surfaces, or signed-iframe URLs from a bridge backend route) plus `allow_embedding = true` on Grafana's side. None of those are necessary for the workflow — a link gives the same single-tab feel for nine investigations out of ten and zero infrastructure cost. If embedding ever becomes load-bearing, this section + `frontend/admin/components/admin-health.js` are the two places to revisit.
 
 `window.GRAFANA_DASHBOARD_URL` accepts any URL the operator's browser can reach. Common shape — inject via build-time env or `index.html` template:
 
@@ -477,7 +477,7 @@ This is **attribution, not authentication**. There is still one shared `ADMIN_TO
 
 ## Related
 
-- Library-side daemon docs (sibling repo): `livepeer-payment-library/docs/operations/running-with-docker.md`.
+- Library-side daemon docs (sibling repo): `livepeer-modules/payment-daemon/docs/operations/running-with-docker.md`.
 - [Architecture](../design-docs/architecture.md)
 - [PayerDaemon integration](../design-docs/payer-integration.md)
 - [Tech-debt tracker](../exec-plans/tech-debt-tracker.md)

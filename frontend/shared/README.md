@@ -1,6 +1,6 @@
-# bridge-ui/shared
+# frontend/shared
 
-Cross-UI primitives shared by `bridge-ui/portal` and `bridge-ui/admin`. **Not** an npm package — a directory of source files imported by consumers via relative paths (`import { ObservableController } from '../shared/controllers/observable-controller.js'`). Each consumer's Vite build tree-shakes shared source into the consumer bundle and resolves `lit` / `rxjs` against the consumer's `node_modules`.
+Cross-UI primitives shared by `frontend/portal` and `frontend/admin`. **Not** an npm package — a directory of source files imported by consumers via relative paths (`import { ObservableController } from '../shared/controllers/observable-controller.js'`). Each consumer's Vite build tree-shakes shared source into the consumer bundle and resolves `lit` / `rxjs` against the consumer's `node_modules`.
 
 `package.json` here declares **peerDependencies only** to document version expectations; there are no own deps, no build, no `node_modules`.
 

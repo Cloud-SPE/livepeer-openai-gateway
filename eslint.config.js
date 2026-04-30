@@ -1,5 +1,5 @@
 // Root flat config — applies only outside the workspace packages
-// (bridge-ui/, lint/, scripts/, doc-gardener helpers). Each package owns
+// (frontend/, lint/, scripts/, doc-gardener helpers). Each package owns
 // its own eslint.config.js with the livepeer-bridge plugin rules; running
 // `npm run lint` (which delegates to `--workspaces`) lints them there.
 
@@ -13,7 +13,7 @@ export default tseslint.config(
       'coverage/**',
       '**/*.d.ts',
       'packages/**',
-      'bridge-ui/**',
+      'frontend/**',
     ],
   },
   ...tseslint.configs.recommended,

@@ -277,12 +277,12 @@ Chat sub-tab additionally has a **Tier Prices** section at the top — 4 fixed r
    - Required minimal change to the existing route handler
 
 6. **SPA**
-   - `bridge-ui/admin/lib/services/rateCard.service.js` — single rxjs-backed service for all 5 capabilities
-   - `bridge-ui/admin/lib/schemas.js` — parser entries for new endpoints
-   - `bridge-ui/admin/components/admin-rate-card.js` — top-level page with sub-tab nav
-   - `bridge-ui/admin/components/admin-rate-card-{chat,embeddings,images,speech,transcriptions}.js` — sub-tab pages
-   - `bridge-ui/admin/lib/glob.js` — client-side glob match (mirrors server impl)
-   - `bridge-ui/admin/main.js` — register route `/rate-card`
+   - `frontend/admin/lib/services/rateCard.service.js` — single rxjs-backed service for all 5 capabilities
+   - `frontend/admin/lib/schemas.js` — parser entries for new endpoints
+   - `frontend/admin/components/admin-rate-card.js` — top-level page with sub-tab nav
+   - `frontend/admin/components/admin-rate-card-{chat,embeddings,images,speech,transcriptions}.js` — sub-tab pages
+   - `frontend/admin/lib/glob.js` — client-side glob match (mirrors server impl)
+   - `frontend/admin/main.js` — register route `/rate-card`
    - SPA tests: glob.test.js, rateCard.service.test.js
 
 7. **Build + push**

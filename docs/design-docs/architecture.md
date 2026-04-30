@@ -6,13 +6,19 @@ last-reviewed: 2026-04-26
 
 # Architecture
 
+> **2026-04-30 note:** this doc describes the currently shipped shell
+> architecture. The suite's later v3.0.1 protocol cut (no worker
+> `/quote`/`/quotes`, `offering`-named resolver inputs, gateway-computed
+> `face_value`) is tracked separately in
+> [v3-runtime-realignment.md](./v3-runtime-realignment.md).
+
 ## Layer stack
 
-The TypeScript server lives under `src/`. Browser UIs (customer portal, operator admin) live in a sibling `bridge-ui/` directory and talk to the bridge over HTTP only — they import nothing from `src/`. See [`ui-architecture.md`](./ui-architecture.md) for the UI stack.
+The TypeScript server lives under `src/`. Browser UIs (customer portal, operator admin) live in a sibling `frontend/` directory and talk to the bridge over HTTP only — they import nothing from `src/`. See [`ui-architecture.md`](./ui-architecture.md) for the UI stack.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  bridge-ui/         browser apps (sibling, not under src/)
+│  frontend/         browser apps (sibling, not under src/)
 │    ├─ shared/         cross-UI primitives
 │    ├─ portal/         customer self-service SPA
 │    └─ admin/          operator console SPA
@@ -64,7 +70,9 @@ The TypeScript server lives under `src/`. Browser UIs (customer portal, operator
 
 A module at layer N may import only modules at layers < N, plus `providers/`. No exceptions.
 
-Concretely: `service/routing` may import `service/nodes`, `service/payments`, and `providers/payerDaemon`, but may not import `runtime/*`, `@grpc/grpc-js`, or `stripe` directly.
+Concretely: `service/routing` may import `service/payments` and
+`providers/payerDaemon`, but may not import `runtime/*`,
+`@grpc/grpc-js`, or `stripe` directly.
 
 Enforced by the custom ESLint rules in `lint/` (`layer-check`, `no-cross-cutting-import`, `zod-at-boundary`, `no-secrets-in-logs`, `file-size`) wired into `eslint.config.js` and run as part of `npm run lint` in CI.
 
@@ -75,11 +83,11 @@ Enforced by the custom ESLint rules in `lint/` (`layer-check`, `no-cross-cutting
 | `src/service/auth/`       | API-key validation, customer record lookup, tier resolution                              |
 | `src/service/billing/`    | CustomerLedger reads/writes, top-up orchestration, refund on failure                     |
 | `src/service/routing/`    | Router: node selection, failover/retry, request dispatch                                 |
-| `src/service/nodes/`      | NodeBook loader (config + Postgres state), QuoteRefresher background loop, health checks |
+| `src/service/routing/`    | Resolver selection, quote refresh/cache, circuit breaker, retry orchestration             |
 | `src/service/pricing/`    | Rate card lookup, margin calculation, drift metrics                                      |
 | `src/service/tokenAudit/` | LocalTokenizer coordination — v1 emits drift metrics only                                |
 | `src/service/rateLimit/`  | Redis sliding window + concurrent-request semaphore                                      |
-| `src/service/payments/`   | Wraps PayerDaemon gRPC calls (StartSession, CreatePayment, CloseSession)                 |
+| `src/service/payments/`   | Wraps payment-daemon gRPC calls (current session bootstrap + CreatePayment flow)         |
 
 ## Runtime surfaces
 
@@ -91,10 +99,10 @@ Enforced by the custom ESLint rules in `lint/` (`layer-check`, `no-cross-cutting
 | `src/runtime/http/images/`             | OpenAI-compatible `/v1/images/generations`                                                           |
 | `src/runtime/http/billing/`            | `/v1/billing/topup` for the customer-facing portal                                                   |
 | `src/runtime/http/account/`            | `/v1/account/*` — profile, API-keys CRUD, usage rollups, top-up history (powers the customer portal) |
-| `src/runtime/http/portal/`             | `@fastify/static` mount serving `bridge-ui/portal/dist/` at `/portal/*`                              |
+| `src/runtime/http/portal/`             | `@fastify/static` mount serving `frontend/portal/dist/` at `/portal/*`                              |
 | `src/runtime/http/stripe/`             | Stripe webhook (`payment_intent.succeeded`, disputes)                                                |
-| `src/runtime/http/admin/`              | Health, NodeBook inspection, customer ops, search/feed routes (powers the operator console)          |
-| `src/runtime/http/admin/console/`      | `@fastify/static` mount serving `bridge-ui/admin/dist/` at `/admin/console/*`                        |
+| `src/runtime/http/admin/`              | Health, registry/node inspection, customer ops, search/feed routes (powers the operator console)     |
+| `src/runtime/http/admin/console/`      | `@fastify/static` mount serving `frontend/admin/dist/` at `/admin/console/*`                        |
 | `src/runtime/http/middleware/`         | Auth + rate-limit middleware shared by every paid route                                              |
 | `src/runtime/http/healthz.ts`          | Liveness probe                                                                                       |
 | `src/runtime/http/errors.ts`           | Typed error → OpenAI-style response envelope mapping                                                 |
@@ -107,15 +115,15 @@ All cross-cutting concerns enter through `src/providers/`. One interface per con
 
 | Provider                | Interface role                                                                     | Default implementation                                                                                                                              |
 | ----------------------- | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PayerDaemonClient`     | gRPC client to local payment daemon (`livepeer.payments.v1`)                       | `@grpc/grpc-js` with generated stubs                                                                                                                |
-| `NodeClient`            | HTTP client to WorkerNode `/health`, `/capabilities`, `/quote`, `/quotes`, `/v1/*` | `fetch`-based impl in `src/providers/nodeClient/`                                                                                                   |
+| `PayerDaemonClient`     | gRPC client to local payment-daemon (`livepeer.payments.v1`)                       | `@grpc/grpc-js` with generated stubs                                                                                                                |
+| `NodeClient`            | HTTP client to WorkerNode `/health`, `/v1/*`, and the current quote-refresh path   | `fetch`-based impl in `src/providers/nodeClient/`                                                                                                   |
 | `StripeClient`          | Top-ups, webhooks, disputes                                                        | `stripe` SDK                                                                                                                                        |
 | `RedisClient`           | Rate-limit state, ephemeral counters                                               | `ioredis`                                                                                                                                           |
 | `Database`              | Postgres connection pool                                                           | `pg` + Drizzle ORM                                                                                                                                  |
 | `Tokenizer`             | Model-aware token counting (drift audit only — no enforcement in v1)               | `tiktoken` default; per-model-family plugins                                                                                                        |
 | `ChainInfo`             | Read-only Eth for admin views (escrow status)                                      | `viem`                                                                                                                                              |
 | `MetricsSink`           | Counter / Gauge / Histogram                                                        | No-op default; Prometheus later                                                                                                                     |
-| `ServiceRegistryClient` | Engine-internal node discovery + selection (NOT operator-overridable)              | `createNodeBookRegistry` wrapping today's NodeBook (stage-1); stage-2 swaps for a gRPC client to `livepeer-modules-project/service-registry-daemon` |
+| `ServiceRegistryClient` | Engine-internal node discovery + selection (NOT operator-overridable)              | gRPC client to `livepeer-modules/service-registry-daemon`                                                                                           |
 
 Providers are wired in `src/runtime/` entry points and injected into `service/` and `repo/`.
 

@@ -1,10 +1,24 @@
 ---
-title: Pricing model (rate card + margin policy)
+title: Pricing model (retail pricing + legacy adapter + margin policy)
 status: accepted
-last-reviewed: 2026-04-25
+last-reviewed: 2026-04-30
 ---
 
 # Pricing model
+
+As of `0032`, the shell's operator-managed pricing source of truth is a
+shell-native retail catalog keyed by `(capability, offering,
+customer_tier)`, with a temporary alias table that maps today's OpenAI
+request selectors onto offerings. The currently installed engine still
+expects its older "rate card" snapshot, so this repo synthesizes that
+legacy shape from the retail catalog's `prepaid` view.
+
+That means two things are true at once:
+
+- The admin/UI surface now edits shell-native retail pricing.
+- The runtime is still constrained by the installed engine's legacy
+  adapter limits, especially for chat (separate input/output pricing and
+  at most four distinct prepaid chat price pairs).
 
 The bridge prices three distinct endpoint families with three distinct rate structures:
 
@@ -218,7 +232,7 @@ The probabilistic ticket protocol has a hard floor independent of the rate cards
 2. **Accept the slight overpayment for tiny requests** as the cost of the protocol's granularity. This is the v1 stance.
 3. **Batch payments across multiple requests per session.** The daemon's session model permits this (one session, many `CreatePayment` calls), but the bridge currently bills per-request via the worker's middleware. A bridge-side change to defer ticket creation across N requests would amortize at the cost of more bookkeeping and stronger session-affinity guarantees.
 
-Tracked as `per-ticket-ev-vs-request-size` in the library tech-debt tracker. Cross-reference: `--receiver-ev-wei` flag in [livepeer-payment-library/docs/operations/running-the-daemon.md](https://github.com/Cloud-SPE/livepeer-modules/blob/main/payment-daemon/docs/operations/running-the-daemon.md).
+Tracked as `per-ticket-ev-vs-request-size` in the library tech-debt tracker. Cross-reference: `--receiver-ev-wei` flag in [payment-daemon/docs/operations/running-the-daemon.md](https://github.com/Cloud-SPE/livepeer-modules/blob/main/payment-daemon/docs/operations/running-the-daemon.md).
 
 ## Types
 

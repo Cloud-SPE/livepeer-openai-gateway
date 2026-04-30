@@ -31,7 +31,7 @@ After this stage:
 
 - `packages/bridge-core/` is a self-contained engine package with its own `package.json`, `tsconfig.json`, `vitest.config.ts`, ESLint config, migrations, tests, dashboard, and proto-generated stubs for both daemons (payment + service-registry).
 - `packages/livepeer-openai-gateway/` is the shell package consuming `bridge-core` via workspace symlink.
-- `bridge-ui/` (the entire `shared/`, `portal/`, `admin/` tree) lives under the shell package — it's all shell-owned, both consumers are shell.
+- `frontend/` (the entire `shared/`, `portal/`, `admin/` tree) lives under the shell package — it's all shell-owned, both consumers are shell.
 - The engine's Fastify peer-dep declaration is real (Fastify is no longer a direct dep of the engine).
 - DB has two schemas. Engine writes `engine.usage_records` with `caller_id` (string). Shell writes `app.customers`, `app.api_keys`, `app.topups`, `app.reservations`, `app.stripe_webhook_events`, `app.admin_audit_events`. No cross-schema FKs.
 - Each package runs its own migrations independently at startup.
@@ -49,7 +49,7 @@ The engine package can be `npm pack`-ed and installed elsewhere as a tarball, va
 - No deprecation of the old migration history beyond renumbering — stage 4 is when the public engine repo gets a fresh `0000_init.sql`.
 - No changes to dispatcher signatures or adapter interfaces.
 - No `@cloud-spe/bridge-core` npm publication yet — workspace consumption only.
-- No splitting of `bridge-ui/shared/` between repos. It stays in the shell package; both `portal/` and `admin/` are shell consumers.
+- No splitting of `frontend/shared/` between repos. It stays in the shell package; both `portal/` and `admin/` are shell consumers.
 
 ## Approach
 
@@ -61,7 +61,7 @@ Root `package.json`:
 {
   "name": "livepeer-openai-gateway-monorepo",
   "private": true,
-  "workspaces": ["packages/*", "bridge-ui/*"],
+  "workspaces": ["packages/*", "frontend/*"],
 }
 ```
 
@@ -69,7 +69,7 @@ Root retains: `compose*.yaml`, top-level `docs/`, `lint/`, `migrations/` retired
 
 Move scripts:
 
-- `npm run build` → workspace-aware: builds `bridge-core` first, then `livepeer-openai-gateway`, then `bridge-ui/*`.
+- `npm run build` → workspace-aware: builds `bridge-core` first, then `livepeer-openai-gateway`, then `frontend/*`.
 - `npm test` → runs each package's `test` script in workspace order.
 - `npm run lint` → runs each package's `lint`.
 
@@ -159,8 +159,8 @@ packages/livepeer-openai-gateway/
 │           ├── billing/        # Stripe top-up
 │           ├── stripe/         # Stripe webhook
 │           ├── admin/          # shell admin routes (customers, topups, audit)
-│           ├── portal/         # @fastify/static for bridge-ui/portal
-│           └── adminConsole/   # @fastify/static for bridge-ui/admin
+│           ├── portal/         # @fastify/static for frontend/portal
+│           └── adminConsole/   # @fastify/static for frontend/admin
 └── tests/
 ```
 
@@ -297,11 +297,11 @@ services:
 
 The `service-registry-config.yaml` example file is added at repo root, demonstrating the daemon's configured node pool. This _replaces_ the old `nodes.example.yaml` (which retired in stage 2).
 
-### 9. `bridge-ui/` placement
+### 9. `frontend/` placement
 
-`bridge-ui/` becomes a workspace member at the root level OR moves under `packages/livepeer-openai-gateway/bridge-ui/`. Recommendation: keep at root as a workspace member — preserves the existing relative-path import convention from `0023-operator-admin.md` (admin imports `../shared/...`) and avoids a deep nesting churn. The shell package's `runtime/http/{portal,adminConsole}/static.ts` imports the built `dist/` directories via configurable paths.
+`frontend/` becomes a workspace member at the root level OR moves under `packages/livepeer-openai-gateway/frontend/`. Recommendation: keep at root as a workspace member — preserves the existing relative-path import convention from `0023-operator-admin.md` (admin imports `../shared/...`) and avoids a deep nesting churn. The shell package's `runtime/http/{portal,adminConsole}/static.ts` imports the built `dist/` directories via configurable paths.
 
-Doc-lint rule that enforces `bridge-ui/<consumer>/lib` doesn't redefine `shared/lib` stays at root, scoped to the bridge-ui workspace.
+Doc-lint rule that enforces `frontend/<consumer>/lib` doesn't redefine `shared/lib` stays at root, scoped to the frontend workspace.
 
 ### 10. Tests
 
@@ -309,7 +309,7 @@ Doc-lint rule that enforces `bridge-ui/<consumer>/lib` doesn't redefine `shared/
 - Engine package tests use `InMemoryWallet`; no shell-side dependencies.
 - Shell package tests use the real `prepaidQuotaWallet` against TestPg.
 - Cross-package integration test in shell: end-to-end `/v1/chat/completions` with a real engine package import + InMemoryWallet stand-in + mock `ServiceRegistryClient`, asserting the engine package's surface is sufficient.
-- Existing Playwright e2e (in `bridge-ui/portal/tests` etc.) keep running against the shell package's combined Fastify app.
+- Existing Playwright e2e (in `frontend/portal/tests` etc.) keep running against the shell package's combined Fastify app.
 
 ### 11. Doc updates
 
@@ -321,7 +321,7 @@ Doc-lint rule that enforces `bridge-ui/<consumer>/lib` doesn't redefine `shared/
 
 ## Steps
 
-- [x] Convert root `package.json` to workspace mode; add `packages/`, keep `bridge-ui/` as workspace member
+- [x] Convert root `package.json` to workspace mode; add `packages/`, keep `frontend/` as workspace member
 - [x] Create `packages/bridge-core/` skeleton (package.json, tsconfig, vitest.config, eslint.config)
 - [x] Move engine source (interfaces, types except customer, config except auth/stripe/admin, engine-side repo files, providers except stripe, engine service domains, dispatch, dashboard, adapters/fastify) into `packages/bridge-core/src/`
 - [x] Create `packages/livepeer-openai-gateway/` skeleton

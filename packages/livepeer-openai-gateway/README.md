@@ -19,7 +19,7 @@ invokes both engine and shell migration runners on startup when
 ## Status
 
 `0.0.0` — proprietary monorepo workspace member. Built once per release
-into the same Docker image that ships engine + shell + bridge-ui.
+into the same Docker image that ships engine + shell + frontend.
 
 ## License
 

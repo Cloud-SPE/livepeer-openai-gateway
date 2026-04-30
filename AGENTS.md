@@ -21,7 +21,7 @@ This is an OpenAI-compatible API service that accepts customer requests, routes 
 - `docs/generated/` — auto-generated; never hand-edit
 - `docs/operations/` — operator guides (deployment, runbooks)
 - `docs/references/` — external material (abstraction doc, harness PDF, architecture doc)
-- `bridge-ui/` — browser apps (sibling to `src/`, not under it). `bridge-ui/shared/` is a directory module of cross-UI primitives consumed by `bridge-ui/portal/` (customer self-service) and `bridge-ui/admin/` (operator console). npm-workspace root hoists `lit` + `rxjs` into one `node_modules`. See [docs/design-docs/ui-architecture.md](docs/design-docs/ui-architecture.md).
+- `frontend/` — browser apps (sibling to `src/`, not under it). `frontend/shared/` is a directory module of cross-UI primitives consumed by `frontend/portal/` (customer self-service) and `frontend/admin/` (operator console). npm-workspace root hoists `lit` + `rxjs` into one `node_modules`. See [docs/design-docs/ui-architecture.md](docs/design-docs/ui-architecture.md).
 
 ## The layer rule (non-negotiable)
 
@@ -33,7 +33,7 @@ types → config → repo → service → runtime
 
 Cross-cutting concerns (PayerDaemon gRPC client, Stripe, Redis, Postgres, tokenizer, chain RPC) enter through a single layer: `src/providers/`. Nothing in `service/` may import `stripe`, `ioredis`, `@grpc/*`, `pg`, `tiktoken` etc. directly — only through a `providers/` interface.
 
-`bridge-ui/` is **not** part of the `src/` layer stack. It is a sibling deliverable that talks to the bridge over HTTP only and may not import from `src/`.
+`frontend/` is **not** part of the `src/` layer stack. It is a sibling deliverable that talks to the bridge over HTTP only and may not import from `src/`.
 
 Lints enforce this in CI. See [docs/design-docs/architecture.md](docs/design-docs/architecture.md).
 
@@ -46,15 +46,15 @@ Lints enforce this in CI. See [docs/design-docs/architecture.md](docs/design-doc
 
 ## Commands
 
-- `npm run build` — compile TypeScript **and** build both UI modules (`bridge-ui/portal/dist`, `bridge-ui/admin/dist`)
+- `npm run build` — compile TypeScript **and** build both UI modules (`frontend/portal/dist`, `frontend/admin/dist`)
 - `npm run build:server` — TypeScript server only
 - `npm run build:ui` — UI modules only (workspace `npm ci` + `build:all`)
 - `npm test` — server vitest + portal vitest + portal Web Test Runner + admin vitest + admin Web Test Runner
 - `npm run dev:ui:portal` / `dev:ui:admin` — Vite dev servers (proxy `/v1` and `/admin` to the local bridge port)
-- `npm run lint` — ESLint + custom layer-check (server only; `bridge-ui/**` is plain JS, owns its own test infra)
+- `npm run lint` — ESLint + custom layer-check (server only; `frontend/**` is plain JS, owns its own test infra)
 - `npm run typecheck` — `tsc --noEmit`
 - `npm run fmt` — Prettier
-- `npm run doc-lint` — validate knowledge-base cross-links + frontmatter, and that `bridge-ui/<consumer>/lib/` does not redefine names from `bridge-ui/shared/lib/`
+- `npm run doc-lint` — validate knowledge-base cross-links + frontmatter, and that `frontend/<consumer>/lib/` does not redefine names from `frontend/shared/lib/`
 
 ## Invariants (do not break without a design-doc)
 

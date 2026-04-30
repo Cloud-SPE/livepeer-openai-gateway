@@ -9,7 +9,7 @@
 // discriminator + sort_order for pattern resolution. Chat additionally
 // has a tier-prices table.
 
-import { asc } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import type { Db } from '../../repo/db.js';
 import {
   rateCardChatModels,
@@ -18,6 +18,8 @@ import {
   rateCardImages,
   rateCardSpeech,
   rateCardTranscriptions,
+  retailPriceAliases,
+  retailPriceCatalog,
 } from '../../repo/schema.js';
 import type {
   ChatModelTierPattern,
@@ -58,8 +60,10 @@ export interface RateCardService extends RateCardResolver {
 
 const DEFAULT_TTL_MS = 60_000;
 const TIER_VALUES: ReadonlyArray<PricingTier> = ['starter', 'standard', 'pro', 'premium'];
+const CUSTOMER_TIER_PREPAID = 'prepaid';
 const QUALITY_VALUES: ReadonlyArray<ImageQuality> = ['standard', 'hd'];
 const SIZE_VALUES: ReadonlyArray<ImageSize> = ['1024x1024', '1024x1792', '1792x1024'];
+const CHAT_PRICE_KINDS = ['input', 'output'] as const;
 
 export function createRateCardService(deps: RateCardServiceDeps): RateCardService {
   const ttlMs = deps.ttlMs ?? DEFAULT_TTL_MS;
@@ -68,6 +72,28 @@ export function createRateCardService(deps: RateCardServiceDeps): RateCardServic
   let inflight: Promise<RateCardSnapshot> | null = null;
 
   async function loadFromDb(): Promise<RateCardSnapshot> {
+    const retailRows = await deps.db
+      .select()
+      .from(retailPriceCatalog)
+      .where(eq(retailPriceCatalog.customerTier, CUSTOMER_TIER_PREPAID))
+      .orderBy(
+        asc(retailPriceCatalog.capability),
+        asc(retailPriceCatalog.offering),
+        asc(retailPriceCatalog.priceKind),
+      );
+    if (retailRows.length > 0) {
+      const aliasRows = await deps.db
+        .select()
+        .from(retailPriceAliases)
+        .orderBy(
+          asc(retailPriceAliases.capability),
+          asc(retailPriceAliases.isPattern),
+          asc(retailPriceAliases.sortOrder),
+          asc(retailPriceAliases.modelOrPattern),
+        );
+      return retailRowsToSnapshot(retailRows, aliasRows);
+    }
+
     const [tiers, chatModels, embeddings, images, speech, transcriptions] = await Promise.all([
       deps.db.select().from(rateCardChatTiers).orderBy(asc(rateCardChatTiers.tier)),
       deps.db
@@ -269,6 +295,211 @@ export function createRateCardService(deps: RateCardServiceDeps): RateCardServic
       await refresh();
     },
   };
+}
+
+function retailRowsToSnapshot(
+  priceRows: Array<typeof retailPriceCatalog.$inferSelect>,
+  aliasRows: Array<typeof retailPriceAliases.$inferSelect>,
+): RateCardSnapshot {
+  const effectiveAt = new Date();
+  const chatPrepaid = priceRows.filter((r) => r.capability === 'chat');
+  const chatPriceByOffering = new Map<
+    string,
+    Partial<Record<(typeof CHAT_PRICE_KINDS)[number], number>>
+  >();
+  for (const row of chatPrepaid) {
+    if (!CHAT_PRICE_KINDS.includes(row.priceKind as (typeof CHAT_PRICE_KINDS)[number])) continue;
+    const current = chatPriceByOffering.get(row.offering) ?? {};
+    current[row.priceKind as (typeof CHAT_PRICE_KINDS)[number]] = unitToPerMillion(
+      Number(row.usdPerUnit),
+    );
+    chatPriceByOffering.set(row.offering, current);
+  }
+
+  const chatPairs = Array.from(chatPriceByOffering.entries()).map(([offering, pair]) => {
+    return {
+      offering,
+      input: pair.input ?? 0,
+      output: pair.output ?? 0,
+    };
+  });
+  const distinctPairs = Array.from(
+    new Map(chatPairs.map((p) => [`${p.input}:${p.output}`, { input: p.input, output: p.output }])).values(),
+  ).sort((a, b) => a.input + a.output - (b.input + b.output));
+  if (distinctPairs.length > TIER_VALUES.length) {
+    throw new Error(
+      `retail chat pricing defines ${distinctPairs.length} distinct prepaid price pairs, but the current engine adapter supports at most ${TIER_VALUES.length}`,
+    );
+  }
+  const pairToTier = new Map(
+    distinctPairs.map((pair, index) => [`${pair.input}:${pair.output}`, TIER_VALUES[index] as PricingTier]),
+  );
+
+  const chatEntries: ChatRateCardEntry[] = TIER_VALUES.map((tier, index) => {
+    const pair = distinctPairs[index];
+    return {
+      tier,
+      inputUsdPerMillion: pair?.input ?? 0,
+      outputUsdPerMillion: pair?.output ?? 0,
+    };
+  });
+
+  const chatAliases = aliasRows.filter((r) => r.capability === 'chat');
+  const modelToTierExact = new Map<string, PricingTier>();
+  const modelToTierPatterns: ChatModelTierPattern[] = [];
+  for (const row of chatAliases) {
+    const pair = chatPriceByOffering.get(row.offering);
+    if (!pair) continue;
+    const tier = pairToTier.get(`${pair.input ?? 0}:${pair.output ?? 0}`);
+    if (!tier) continue;
+    if (row.isPattern) {
+      modelToTierPatterns.push({
+        pattern: row.modelOrPattern,
+        tier,
+        sortOrder: row.sortOrder,
+      });
+      continue;
+    }
+    modelToTierExact.set(row.modelOrPattern, tier);
+  }
+
+  return {
+    chatRateCard: {
+      version: 'operator-managed',
+      effectiveAt,
+      entries: chatEntries,
+    },
+    embeddingsRateCard: {
+      version: 'operator-managed',
+      effectiveAt,
+      entries: capabilityExactEntries(priceRows, aliasRows, 'embeddings').map((entry) => ({
+        model: entry.model,
+        usdPerMillionTokens: unitToPerMillion(entry.usdPerUnit),
+      })),
+    },
+    imagesRateCard: {
+      version: 'operator-managed',
+      effectiveAt,
+      entries: capabilityExactEntries(priceRows, aliasRows, 'images')
+        .filter((entry) => isValidSize(entry.size) && isValidQuality(entry.quality))
+        .map((entry) => ({
+          model: entry.model,
+          size: entry.size as ImageSize,
+          quality: entry.quality as ImageQuality,
+          usdPerImage: entry.usdPerUnit,
+        })),
+    },
+    speechRateCard: {
+      version: 'operator-managed',
+      effectiveAt,
+      entries: capabilityExactEntries(priceRows, aliasRows, 'speech').map((entry) => ({
+        model: entry.model,
+        usdPerMillionChars: unitToPerMillion(entry.usdPerUnit),
+      })),
+    },
+    transcriptionsRateCard: {
+      version: 'operator-managed',
+      effectiveAt,
+      entries: capabilityExactEntries(priceRows, aliasRows, 'transcriptions').map((entry) => ({
+        model: entry.model,
+        usdPerMinute: entry.usdPerUnit,
+      })),
+    },
+    modelToTierExact,
+    modelToTierPatterns,
+    embeddingsPatterns: capabilityPatternEntries(priceRows, aliasRows, 'embeddings').map((entry) => ({
+      pattern: entry.pattern,
+      entry: {
+        model: entry.pattern,
+        usdPerMillionTokens: unitToPerMillion(entry.usdPerUnit),
+      },
+      sortOrder: entry.sortOrder,
+    })),
+    imagesPatterns: capabilityPatternEntries(priceRows, aliasRows, 'images')
+      .filter((entry) => isValidSize(entry.size) && isValidQuality(entry.quality))
+      .map((entry) => ({
+        pattern: entry.pattern,
+        size: entry.size as ImageSize,
+        quality: entry.quality as ImageQuality,
+        entry: {
+          model: entry.pattern,
+          size: entry.size as ImageSize,
+          quality: entry.quality as ImageQuality,
+          usdPerImage: entry.usdPerUnit,
+        },
+        sortOrder: entry.sortOrder,
+      })),
+    speechPatterns: capabilityPatternEntries(priceRows, aliasRows, 'speech').map((entry) => ({
+      pattern: entry.pattern,
+      entry: {
+        model: entry.pattern,
+        usdPerMillionChars: unitToPerMillion(entry.usdPerUnit),
+      },
+      sortOrder: entry.sortOrder,
+    })),
+    transcriptionsPatterns: capabilityPatternEntries(
+      priceRows,
+      aliasRows,
+      'transcriptions',
+    ).map((entry) => ({
+      pattern: entry.pattern,
+      entry: {
+        model: entry.pattern,
+        usdPerMinute: entry.usdPerUnit,
+      },
+      sortOrder: entry.sortOrder,
+    })),
+  };
+}
+
+function capabilityExactEntries(
+  priceRows: Array<typeof retailPriceCatalog.$inferSelect>,
+  aliasRows: Array<typeof retailPriceAliases.$inferSelect>,
+  capability: 'embeddings' | 'images' | 'speech' | 'transcriptions',
+): Array<{ model: string; usdPerUnit: number; size: string; quality: string }> {
+  const priceByOffering = new Map(
+    priceRows
+      .filter((r) => r.capability === capability && r.priceKind === 'default')
+      .map((r) => [r.offering, Number(r.usdPerUnit)] as const),
+  );
+  return aliasRows
+    .filter((r) => r.capability === capability && !r.isPattern)
+    .flatMap((r) => {
+      const usdPerUnit = priceByOffering.get(r.offering);
+      if (usdPerUnit === undefined) return [];
+      return [{ model: r.modelOrPattern, usdPerUnit, size: r.size, quality: r.quality }];
+    });
+}
+
+function capabilityPatternEntries(
+  priceRows: Array<typeof retailPriceCatalog.$inferSelect>,
+  aliasRows: Array<typeof retailPriceAliases.$inferSelect>,
+  capability: 'embeddings' | 'images' | 'speech' | 'transcriptions',
+): Array<{ pattern: string; usdPerUnit: number; size: string; quality: string; sortOrder: number }> {
+  const priceByOffering = new Map(
+    priceRows
+      .filter((r) => r.capability === capability && r.priceKind === 'default')
+      .map((r) => [r.offering, Number(r.usdPerUnit)] as const),
+  );
+  return aliasRows
+    .filter((r) => r.capability === capability && r.isPattern)
+    .flatMap((r) => {
+      const usdPerUnit = priceByOffering.get(r.offering);
+      if (usdPerUnit === undefined) return [];
+      return [
+        {
+          pattern: r.modelOrPattern,
+          usdPerUnit,
+          size: r.size,
+          quality: r.quality,
+          sortOrder: r.sortOrder,
+        },
+      ];
+    });
+}
+
+function unitToPerMillion(v: number): number {
+  return v * 1_000_000;
 }
 
 function isValidSize(s: string): s is ImageSize {

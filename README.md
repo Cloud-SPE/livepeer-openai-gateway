@@ -1,6 +1,9 @@
 # livepeer-openai-gateway
 
-An OpenAI-compatible API service that fronts a pool of Livepeer WorkerNodes. Customers pay in USD (prepaid balance + free tier); the service pays nodes in ETH via the [`livepeer-payment-library`](../livepeer-payment-library) daemon running as a sidecar.
+An OpenAI-compatible API service that fronts a pool of Livepeer WorkerNodes.
+Customers pay in USD (prepaid balance + free tier); the service pays nodes in
+ETH via the `payment-daemon` sidecar from
+[`livepeer-modules`](https://github.com/Cloud-SPE/livepeer-modules).
 
 > **Agent-first repository.** Before making changes, read [AGENTS.md](AGENTS.md) → [DESIGN.md](DESIGN.md) → [docs/design-docs/](docs/design-docs/). Non-trivial work starts with an exec-plan in `docs/exec-plans/active/`; see [PLANS.md](PLANS.md).
 
@@ -8,14 +11,23 @@ An OpenAI-compatible API service that fronts a pool of Livepeer WorkerNodes. Cus
 
 - **OpenAI-compatible `/v1/chat/completions`** — streaming (SSE) + non-streaming. Drop-in compatible with the official `openai` SDK via a custom `base_url` + an API key the bridge issues.
 - **Two customer tiers**: **Free** (100K-token monthly quota) and **Prepaid** (USD balance, topped up via Stripe Checkout). First top-up auto-upgrades a free customer atomically with the credit.
-- **Routes every request** to a Livepeer WorkerNode from a config-driven pool, builds a micropayment via `PayerDaemon`, forwards the call, commits billing from the node's reported usage.
+- **Routes every request** to a Livepeer WorkerNode from a config-driven pool, builds a micropayment via `payment-daemon`, forwards the call, commits billing from the node's reported usage.
 - **Fail-closed on payment-daemon outage.** Never proceeds without payment.
 - **Observation-only token audit**: `tiktoken`-based local counts cross-checked against node-reported counts; drift is metered, not enforced.
+- **Optional `Idempotency-Key` support** on supported customer POSTs. The shell persists completed responses and replays them on duplicate requests; unsafe current-runtime cases (streaming chat, multipart transcriptions) are rejected.
 - **Operator endpoints** under `/admin/*` for health, node inspection, customer lookup, manual refund, suspend/unsuspend, escrow view.
 
 ## Status
 
-**Production-ready, all 30 exec-plans archived to [`docs/exec-plans/completed/`](docs/exec-plans/completed/).** Outstanding items live in [`docs/exec-plans/tech-debt-tracker.md`](docs/exec-plans/tech-debt-tracker.md).
+The shell is production-usable on the currently published
+`@cloudspe/livepeer-openai-gateway-core@3.0.0` dependency, but the
+full suite-level v3.0.1 runtime protocol cut is still in progress.
+Track that work in
+[`docs/exec-plans/active/0032-v3-0-1-shell-realignment.md`](docs/exec-plans/active/0032-v3-0-1-shell-realignment.md).
+
+Completed work lives in [`docs/exec-plans/completed/`](docs/exec-plans/completed/).
+Outstanding debt and follow-ons live in
+[`docs/exec-plans/tech-debt-tracker.md`](docs/exec-plans/tech-debt-tracker.md).
 
 The engine has since been carved out and published as the public OSS package [`@cloudspe/livepeer-openai-gateway-core`](https://github.com/Cloud-SPE/livepeer-openai-gateway-core) on npm. This monorepo is now the proprietary shell — billing, Stripe, customer portal, admin SPA — that consumes the engine via its npm dep.
 
@@ -23,22 +35,29 @@ The engine has since been carved out and published as the public OSS package [`@
 | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0001 – 0016 (foundational) | Repo scaffold, types, ledger, auth, NodeBook→registry, payer-daemon, chat completions (streaming + non-streaming), rate limiter, Stripe top-ups, tokenizer, admin endpoints, deployment, lint plugins, doc-gardener, prod compose stack |
 | 0017 – 0023                | Embeddings + images + audio (speech, transcriptions), worker-wire-format alignment, per-capability NodeBook, metrics phase 1, customer portal SPA, operator admin SPA                                                                   |
-| 0024 – 0028                | Engine extraction (interfaces, dispatchers, workspace conversion, public release as `@cloudspe/livepeer-openai-gateway-core@0.1.0/0.1.1`, OSS readiness — LICENSE/CONTRIBUTING/SECURITY/CoC/CHANGELOG/GOVERNANCE)                       |
+| 0024 – 0028                | Engine extraction (interfaces, dispatchers, workspace conversion, public release of `@cloudspe/livepeer-openai-gateway-core`, OSS readiness — LICENSE/CONTRIBUTING/SECURITY/CoC/CHANGELOG/GOVERNANCE)                                     |
 | 0029                       | Admin customer onboarding — `POST /admin/customers` + admin SPA "+ New customer" form                                                                                                                                                   |
-| 0030                       | Operator-managed rate card — DB-backed pricing for all 5 capabilities (chat tiered + embeddings/images/speech/transcriptions per-model) with glob-pattern rules; engine 0.2.0 with `RateCardResolver` adapter                           |
+| 0030                       | Operator-managed rate card — DB-backed pricing for all 5 capabilities (chat tiered + embeddings/images/speech/transcriptions per-model) with glob-pattern rules                                                                       |
+| 0031                       | Shell adoption of the published engine v3 package + manifest-pricing alignment clean-up                                                                                                                                                  |
 
 **Test suite:** 264 tests across the shell (90.62 % stmt / 81.31 % branch coverage); 215 in the engine (89.25 % / 88.29 %). Both gated at the 75 % floor per [core belief #11](docs/design-docs/core-beliefs.md).
 
 **Current published artifacts:**
 
-- npm: `@cloudspe/livepeer-openai-gateway-core@0.2.0`
+- npm: `@cloudspe/livepeer-openai-gateway-core@3.0.0`
 - Docker Hub: `tztcloud/livepeer-openai-gateway:v0.8.10` (rolling tag, current digest `sha256:9aac7480cffe…`)
 - Daemons (sidecars): `tztcloud/livepeer-payment-daemon:v1.4.0`, `tztcloud/livepeer-service-registry-daemon:v1.4.0`
+
+**Important runtime note:** the current shell still consumes the engine's
+existing quote-refresh/session-bootstrap path. The suite v3.0.1 spec now
+requires a follow-on protocol cut (`offering` semantics, no worker
+`/quote`/`/quotes`, gateway-computed `face_value`). That gap is documented
+in [docs/design-docs/v3-runtime-realignment.md](docs/design-docs/v3-runtime-realignment.md).
 
 ## Where things live
 
 ```
-src/
+packages/livepeer-openai-gateway/src/
 ├── types/          Zod schemas + inferred TS types (src/types/*.ts)
 ├── config/         Zod-validated env loaders (one file per concern)
 ├── providers/      Cross-cutting I/O deps — the ONLY layer that may import
@@ -61,7 +80,7 @@ docs/
 ├── product-specs/  Customer-facing + operator-facing behavior (topup flow,
 │                   admin endpoints, etc.).
 ├── exec-plans/
-│   ├── active/     In-flight work (empty in v1).
+│   ├── active/     In-flight work.
 │   ├── completed/  Every plan that shipped, with its decisions log and
 │                   artifacts — history is immutable.
 │   └── tech-debt-tracker.md  Append-only list of open items with remediation.
@@ -85,7 +104,7 @@ From [`docs/design-docs/core-beliefs.md`](docs/design-docs/core-beliefs.md) and 
 2. **Zod at boundaries.** Every HTTP body + every gRPC response parses through a Zod schema before entering `service/`.
 3. **Providers boundary.** Cross-cutting libraries only in `src/providers/`.
 4. **Atomic ledger debits.** Customer debits run under `SELECT … FOR UPDATE`. No read-modify-write.
-5. **Fail-closed on PayerDaemon outage** → 503. Never bill without payment.
+5. **Fail-closed on payment-daemon outage** → 503. Never bill without payment.
 6. **Test coverage ≥ 75 %** on lines, branches, functions, statements. Ratchet only up.
 
 ESLint rules [`livepeer-bridge/layer-check`](lint/eslint-plugin-livepeer-bridge/rules/layer-check.js), [`no-cross-cutting-import`](lint/eslint-plugin-livepeer-bridge/rules/no-cross-cutting-import.js), and [`zod-at-boundary`](lint/eslint-plugin-livepeer-bridge/rules/zod-at-boundary.js) enforce the first three mechanically.
@@ -99,7 +118,7 @@ cp .env.example .env
 # fill the REQUIRED values: CHAIN_RPC, API_KEY_PEPPER, STRIPE_*, ADMIN_TOKEN
 # drop keystore.json + keystore-password alongside compose.yaml (see .env.example)
 # author your own service-registry-config.yaml (the daemon's static-overlay)
-# — see livepeer-modules-project/service-registry-daemon/registry.example.yaml
+# — see livepeer-modules/service-registry-daemon/registry.example.yaml
 docker compose up --build
 ```
 
@@ -112,7 +131,7 @@ See [`docs/operations/deployment.md`](docs/operations/deployment.md) for the ful
 ```sh
 npm ci
 npm run build
-# export env vars pointing at a running Postgres + Redis + PayerDaemon socket
+# export env vars pointing at a running Postgres + Redis + payment-daemon socket
 npm run start
 ```
 
@@ -153,7 +172,7 @@ npm run fmt            # prettier --write
 npm run fmt:check      # prettier --check
 npm run db:generate    # drizzle-kit: regenerate migrations from schema
 npm run db:migrate     # apply migrations (also runs on boot)
-npm run proto:gen      # regenerate PayerDaemon TS stubs from sibling proto
+npm run proto:gen      # regenerate payment-daemon TS stubs from sibling proto
 ```
 
 Tests need Postgres + Redis reachable either via **Testcontainers** (Docker running locally) or via `TEST_PG_HOST` / `TEST_REDIS_HOST` env vars (CI uses GitHub Actions service containers).

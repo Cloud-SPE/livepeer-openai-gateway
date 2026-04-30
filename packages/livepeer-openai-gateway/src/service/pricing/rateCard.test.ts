@@ -18,6 +18,8 @@ afterAll(async () => {
 beforeEach(async () => {
   await pg.db.execute(sql`
     TRUNCATE
+      app.retail_price_aliases,
+      app.retail_price_catalog,
       app.rate_card_chat_models,
       app.rate_card_embeddings,
       app.rate_card_images,
@@ -115,6 +117,26 @@ describe('RateCardService.warmUp + current', () => {
     expect(snap.imagesRateCard.entries).toEqual([]);
     expect(snap.speechRateCard.entries).toEqual([]);
     expect(snap.transcriptionsRateCard.entries).toEqual([]);
+  });
+
+  it('prefers shell-native retail pricing when present', async () => {
+    await pg.db.execute(sql`
+      INSERT INTO app.retail_price_catalog
+        (capability, offering, customer_tier, unit, usd_per_unit)
+      VALUES
+        ('embeddings', 'text-embedding-3-small', 'prepaid', 'token', 0.00000008)
+    `);
+    await pg.db.execute(sql`
+      INSERT INTO app.retail_price_aliases
+        (capability, model_or_pattern, is_pattern, offering)
+      VALUES
+        ('embeddings', 'text-embedding-3-small', false, 'text-embedding-3-small')
+    `);
+    const svc = createRateCardService({ db: pg.db });
+    await svc.warmUp();
+    const snap = svc.current();
+    expect(snap.embeddingsRateCard.entries).toHaveLength(1);
+    expect(snap.embeddingsRateCard.entries[0]?.usdPerMillionTokens).toBe(0.08);
   });
 });
 

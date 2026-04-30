@@ -22,7 +22,7 @@ This plan closes both gaps with backend routes + a minimal SPA "Create Customer"
 - No new customer fields beyond what `app.customers` already has. Tier, balance, quota, rate-limit-tier, email — anything else is out of scope.
 - No edit-customer flow. List → detail → suspend / unsuspend / refund / issue-key already exists; mutating tier/balance from the SPA is out of scope.
 - No re-architecting `/admin/config/nodes` to read the daemon's mounted YAML. Synthetic response is sufficient — the SPA's UI just needs valid JSON to render its config tab.
-- No SPA test coverage gate. The bridge-ui workspace doesn't enforce a coverage floor; a manual browser pass is the verification path.
+- No SPA test coverage gate. The frontend workspace doesn't enforce a coverage floor; a manual browser pass is the verification path.
 - No migration changes. The schema already supports everything we need.
 
 ## Architecture
@@ -64,7 +64,7 @@ The SPA renders this as "the config" — the user sees the explainer in `content
 
 Requires the route to receive a `serviceRegistry` reference. We extend the route's `deps` shape rather than reaching into the engine's adminService (which is intentionally cached/start-time-static).
 
-### SPA (`bridge-ui/admin/`)
+### SPA (`frontend/admin/`)
 
 - **New service method** `customersService.create(input)` → `POST /admin/customers`
 - **New component** `admin-customer-create` (Lit, modal-style):

@@ -10,14 +10,14 @@ closed: 2026-04-26
 
 ## Goal
 
-Stand up the customer-facing self-service portal at `bridge-ui/portal/`, **plus** a sibling `bridge-ui/shared/` module that holds every cross-UI primitive (design tokens, base CSS, RxJS-Lit `ObservableController`, fetch-wrapper base, generic web components, validator combinators, session helpers). [`0023-operator-admin.md`](./0023-operator-admin.md) imports from `bridge-ui/shared/` from its first commit — no copy-and-extract-later. Mirrors the proven module pattern in `livepeer-cloud-openai-ui` (sibling-of-`src/`, per-module `package.json` and `vite.config.js`, plain-JS ES modules, Lit `LitElement` subclasses with **light DOM**, hash-based routing, design tokens via CSS custom properties, `@layer`-organized styles, sessionStorage-held credential, namespaced `CustomEvent` cross-component signaling, fetch wrapper that attaches `Authorization: Bearer`).
+Stand up the customer-facing self-service portal at `frontend/portal/`, **plus** a sibling `frontend/shared/` module that holds every cross-UI primitive (design tokens, base CSS, RxJS-Lit `ObservableController`, fetch-wrapper base, generic web components, validator combinators, session helpers). [`0023-operator-admin.md`](./0023-operator-admin.md) imports from `frontend/shared/` from its first commit — no copy-and-extract-later. Mirrors the proven module pattern in `livepeer-cloud-openai-ui` (sibling-of-`src/`, per-module `package.json` and `vite.config.js`, plain-JS ES modules, Lit `LitElement` subclasses with **light DOM**, hash-based routing, design tokens via CSS custom properties, `@layer`-organized styles, sessionStorage-held credential, namespaced `CustomEvent` cross-component signaling, fetch wrapper that attaches `Authorization: Bearer`).
 
 Two deliberate departures from the reference UI, both per project standards:
 
 1. **Add RxJS streams.** The reference uses Lit reactive properties + `window.CustomEvent` only — fine for its surface. The bridge portal has live balance + in-flight top-up + usage rollups + key list with optimistic add-and-confirm + free-tier quota countdown, all needing synchronization across header, dashboard, billing, and keys pages simultaneously. RxJS `BehaviorSubject` per domain (`account$`, `keys$`, `usage$`, `topups$`) gives a single source of truth and a Lit `ReactiveController` glues subscription to component lifecycle.
 2. **Modern CSS 2026** per the project's CSS standard (`example-modern-css-2026.md` in the sibling `accountability-agent-platform/` repo): `@layer reset, tokens, base, layout, components, utilities`; native nesting; `light-dark()` with `color-scheme: light dark`; OKLCH palette; `color-mix()` for state variants; `@property` for animatable color tokens; `@container` for table-to-card collapse on narrow viewports; `@scope` for component-local rules in light DOM; `@starting-style` for dialog/menu entry; View Transitions across route changes; `clamp()` fluid type; `text-wrap: balance/pretty`; `field-sizing: content`; `:user-invalid` form validation; `:has()` for parent-state styling.
 
-Backend adds a new `/v1/account/*` JSON surface — Zod-validated, **USD-only** (Invariant 1, customer never sees wei). UI ships as static assets built from `bridge-ui/portal/`, served by the customer Fastify instance at `/portal/*` via `@fastify/static`.
+Backend adds a new `/v1/account/*` JSON surface — Zod-validated, **USD-only** (Invariant 1, customer never sees wei). UI ships as static assets built from `frontend/portal/`, served by the customer Fastify instance at `/portal/*` via `@fastify/static`.
 
 Picking the portal first because: (a) operator currently issues every API key by hand (AGENTS-noted "TODO: self-service" in `src/service/auth/`), so portal unlocks revenue self-service; (b) it's the lower-stakes surface for proving the UI infra before [`0023`](./0023-operator-admin.md) lands destructive operator actions on top of it.
 
@@ -26,11 +26,11 @@ Picking the portal first because: (a) operator currently issues every API key by
 - **React, Tailwind, CSS-in-JS, Next.js, any SSR framework** — explicit project directive. Lit + plain-JS + native CSS only.
 - **TypeScript in the UI bundle** — reference UI is plain JS; portal follows. Server-side `/v1/account/*` Zod schemas remain TS in `src/types/`. UI ships hand-mirrored runtime validators (see Decisions).
 - **Shadow DOM** — components use light DOM (`createRenderRoot() { return this; }`) so cascade layers apply. `@scope { ... }` provides component-local rules where needed.
-- **Monorepo tooling.** `bridge-ui/portal/` and `bridge-ui/admin/` each have their own `package.json`, deps, lockfile, vite config. No npm workspaces. `bridge-ui/shared/` is a directory of source files imported via relative paths — peerDependencies-only, no own `node_modules` or build, not an npm package. (Matches reference's "no monorepo tooling" call while still making the cross-UI boundary explicit.)
+- **Monorepo tooling.** `frontend/portal/` and `frontend/admin/` each have their own `package.json`, deps, lockfile, vite config. No npm workspaces. `frontend/shared/` is a directory of source files imported via relative paths — peerDependencies-only, no own `node_modules` or build, not an npm package. (Matches reference's "no monorepo tooling" call while still making the cross-UI boundary explicit.)
 - **Signup / onboarding / email verification.** Customer arrives with an existing key (operator-issued today, operator-issued via 0023 admin tomorrow).
 - **OAuth / SSO / passwordless.** v1 auth is "paste your API key" → sessionStorage → Bearer header.
 - **Multi-tenant org / team management.** One customer = one account.
-- **Marketing site / docs.** Future `bridge-ui/site/` module; not this plan.
+- **Marketing site / docs.** Future `frontend/site/` module; not this plan.
 - **In-app charts library.** Vanilla CSS bars off rollup data; no Chart.js / Recharts. (Same call as the prior console draft; survives the rewrite.)
 
 ## Approach
@@ -40,7 +40,7 @@ Picking the portal first because: (a) operator currently issues every API key by
 New top-level sibling to `src/` (deliberate — see Decisions). **Two modules stood up in this plan**: `shared/` and `portal/`. 0023 lands `admin/` next to them.
 
 ```
-bridge-ui/
+frontend/
 ├── shared/                       # this plan stands it up; admin imports day one
 │   ├── package.json              # peerDependencies only: lit, rxjs (no own node_modules / build)
 │   ├── README.md                 # what belongs here, what does not
@@ -90,7 +90,7 @@ bridge-ui/
             └── topups.service.js
 ```
 
-**Shared module mechanics**: `bridge-ui/shared/` is a directory of source files, **not** an npm package with its own `node_modules` or build. Consumers import via relative paths (`import { ObservableController } from '../shared/controllers/observable-controller.js'`). Vite tree-shakes from each consumer's bundle. `shared/package.json` declares `peerDependencies` only (`lit ^3.3`, `rxjs ^7.8`) and a one-line description; no `dependencies`, no `scripts`. This matches the reference UI's "no monorepo tooling" simplification while still making the boundary explicit.
+**Shared module mechanics**: `frontend/shared/` is a directory of source files, **not** an npm package with its own `node_modules` or build. Consumers import via relative paths (`import { ObservableController } from '../shared/controllers/observable-controller.js'`). Vite tree-shakes from each consumer's bundle. `shared/package.json` declares `peerDependencies` only (`lit ^3.3`, `rxjs ^7.8`) and a one-line description; no `dependencies`, no `scripts`. This matches the reference UI's "no monorepo tooling" simplification while still making the boundary explicit.
 
 **What belongs in `shared/`** — primitives reusable across any UI in the bridge fleet:
 
@@ -111,20 +111,20 @@ bridge-ui/
 
 Tasks:
 
-- [x] `bridge-ui/shared/package.json` — `peerDependencies`: `lit ^3.3`, `rxjs ^7.8`. No `dependencies`. No `scripts`.
-- [x] `bridge-ui/shared/README.md` — what belongs / does not belong (mirror the lists above), peer-version expectations, "imported via relative paths, not as an npm package."
-- [x] All `bridge-ui/shared/css/*.css`, `controllers/`, `lib/`, `components/` files listed above.
-- [x] `bridge-ui/portal/package.json` with `lit ^3.3`, `rxjs ^7.8`, `vite ^8`. Versions match shared's `peerDependencies`.
-- [x] `bridge-ui/portal/vite.config.js` — dev server `5173`, build to `bridge-ui/portal/dist/`, base `/portal/`, dev proxy `/v1` → `http://localhost:<BRIDGE_PORT>`. No alias config — Vite resolves `../shared/` natively.
-- [x] `bridge-ui/portal/index.html` mounts `<portal-app>` and links `portal.css`.
-- [x] Top-level `package.json` `build` script: `tsc && (cd bridge-ui/portal && npm ci && npm run build)`.
-- [x] `Dockerfile` adds a UI build stage; copies `bridge-ui/portal/dist/` into the runtime image at `/app/bridge-ui/portal/dist/`. `bridge-ui/shared/` participates in the build context but is not copied separately (its files end up tree-shaken into `portal/dist/`).
+- [x] `frontend/shared/package.json` — `peerDependencies`: `lit ^3.3`, `rxjs ^7.8`. No `dependencies`. No `scripts`.
+- [x] `frontend/shared/README.md` — what belongs / does not belong (mirror the lists above), peer-version expectations, "imported via relative paths, not as an npm package."
+- [x] All `frontend/shared/css/*.css`, `controllers/`, `lib/`, `components/` files listed above.
+- [x] `frontend/portal/package.json` with `lit ^3.3`, `rxjs ^7.8`, `vite ^8`. Versions match shared's `peerDependencies`.
+- [x] `frontend/portal/vite.config.js` — dev server `5173`, build to `frontend/portal/dist/`, base `/portal/`, dev proxy `/v1` → `http://localhost:<BRIDGE_PORT>`. No alias config — Vite resolves `../shared/` natively.
+- [x] `frontend/portal/index.html` mounts `<portal-app>` and links `portal.css`.
+- [x] Top-level `package.json` `build` script: `tsc && (cd frontend/portal && npm ci && npm run build)`.
+- [x] `Dockerfile` adds a UI build stage; copies `frontend/portal/dist/` into the runtime image at `/app/frontend/portal/dist/`. `frontend/shared/` participates in the build context but is not copied separately (its files end up tree-shaken into `portal/dist/`).
 - [x] `.dockerignore` carves the `dist/` exception.
-- [x] `npm run doc-lint` — extend to enforce that no module under `bridge-ui/<consumer>/lib/` re-implements anything that exists in `bridge-ui/shared/lib/`. Initial impl: a list of forbidden filenames in consumer/lib/ that must instead come from shared/.
+- [x] `npm run doc-lint` — extend to enforce that no module under `frontend/<consumer>/lib/` re-implements anything that exists in `frontend/shared/lib/`. Initial impl: a list of forbidden filenames in consumer/lib/ that must instead come from shared/.
 
 ### CSS architecture (modern 2026)
 
-Layer order is the project standard, declared in `bridge-ui/portal/portal.css` and populated from a mix of `shared/css/*.css` (reset, tokens, base, utilities) and per-module blocks (layout, components):
+Layer order is the project standard, declared in `frontend/portal/portal.css` and populated from a mix of `shared/css/*.css` (reset, tokens, base, utilities) and per-module blocks (layout, components):
 
 ```css
 @layer reset, tokens, base, layout, components, utilities;
@@ -145,7 +145,7 @@ Layer order is the project standard, declared in `bridge-ui/portal/portal.css` a
   - Radii, shadows, durations, easings.
 - [x] `shared/css/base.css` — element defaults: `body`, headings (`text-wrap: balance`), `p` (`text-wrap: pretty`), form controls (`field-sizing: content` on textareas), `dialog::backdrop`, `:user-invalid` outline.
 - [x] `@layer layout` (per-module, in `portal.css`) — app shell grid (header / nav / main), main outlet `view-transition-name: portal-main`.
-- [x] `@layer components` (per-module, in `portal.css`) — per-component blocks using **native nesting**. Generic component styling (`bridge-button`, `bridge-dialog`, `bridge-table`, etc.) lives in the components themselves under `bridge-ui/shared/components/*.js` as tagged-template strings; per-page styling stays in `portal.css`. Example skeleton for a page block:
+- [x] `@layer components` (per-module, in `portal.css`) — per-component blocks using **native nesting**. Generic component styling (`bridge-button`, `bridge-dialog`, `bridge-table`, etc.) lives in the components themselves under `frontend/shared/components/*.js` as tagged-template strings; per-page styling stays in `portal.css`. Example skeleton for a page block:
   ```css
   @layer components {
     portal-dashboard {
@@ -208,7 +208,7 @@ Layer order is the project standard, declared in `bridge-ui/portal/portal.css` a
 
 ### RxJS service layer
 
-Pattern: each service exports a singleton object owning one or more `BehaviorSubject`s plus async commands that push into them. Components never call `fetch` directly — they call service methods and subscribe to service streams. The `ObservableController` lives in `bridge-ui/shared/controllers/`; services live in the consumer module since they're domain-specific.
+Pattern: each service exports a singleton object owning one or more `BehaviorSubject`s plus async commands that push into them. Components never call `fetch` directly — they call service methods and subscribe to service streams. The `ObservableController` lives in `frontend/shared/controllers/`; services live in the consumer module since they're domain-specific.
 
 - [x] `lib/services/account.service.js`
   ```js
@@ -229,7 +229,7 @@ Pattern: each service exports a singleton object owning one or more `BehaviorSub
 - [x] `lib/services/keys.service.js` — `keys$`, `create(label)` (optimistic insert with `pending: true`, replace on response or rollback on error), `revoke(id)` (optimistic mark, rollback on 412).
 - [x] `lib/services/usage.service.js` — `query({ from, to, group_by })` returns a fresh cold `Observable` per call (no shared subject — usage is on-demand).
 - [x] `lib/services/topups.service.js` — `topups$` + `pollUntilSettled(sessionId, timeoutMs)` returning an Observable that `interval(2000).pipe(switchMap(refetch), takeWhile(notSettled, true), takeUntil(timer(timeoutMs)))`.
-- [x] `bridge-ui/shared/controllers/observable-controller.js` — Lit `ReactiveController`:
+- [x] `frontend/shared/controllers/observable-controller.js` — Lit `ReactiveController`:
   ```js
   // representative shape — lives in shared/, imported by portal and admin
   export class ObservableController {
@@ -250,7 +250,7 @@ Pattern: each service exports a singleton object owning one or more `BehaviorSub
     }
   }
   ```
-- [x] `bridge-ui/shared/lib/api-base.js` — fetch wrapper **factory**, not a singleton:
+- [x] `frontend/shared/lib/api-base.js` — fetch wrapper **factory**, not a singleton:
   ```js
   // representative shape
   export function createApi({ baseUrl, getAuthHeaders, onUnauthorized, parseResponse }) {
@@ -275,7 +275,7 @@ Pattern: each service exports a singleton object owning one or more `BehaviorSub
     };
   }
   ```
-- [x] `bridge-ui/portal/lib/api.js` — wraps `createApi(...)` with portal-specific config: `baseUrl: ''` (same origin), `getAuthHeaders: () => ({ authorization: 'Bearer ' + getSession() })`, `onUnauthorized: () => { clearSession(); window.dispatchEvent(new CustomEvent('bridge:unauthorized')); }`, `parseResponse` dispatches by path through `portal/lib/schemas.js` validators.
+- [x] `frontend/portal/lib/api.js` — wraps `createApi(...)` with portal-specific config: `baseUrl: ''` (same origin), `getAuthHeaders: () => ({ authorization: 'Bearer ' + getSession() })`, `onUnauthorized: () => { clearSession(); window.dispatchEvent(new CustomEvent('bridge:unauthorized')); }`, `parseResponse` dispatches by path through `portal/lib/schemas.js` validators.
 
 ### Routing
 
@@ -311,7 +311,7 @@ Files:
 - [x] `src/repo/customers.ts` — extend with `findApiKeysByCustomer`, `insertApiKey`, `revokeApiKey`.
 - [x] `src/service/auth/keys.ts` — generation: `lpb_live_` + 32 random bytes (base32 of crypto.randomBytes), HMAC-SHA-256(`API_KEY_PEPPER`) for storage.
 - [x] `src/repo/usageRollups.ts` — one SQL per `group_by`. TestPg-backed.
-- [x] `src/runtime/http/portal/static.ts` — `@fastify/static` registration at `/portal/*` serving `bridge-ui/portal/dist/` with hash-route SPA fallback (only `index.html` needed).
+- [x] `src/runtime/http/portal/static.ts` — `@fastify/static` registration at `/portal/*` serving `frontend/portal/dist/` with hash-route SPA fallback (only `index.html` needed).
 
 ### Tests
 
@@ -325,11 +325,11 @@ Files:
 
 ### Docs
 
-- [x] **New design doc** `docs/design-docs/ui-architecture.md` — captures: Lit + RxJS + modern CSS; `bridge-ui/` sibling layout with `shared/` + per-consumer module split (what belongs in shared, what does not); light DOM rationale + adoptedStyleSheets caveat for shared component CSS; cascade layer order with `@import url(...) layer(...)` pulls from shared; OKLCH + `light-dark()` theming; `ObservableController` pattern; namespaced `bridge:` events; hash routing + View Transitions; sessionStorage credential; per-module `package.json` + shared as a peerDependencies-only directory module; supported-browsers floor. Both consoles reference this; design-docs may not reference plans (per [PLANS.md](../../../PLANS.md)).
+- [x] **New design doc** `docs/design-docs/ui-architecture.md` — captures: Lit + RxJS + modern CSS; `frontend/` sibling layout with `shared/` + per-consumer module split (what belongs in shared, what does not); light DOM rationale + adoptedStyleSheets caveat for shared component CSS; cascade layer order with `@import url(...) layer(...)` pulls from shared; OKLCH + `light-dark()` theming; `ObservableController` pattern; namespaced `bridge:` events; hash routing + View Transitions; sessionStorage credential; per-module `package.json` + shared as a peerDependencies-only directory module; supported-browsers floor. Both consoles reference this; design-docs may not reference plans (per [PLANS.md](../../../PLANS.md)).
 - [x] **New product spec** `docs/product-specs/customer-portal.md` — page-by-page UX, rate-card display rules, dispute / refund visibility, USD formatting rules.
-- [x] **Update** `docs/design-docs/architecture.md` — replace the `ui/ admin UI (v2+)` row with a pointer to `bridge-ui/` sibling layout. Note layer rule still holds _within_ `src/`; `bridge-ui/` is a separate static-asset deliverable that talks to the bridge over HTTP only.
-- [x] **Update** `AGENTS.md` "Knowledge base layout" and "Where to look for X" — add the new `bridge-ui/` and design / product entries.
-- [x] **Update** `docs/operations/deployment.md` — `bridge-ui/portal/` build step, `@fastify/static` mount, Docker UI stage, Grafana not required for portal.
+- [x] **Update** `docs/design-docs/architecture.md` — replace the `ui/ admin UI (v2+)` row with a pointer to `frontend/` sibling layout. Note layer rule still holds _within_ `src/`; `frontend/` is a separate static-asset deliverable that talks to the bridge over HTTP only.
+- [x] **Update** `AGENTS.md` "Knowledge base layout" and "Where to look for X" — add the new `frontend/` and design / product entries.
+- [x] **Update** `docs/operations/deployment.md` — `frontend/portal/` build step, `@fastify/static` mount, Docker UI stage, Grafana not required for portal.
 
 ## Decisions log
 
@@ -337,13 +337,13 @@ Files:
 
 Project directive. Pattern lifted from `livepeer-cloud-openai-ui/portal` (Lit, light DOM, hash routing, design tokens, `@layer`-organized CSS, sessionStorage, namespaced CustomEvents); RxJS layered on top because the bridge state surface is bigger than the reference's. Modern CSS per the project's CSS standard (`example-modern-css-2026.md` in the sibling `accountability-agent-platform/` repo).
 
-### 2026-04-26 — Stand up `bridge-ui/shared/` from day one, not on rule-of-three
+### 2026-04-26 — Stand up `frontend/shared/` from day one, not on rule-of-three
 
 Two consumers (portal + admin) are being designed in the same planning session. The rule-of-three protects against premature abstraction _discovered_ too early; here the abstraction isn't premature because both consumers are already on the design table. Copy-then-extract would waste 0023's implementation time and risks the two copies drifting before extraction. `shared/` is a directory of source files (no own `node_modules` / build), peerDependencies declared, imported via relative paths. Easy to grow, easy to delete what doesn't earn its keep.
 
-### 2026-04-26 — Sibling `bridge-ui/`, not `src/ui/`
+### 2026-04-26 — Sibling `frontend/`, not `src/ui/`
 
-Architecture doc originally slotted `ui/` inside `src/`. Rewriting to sibling-of-`src/` because: (1) the reference UI is sibling, and the directive is to borrow its module pattern; (2) UI is plain-JS browser bundles, `src/` is server TS — mixing them forces tsconfig coordination, mixed lint rules, and a mixed build graph for no gain; (3) per-module `package.json` is the reference's hard-won simplification — keeps browser-only deps (`lit`, `rxjs`) out of the bridge npm package. Architecture doc gets updated; the bridge's layer rule is unaffected because `bridge-ui/` doesn't import from `src/` at all.
+Architecture doc originally slotted `ui/` inside `src/`. Rewriting to sibling-of-`src/` because: (1) the reference UI is sibling, and the directive is to borrow its module pattern; (2) UI is plain-JS browser bundles, `src/` is server TS — mixing them forces tsconfig coordination, mixed lint rules, and a mixed build graph for no gain; (3) per-module `package.json` is the reference's hard-won simplification — keeps browser-only deps (`lit`, `rxjs`) out of the bridge npm package. Architecture doc gets updated; the bridge's layer rule is unaffected because `frontend/` doesn't import from `src/` at all.
 
 ### 2026-04-26 — Light DOM (no shadow DOM)
 
@@ -359,7 +359,7 @@ Reference uses `@property` + `window.CustomEvent` only — fine for two pages. B
 
 ### 2026-04-26 — Hand-mirrored response validators in the UI, not shared Zod from `src/types/`
 
-Sharing TS-Zod into a plain-JS browser bundle requires either (a) a TS-build step the UI doesn't otherwise need, or (b) shipping ~12 kB gz of Zod runtime. Hand-mirrored validators in `bridge-ui/portal/lib/schemas.js` (plain JS, ~200 LOC for the six routes) plus a `npm run doc-lint` rule that diffs the server's Zod field names against the UI's keeps them honest. Codegen UI validators from server schemas is a Phase 2 if drift becomes a real cost.
+Sharing TS-Zod into a plain-JS browser bundle requires either (a) a TS-build step the UI doesn't otherwise need, or (b) shipping ~12 kB gz of Zod runtime. Hand-mirrored validators in `frontend/portal/lib/schemas.js` (plain JS, ~200 LOC for the six routes) plus a `npm run doc-lint` rule that diffs the server's Zod field names against the UI's keeps them honest. Codegen UI validators from server schemas is a Phase 2 if drift becomes a real cost.
 
 ### 2026-04-26 — Cascade layer order `reset, tokens, base, layout, components, utilities`
 
@@ -408,12 +408,12 @@ Implementation in progress (status remains `active` — see "What's still pendin
 
 ### Files added (uncommitted)
 
-- **`bridge-ui/shared/`** — workspace member with peerDeps-only `package.json`, README, `css/{reset,tokens,base,utilities}.css`, `controllers/observable-controller.js`, `lib/{api-base,session-storage,validators,events,route}.js`, `components/{bridge-button,bridge-spinner,bridge-dialog,bridge-confirm-dialog,bridge-table,bridge-toast,bridge-popover-menu,_adopt-styles}.js`.
-- **`bridge-ui/portal/`** — workspace member with `package.json`, `vite.config.js`, `vitest.config.js`, `web-test-runner.config.js`, `index.html`, `main.js`, `portal.css`, `lib/{api,session,schemas}.js`, `lib/services/{account,keys,usage,topups}.service.js`, `components/{portal-app,portal-login,portal-dashboard,portal-keys,portal-usage,portal-billing,portal-settings}.js`.
-- **`bridge-ui/package.json`** — npm-workspace root hoisting `lit ^3.3.2` + `rxjs ^7.8.1` for shared and consumers.
+- **`frontend/shared/`** — workspace member with peerDeps-only `package.json`, README, `css/{reset,tokens,base,utilities}.css`, `controllers/observable-controller.js`, `lib/{api-base,session-storage,validators,events,route}.js`, `components/{bridge-button,bridge-spinner,bridge-dialog,bridge-confirm-dialog,bridge-table,bridge-toast,bridge-popover-menu,_adopt-styles}.js`.
+- **`frontend/portal/`** — workspace member with `package.json`, `vite.config.js`, `vitest.config.js`, `web-test-runner.config.js`, `index.html`, `main.js`, `portal.css`, `lib/{api,session,schemas}.js`, `lib/services/{account,keys,usage,topups}.service.js`, `components/{portal-app,portal-login,portal-dashboard,portal-keys,portal-usage,portal-billing,portal-settings}.js`.
+- **`frontend/package.json`** — npm-workspace root hoisting `lit ^3.3.2` + `rxjs ^7.8.1` for shared and consumers.
 - **Backend `/v1/account/*` (7 routes)** — `src/runtime/http/account/routes.ts` + `src/runtime/http/portal/static.ts`. Repo extensions in `src/repo/{customers,apiKeys,topups}.ts`; new `src/repo/usageRollups.ts`. Wired in `src/main.ts`. `package.json` gains `@fastify/static`.
-- **Tests** — `src/repo/usageRollups.test.ts` (8); `src/repo/repo.test.ts` extensions (8 for apiKeys + topups extensions); `src/runtime/http/account/routes.test.ts` (17); `src/runtime/http/portal/static.test.ts` (2). UI: `bridge-ui/shared/tests/{validators,observable-controller,api-base,session-storage}.test.js` + `bridge-ui/portal/tests/{account,keys}.service.test.js` (vitest, 42 tests). Component: `bridge-ui/portal/tests/wtr/{shared/*,portal-*}.test.js` (Web Test Runner + Chromium, 68 tests).
-- **Docker / scripts** — multi-stage `Dockerfile` ui-build stage builds the workspace and copies `dist/` outputs into the runtime image. Top-level `npm run build` and `npm test` chain through `bridge-ui` workspace scripts.
+- **Tests** — `src/repo/usageRollups.test.ts` (8); `src/repo/repo.test.ts` extensions (8 for apiKeys + topups extensions); `src/runtime/http/account/routes.test.ts` (17); `src/runtime/http/portal/static.test.ts` (2). UI: `frontend/shared/tests/{validators,observable-controller,api-base,session-storage}.test.js` + `frontend/portal/tests/{account,keys}.service.test.js` (vitest, 42 tests). Component: `frontend/portal/tests/wtr/{shared/*,portal-*}.test.js` (Web Test Runner + Chromium, 68 tests).
+- **Docker / scripts** — multi-stage `Dockerfile` ui-build stage builds the workspace and copies `dist/` outputs into the runtime image. Top-level `npm run build` and `npm test` chain through `frontend` workspace scripts.
 - **Design doc** — `docs/design-docs/ui-architecture.md` captures the stack, layout, what belongs in shared, CSS architecture, Lit + RxJS patterns, auth, routing, build/serve/deploy, testing, lint enforcement. Indexed in `docs/design-docs/index.md`.
 
 ### What's still pending
@@ -426,4 +426,4 @@ Implementation in progress (status remains `active` — see "What's still pendin
 
 ### Architectural correction discovered during E2E
 
-- Plan said all `bridge-ui/shared/components/*` would render in **light DOM** (`createRenderRoot() { return this; }`). E2E discovered that components using `<slot>` (`bridge-button`, `bridge-dialog`) are visually broken in light DOM — `<slot>` is shadow-DOM-specific, so consumer-slotted text renders **alongside** the inner button instead of inside it. Worse, when `bridge-dialog.showModal()` runs, slotted action buttons end up outside the modal's top layer and become unclickable. Fix: bridge-button and bridge-dialog now use shadow DOM (CSS custom properties cross the boundary, so the global token catalogue still drives them). Other shared components (bridge-spinner, bridge-table, bridge-toast, bridge-popover-menu) don't use `<slot>` and stay light DOM. Tests query through `shadowRoot` for the inner template; slotted children remain on the host. The `ui-architecture.md` design doc was updated to reflect the per-component decision.
+- Plan said all `frontend/shared/components/*` would render in **light DOM** (`createRenderRoot() { return this; }`). E2E discovered that components using `<slot>` (`bridge-button`, `bridge-dialog`) are visually broken in light DOM — `<slot>` is shadow-DOM-specific, so consumer-slotted text renders **alongside** the inner button instead of inside it. Worse, when `bridge-dialog.showModal()` runs, slotted action buttons end up outside the modal's top layer and become unclickable. Fix: bridge-button and bridge-dialog now use shadow DOM (CSS custom properties cross the boundary, so the global token catalogue still drives them). Other shared components (bridge-spinner, bridge-table, bridge-toast, bridge-popover-menu) don't use `<slot>` and stay light DOM. Tests query through `shadowRoot` for the inner template; slotted children remain on the host. The `ui-architecture.md` design doc was updated to reflect the per-component decision.

@@ -12,8 +12,8 @@
 //     are durable — conventions section of `design-docs/index.md`).
 //     Exception: `tech-debt-tracker.md` lives under `exec-plans/` but is a
 //     durable, append-only registry — design-docs may link into it.
-//   - bridge-ui/<consumer>/lib/ does not redefine a filename present in
-//     bridge-ui/shared/lib/ (consumers must wrap, not duplicate).
+//   - frontend/<consumer>/lib/ does not redefine a filename present in
+//     frontend/shared/lib/ (consumers must wrap, not duplicate).
 //
 // Exit 0 on clean, 1 on any violation. One diagnostic per violation.
 
@@ -194,20 +194,20 @@ async function validateCrossLinks(file, text) {
   }
 }
 
-// bridge-ui/shared/lib/ defines cross-UI primitives. Consumers (portal,
+// frontend/shared/lib/ defines cross-UI primitives. Consumers (portal,
 // admin) must wrap, not redefine, those filenames. A file with the same
 // basename in <consumer>/lib/ is a strong signal that someone forgot the
 // shared module exists. Enforce it here so the convention sticks without
-// adding a JS-side ESLint rule (bridge-ui/ is plain JS; lint there is
+// adding a JS-side ESLint rule (frontend/ is plain JS; lint there is
 // vitest/web-test-runner's job — see eslint.config.js).
 async function validateBridgeUiSharedRedefinition() {
-  const root = resolve(process.cwd(), 'bridge-ui');
+  const root = resolve(process.cwd(), 'frontend');
   const sharedLib = join(root, 'shared/lib');
   let sharedNames;
   try {
     sharedNames = (await readdir(sharedLib)).filter((n) => n.endsWith('.js'));
   } catch {
-    return; // bridge-ui not present in this checkout — nothing to enforce.
+    return; // frontend not present in this checkout — nothing to enforce.
   }
 
   let consumerDirs;
@@ -233,8 +233,8 @@ async function validateBridgeUiSharedRedefinition() {
         report(
           offending,
           1,
-          'bridge-ui-shared-redefinition',
-          `bridge-ui/${consumer.name}/lib/${name} duplicates bridge-ui/shared/lib/${name}; ` +
+          'frontend-shared-redefinition',
+          `frontend/${consumer.name}/lib/${name} duplicates frontend/shared/lib/${name}; ` +
             `import or wrap the shared one instead.`,
         );
       }

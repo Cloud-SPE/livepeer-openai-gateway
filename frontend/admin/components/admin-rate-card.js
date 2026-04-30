@@ -1,14 +1,10 @@
-// Top-level rate-card page. Sub-tab nav (chat / embeddings / images /
-// speech / transcriptions) + per-capability child component. Per
-// exec-plan 0030.
+// Top-level retail-pricing page. Uses the shell-native v3 pricing
+// surface, while the current runtime still consumes a compatibility
+// adapter behind the scenes.
 
 import { LitElement, html } from 'lit';
 import { navigate } from '../../shared/lib/route.js';
-import './admin-rate-card-chat.js';
-import './admin-rate-card-embeddings.js';
-import './admin-rate-card-images.js';
-import './admin-rate-card-speech.js';
-import './admin-rate-card-transcriptions.js';
+import './admin-retail-pricing-capability.js';
 
 const TABS = [
   { key: 'chat', label: 'Chat' },
@@ -36,10 +32,11 @@ export class AdminRateCard extends LitElement {
     const active = TABS.some((t) => t.key === this.tab) ? this.tab : 'chat';
     return html`
       <div class="page-header">
-        <h1>Rate card</h1>
+        <h1>Retail pricing</h1>
         <p class="muted text-sm">
-          Operator-managed pricing for all 5 capabilities. Edits take effect immediately for new
-          requests; in-flight reservations honor the price quoted at reserve time.
+          Shell-native v3 pricing for all 5 capabilities. Edits take effect immediately for new
+          requests. The current runtime still uses a legacy pricing adapter until the upstream v3
+          protocol cut lands.
         </p>
       </div>
       <nav
@@ -63,15 +60,9 @@ export class AdminRateCard extends LitElement {
           `,
         )}
       </nav>
-      ${active === 'chat' ? html`<admin-rate-card-chat></admin-rate-card-chat>` : ''}
-      ${active === 'embeddings'
-        ? html`<admin-rate-card-embeddings></admin-rate-card-embeddings>`
-        : ''}
-      ${active === 'images' ? html`<admin-rate-card-images></admin-rate-card-images>` : ''}
-      ${active === 'speech' ? html`<admin-rate-card-speech></admin-rate-card-speech>` : ''}
-      ${active === 'transcriptions'
-        ? html`<admin-rate-card-transcriptions></admin-rate-card-transcriptions>`
-        : ''}
+      <admin-retail-pricing-capability
+        .capability=${active}
+      ></admin-retail-pricing-capability>
     `;
   }
 }

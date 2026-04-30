@@ -173,7 +173,7 @@ export class AdminApp extends LitElement {
 }
 
 function labelFor(v) {
-  if (v === 'rate-card') return 'Rate card';
+  if (v === 'rate-card') return 'Retail pricing';
   return v.charAt(0).toUpperCase() + v.slice(1);
 }
 

@@ -20,6 +20,8 @@ beforeEach(async () => {
   await pg.db.execute(sql`
     TRUNCATE
       app.admin_audit_events,
+      app.retail_price_aliases,
+      app.retail_price_catalog,
       app.rate_card_chat_models,
       app.rate_card_embeddings,
       app.rate_card_images,
@@ -58,6 +60,111 @@ describe('admin pricing — auth', () => {
     try {
       const res = await server.app.inject({ method: 'GET', url: '/admin/pricing/chat/tiers' });
       expect(res.statusCode).toBe(401);
+    } finally {
+      await server.close();
+    }
+  });
+});
+
+describe('admin pricing — retail prices and aliases', () => {
+  it('GET retail prices lists seeded chat prepaid/free rows', async () => {
+    const { server } = await buildServer();
+    try {
+      await server.app.inject({
+        method: 'POST',
+        url: '/admin/pricing/retail/prices',
+        headers: auth,
+        payload: JSON.stringify({
+          capability: 'chat',
+          offering: 'model-small',
+          customer_tier: 'prepaid',
+          price_kind: 'input',
+          unit: 'token',
+          usd_per_unit: '0.00000005',
+        }),
+      });
+      await server.app.inject({
+        method: 'POST',
+        url: '/admin/pricing/retail/prices',
+        headers: auth,
+        payload: JSON.stringify({
+          capability: 'chat',
+          offering: 'model-small',
+          customer_tier: 'free',
+          price_kind: 'output',
+          unit: 'token',
+          usd_per_unit: '0.00000010',
+        }),
+      });
+      const res = await server.app.inject({
+        method: 'GET',
+        url: '/admin/pricing/retail/prices/chat',
+        headers: auth,
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json() as { entries: Array<{ customer_tier: string; price_kind: string }> };
+      expect(body.entries.length).toBeGreaterThan(0);
+      expect(body.entries.some((entry) => entry.customer_tier === 'prepaid')).toBe(true);
+      expect(body.entries.some((entry) => entry.price_kind === 'input')).toBe(true);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('POST retail price invalidates the snapshot adapter', async () => {
+    const { server, rateCardService } = await buildServer();
+    try {
+      const res = await server.app.inject({
+        method: 'POST',
+        url: '/admin/pricing/retail/prices',
+        headers: auth,
+        payload: JSON.stringify({
+          capability: 'embeddings',
+          offering: 'text-embedding-3-small-v2',
+          customer_tier: 'prepaid',
+          unit: 'token',
+          usd_per_unit: '0.00000007',
+        }),
+      });
+      expect(res.statusCode).toBe(201);
+      const alias = await server.app.inject({
+        method: 'POST',
+        url: '/admin/pricing/retail/aliases',
+        headers: auth,
+        payload: JSON.stringify({
+          capability: 'embeddings',
+          model_or_pattern: 'text-embedding-3-small-v2',
+          is_pattern: false,
+          offering: 'text-embedding-3-small-v2',
+        }),
+      });
+      expect(alias.statusCode).toBe(201);
+
+      await new Promise((r) => setTimeout(r, 50));
+      expect(
+        rateCardService.current().embeddingsRateCard.entries.some((e) => e.model === 'text-embedding-3-small-v2'),
+      ).toBe(true);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('POST retail alias rejects invalid non-image size/quality', async () => {
+    const { server } = await buildServer();
+    try {
+      const res = await server.app.inject({
+        method: 'POST',
+        url: '/admin/pricing/retail/aliases',
+        headers: auth,
+        payload: JSON.stringify({
+          capability: 'speech',
+          model_or_pattern: 'tts-1',
+          is_pattern: false,
+          offering: 'tts-1',
+          size: '1024x1024',
+        }),
+      });
+      expect(res.statusCode).toBe(400);
     } finally {
       await server.close();
     }

@@ -19,7 +19,7 @@ OSS adopters of the engine fall into two operational modes:
   (e.g. `examples/minimal-shell`) wants visibility into node health
   without standing up a custom dashboard.
 - **With shell**: an operator running this repo's full shell already has
-  `bridge-ui/admin/` (a richer Lit + RxJS SPA at `/admin/console`) and
+  `frontend/admin/` (a richer Lit + RxJS SPA at `/admin/console`) and
   doesn't need this dashboard. The engine's dashboard is OFF by default
   in the shell; both can coexist when enabled.
 
@@ -70,7 +70,7 @@ When `resolve()` returns null, the dashboard sends 401 with a
 ## What the engine dashboard is NOT
 
 - It is **not** the shell's admin SPA. The shell's
-  `bridge-ui/admin/` (Lit + RxJS, customer search, audit log, refunds,
+  `frontend/admin/` (Lit + RxJS, customer search, audit log, refunds,
   etc.) lives at `/admin/console/*`. That SPA is shell-owned and
   customer-facing-adjacent; it stays in the proprietary shell post-split.
 - It is **not** a metrics dashboard. Operators with Prometheus / Grafana

@@ -1,9 +1,9 @@
 {
-  "name": "@bridge-ui/root",
+  "name": "@frontend/root",
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "npm-workspace root for the bridge-ui modules. Hoists lit + rxjs into one node_modules so shared and consumer modules (portal, admin) resolve a single instance.",
+  "description": "npm-workspace root for the frontend modules. Hoists lit + rxjs into one node_modules so shared and consumer modules (portal, admin) resolve a single instance.",
   "workspaces": [
     "shared",
     "portal",

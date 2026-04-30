@@ -6,7 +6,7 @@ last-reviewed: 2026-04-26
 
 # UI Architecture
 
-The bridge ships one or more browser web apps that talk to the bridge over HTTP. They live in `bridge-ui/` (sibling to `src/`), are built per-module by Vite, and are served by the bridge's customer Fastify instance via `@fastify/static` at module-specific path prefixes (`/portal/`, `/admin/console/`).
+The bridge ships one or more browser web apps that talk to the bridge over HTTP. They live in `frontend/` (sibling to `src/`), are built per-module by Vite, and are served by the bridge's customer Fastify instance via `@fastify/static` at module-specific path prefixes (`/portal/`, `/admin/console/`).
 
 This document is the canonical reference for **how** every UI module in this repo is built. It is referenced by exec-plans; it never references plans (per [PLANS.md](../../PLANS.md)).
 
@@ -23,7 +23,7 @@ Everything not on this list (React, Tailwind, CSS-in-JS, Next.js, SSR frameworks
 ## Workspace layout
 
 ```
-bridge-ui/                        # sibling of src/, not under it
+frontend/                        # sibling of src/, not under it
 ├── shared/                       # peerDependencies-only directory module
 │   ├── package.json              # peerDependencies: lit, rxjs (no own deps, no build)
 │   ├── README.md                 # what belongs / does not belong
@@ -47,7 +47,7 @@ Consumers import from shared via relative paths (`import { ObservableController 
 
 ### Why sibling to `src/`, not under `src/ui/`
 
-The `src/` tree is the bridge's TypeScript server. `bridge-ui/` is plain-JS browser bundles. Mixing them forces tsconfig coordination, mixed lint rules, and a mixed build graph for no gain. The bridge's [layer rule](./architecture.md) (`types → config → repo → service → runtime`) is unaffected because `bridge-ui/` does not import from `src/` — it talks to the bridge over HTTP only.
+The `src/` tree is the bridge's TypeScript server. `frontend/` is plain-JS browser bundles. Mixing them forces tsconfig coordination, mixed lint rules, and a mixed build graph for no gain. The bridge's [layer rule](./architecture.md) (`types → config → repo → service → runtime`) is unaffected because `frontend/` does not import from `src/` — it talks to the bridge over HTTP only.
 
 ### What belongs in `shared/`
 
@@ -170,9 +170,9 @@ Hash-based (`location.hash`), no router library. Consumers maintain an allowlist
 ## Build, serve, and deploy
 
 - **Dev**: each consumer's `npm run dev` (Vite) on its own port. `vite.config.js` proxies the bridge's API path prefix (`/v1` for portal, `/admin` for admin) to the local bridge port.
-- **Build**: `vite build` per consumer outputs to `bridge-ui/<consumer>/dist/`. The top-level `npm run build` chains: `tsc && (cd bridge-ui/portal && npm ci && npm run build) && (cd bridge-ui/admin && npm ci && npm run build)`.
+- **Build**: `vite build` per consumer outputs to `frontend/<consumer>/dist/`. The top-level `npm run build` chains: `tsc && (cd frontend/portal && npm ci && npm run build) && (cd frontend/admin && npm ci && npm run build)`.
 - **Serve**: each consumer is mounted by `@fastify/static` on the customer Fastify instance at its base path (`/portal/`, `/admin/console/`). Hash routing means only `index.html` needs SPA fallback.
-- **Docker**: multi-stage Dockerfile — UI build stage runs each consumer's build, runtime stage copies the `dist/` outputs into `/app/bridge-ui/<consumer>/dist/`.
+- **Docker**: multi-stage Dockerfile — UI build stage runs each consumer's build, runtime stage copies the `dist/` outputs into `/app/frontend/<consumer>/dist/`.
 
 ## Testing
 
@@ -184,5 +184,5 @@ Hash-based (`location.hash`), no router library. Consumers maintain an allowlist
 
 ## Lint and convention enforcement
 
-- `bridge-ui/<consumer>/lib/` may not redefine anything that exists in `bridge-ui/shared/lib/`. Enforced by `npm run doc-lint` with a name-matched check.
-- The bridge's `layer-check` lint rule remains enforced in `src/`; `bridge-ui/` is outside its scope (no `src/` layer rule applies because `bridge-ui/` is sibling, not nested).
+- `frontend/<consumer>/lib/` may not redefine anything that exists in `frontend/shared/lib/`. Enforced by `npm run doc-lint` with a name-matched check.
+- The bridge's `layer-check` lint rule remains enforced in `src/`; `frontend/` is outside its scope (no `src/` layer rule applies because `frontend/` is sibling, not nested).

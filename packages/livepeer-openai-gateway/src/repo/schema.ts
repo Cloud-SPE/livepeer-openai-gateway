@@ -122,6 +122,37 @@ export const adminAuditEvents = appSchema.table(
   }),
 );
 
+export const idempotencyState = pgEnum('idempotency_state', ['pending', 'completed']);
+export const idempotencyEncoding = pgEnum('idempotency_encoding', ['utf8', 'base64']);
+
+export const idempotencyRequests = appSchema.table(
+  'idempotency_requests',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    customerId: uuid('customer_id')
+      .notNull()
+      .references(() => customers.id),
+    idempotencyKey: text('idempotency_key').notNull(),
+    requestMethod: text('request_method').notNull(),
+    requestPath: text('request_path').notNull(),
+    requestHash: text('request_hash').notNull(),
+    state: idempotencyState('state').notNull().default('pending'),
+    responseStatusCode: integer('response_status_code'),
+    responseContentType: text('response_content_type'),
+    responseEncoding: idempotencyEncoding('response_encoding'),
+    responseBody: text('response_body'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+  },
+  (t) => ({
+    byCustomerAndKey: uniqueIndex('idempotency_requests_customer_key_uniq').on(
+      t.customerId,
+      t.idempotencyKey,
+    ),
+    byCreatedAt: index('idempotency_requests_created_at_idx').on(t.createdAt),
+  }),
+);
+
 // ── Rate-card tables (per exec-plan 0030) ───────────────────────────────────
 //
 // Operator-managed pricing. Each capability has its own table with an
@@ -227,6 +258,61 @@ export const rateCardTranscriptions = appSchema.table(
   }),
 );
 
+// ── Shell-native retail pricing (v3.0.1 prep) ──────────────────────────────
+//
+// These tables are the shell-owned pricing source of truth for the new
+// `(capability, offering, customer_tier)` model. While the installed
+// engine still consumes the legacy rate-card snapshot, the pricing
+// service synthesizes that older shape from the `prepaid` view here.
+
+export const retailPriceCatalog = appSchema.table(
+  'retail_price_catalog',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    capability: text('capability').notNull(),
+    offering: text('offering').notNull(),
+    customerTier: text('customer_tier').notNull(),
+    priceKind: text('price_kind').notNull().default('default'),
+    unit: text('unit').notNull(),
+    usdPerUnit: numeric('usd_per_unit', { precision: 20, scale: 8 }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    uniq: uniqueIndex('retail_price_catalog_uniq').on(
+      t.capability,
+      t.offering,
+      t.customerTier,
+      t.priceKind,
+    ),
+  }),
+);
+
+export const retailPriceAliases = appSchema.table(
+  'retail_price_aliases',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    capability: text('capability').notNull(),
+    modelOrPattern: text('model_or_pattern').notNull(),
+    isPattern: boolean('is_pattern').notNull(),
+    offering: text('offering').notNull(),
+    size: text('size').notNull().default(''),
+    quality: text('quality').notNull().default(''),
+    sortOrder: integer('sort_order').notNull().default(100),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    uniq: uniqueIndex('retail_price_aliases_uniq').on(
+      t.capability,
+      t.modelOrPattern,
+      t.isPattern,
+      t.size,
+      t.quality,
+    ),
+  }),
+);
+
 export const schema = {
   customers,
   apiKeys,
@@ -234,15 +320,20 @@ export const schema = {
   topups,
   stripeWebhookEvents,
   adminAuditEvents,
+  idempotencyRequests,
   rateCardChatTiers,
   rateCardChatModels,
   rateCardEmbeddings,
   rateCardImages,
   rateCardSpeech,
   rateCardTranscriptions,
+  retailPriceCatalog,
+  retailPriceAliases,
   customerTier,
   customerStatus,
   topupStatus,
   reservationState,
   reservationKind,
+  idempotencyState,
+  idempotencyEncoding,
 };

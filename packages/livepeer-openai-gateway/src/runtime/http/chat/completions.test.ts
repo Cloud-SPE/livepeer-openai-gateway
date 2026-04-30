@@ -12,6 +12,7 @@ import * as apiKeysRepo from '../../../repo/apiKeys.js';
 import { createAuthService, issueKey } from '../../../service/auth/index.js';
 import { createAuthResolver } from '../../../service/auth/authResolver.js';
 import { createPrepaidQuotaWallet } from '../../../service/billing/wallet.js';
+import { idempotencyOnSend, idempotencyPreHandler } from '../middleware/idempotency.js';
 import { createFakeServiceRegistry } from '@cloudspe/livepeer-openai-gateway-core/providers/serviceRegistry/fake.js';
 import { createQuoteRefresher } from '@cloudspe/livepeer-openai-gateway-core/service/routing/quoteRefresher.js';
 import { CircuitBreaker } from '@cloudspe/livepeer-openai-gateway-core/service/routing/circuitBreaker.js';
@@ -244,6 +245,8 @@ async function startBridge(opts: {
     config: { pepper, envPrefix: 'test', cacheTtlMs: 60_000 },
   });
   const server = await createFastifyServer({ logger: false });
+  server.app.addHook('preHandler', idempotencyPreHandler({ db: pg.db, authService }));
+  server.app.addHook('onSend', idempotencyOnSend({ db: pg.db, authService }));
   registerChatCompletionsRoute(server.app, {
     db: pg.db,
     serviceRegistry,
@@ -279,7 +282,7 @@ afterAll(async () => {
 });
 beforeEach(async () => {
   await pg.db.execute(
-    sql`TRUNCATE TABLE app.api_keys, app.reservations, engine.usage_records, app.topups, engine.node_health_events, engine.node_health, app.customers CASCADE`,
+    sql`TRUNCATE TABLE app.api_keys, app.idempotency_requests, app.reservations, engine.usage_records, app.topups, engine.node_health_events, engine.node_health, app.customers CASCADE`,
   );
 });
 
@@ -445,6 +448,147 @@ describe('/v1/chat/completions (non-streaming, end-to-end)', () => {
         }),
       });
       expect(res.status).toBe(401);
+    } finally {
+      await bridge.stop();
+    }
+  });
+
+  it('replays the cached response for a duplicate Idempotency-Key and does not double-charge', async () => {
+    const bridge = await startBridge({ customerTier: 'prepaid', balanceCents: 10_000n });
+    try {
+      const headers = {
+        'content-type': 'application/json',
+        authorization: `Bearer ${bridge.apiKey}`,
+        'idempotency-key': 'idem-chat-1',
+      };
+      const body = JSON.stringify({
+        model: 'model-small',
+        messages: [{ role: 'user', content: 'hi' }],
+        max_tokens: 100,
+      });
+
+      const first = await fetch(`${bridge.url}/v1/chat/completions`, {
+        method: 'POST',
+        headers,
+        body,
+      });
+      expect(first.status).toBe(200);
+      const firstJson = await first.json();
+
+      const afterFirst = await customersRepo.findById(pg.db, bridge.customerId);
+      const firstBalance = afterFirst!.balanceUsdCents;
+
+      const second = await fetch(`${bridge.url}/v1/chat/completions`, {
+        method: 'POST',
+        headers,
+        body,
+      });
+      expect(second.status).toBe(200);
+      expect(second.headers.get('Idempotency-Replayed')).toBe('true');
+      const secondJson = await second.json();
+      expect(secondJson).toEqual(firstJson);
+
+      const afterSecond = await customersRepo.findById(pg.db, bridge.customerId);
+      expect(afterSecond!.balanceUsdCents).toBe(firstBalance);
+      expect(afterSecond!.reservedUsdCents).toBe(0n);
+
+      const usage = await pg.db.execute(
+        sql`SELECT count(*)::int AS count FROM engine.usage_records WHERE caller_id = ${bridge.customerId}`,
+      );
+      expect((usage.rows[0] as { count: number }).count).toBe(1);
+    } finally {
+      await bridge.stop();
+    }
+  });
+
+  it('rejects reuse of an Idempotency-Key with a different payload', async () => {
+    const bridge = await startBridge({ customerTier: 'prepaid', balanceCents: 10_000n });
+    try {
+      const headers = {
+        'content-type': 'application/json',
+        authorization: `Bearer ${bridge.apiKey}`,
+        'idempotency-key': 'idem-chat-2',
+      };
+
+      const first = await fetch(`${bridge.url}/v1/chat/completions`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          model: 'model-small',
+          messages: [{ role: 'user', content: 'hi' }],
+        }),
+      });
+      expect(first.status).toBe(200);
+
+      const second = await fetch(`${bridge.url}/v1/chat/completions`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          model: 'model-small',
+          messages: [{ role: 'user', content: 'different' }],
+        }),
+      });
+      expect(second.status).toBe(409);
+      const body = (await second.json()) as { error: { code: string } };
+      expect(body.error.code).toBe('idempotency_key_reused');
+    } finally {
+      await bridge.stop();
+    }
+  });
+
+  it('does not cache a 503 response, allowing a later retry with the same Idempotency-Key', async () => {
+    const bridge = await startBridge({ customerTier: 'prepaid', balanceCents: 10_000n });
+    try {
+      bridge.state.worker.setChatMode('fail-500');
+      const headers = {
+        'content-type': 'application/json',
+        authorization: `Bearer ${bridge.apiKey}`,
+        'idempotency-key': 'idem-chat-3',
+      };
+      const body = JSON.stringify({
+        model: 'model-small',
+        messages: [{ role: 'user', content: 'hi' }],
+      });
+
+      const first = await fetch(`${bridge.url}/v1/chat/completions`, {
+        method: 'POST',
+        headers,
+        body,
+      });
+      expect(first.status).toBe(503);
+
+      bridge.state.worker.setChatMode('ok');
+      const second = await fetch(`${bridge.url}/v1/chat/completions`, {
+        method: 'POST',
+        headers,
+        body,
+      });
+      expect(second.status).toBe(200);
+      expect(second.headers.get('Idempotency-Replayed')).toBeNull();
+    } finally {
+      await bridge.stop();
+    }
+  });
+
+  it('rejects Idempotency-Key on streaming chat completions for now', async () => {
+    const bridge = await startBridge({ customerTier: 'prepaid', balanceCents: 10_000n });
+    try {
+      const res = await fetch(`${bridge.url}/v1/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${bridge.apiKey}`,
+          'idempotency-key': 'idem-chat-stream',
+        },
+        body: JSON.stringify({
+          model: 'model-small',
+          stream: true,
+          messages: [{ role: 'user', content: 'hi' }],
+        }),
+      });
+      expect(res.status).toBe(400);
+      const body = (await res.json()) as { error: { code: string } };
+      expect(body.error.code).toBe('idempotency_unsupported');
     } finally {
       await bridge.stop();
     }

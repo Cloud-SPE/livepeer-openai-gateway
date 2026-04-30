@@ -37,6 +37,7 @@ import { registerAdminConsoleStatic } from './runtime/http/admin/console/static.
 import { registerAdminRoutes } from './runtime/http/admin/routes.js';
 import { registerAdminPricingRoutes } from './runtime/http/admin/pricing.js';
 import { registerTopupRoute } from './runtime/http/billing/topup.js';
+import { idempotencyOnSend, idempotencyPreHandler } from './runtime/http/middleware/idempotency.js';
 import { registerPortalStatic } from './runtime/http/portal/static.js';
 import { registerChatCompletionsRoute } from '@cloudspe/livepeer-openai-gateway-core/runtime/http/chat/completions.js';
 import { registerEmbeddingsRoute } from '@cloudspe/livepeer-openai-gateway-core/runtime/http/embeddings/index.js';
@@ -263,6 +264,8 @@ async function main(): Promise<void> {
     server.app.addHook('onRequest', hooks.onRequest);
     server.app.addHook('onResponse', hooks.onResponse);
   }
+  server.app.addHook('preHandler', idempotencyPreHandler({ db, authService }));
+  server.app.addHook('onSend', idempotencyOnSend({ db, authService }));
   registerHealthzRoute(server.app);
   registerChatCompletionsRoute(server.app, {
     db,

@@ -4,7 +4,7 @@ import type { FastifyInstance } from 'fastify';
 import fastifyStatic from '@fastify/static';
 
 export interface AdminConsoleStaticOptions {
-  /** Filesystem path to bridge-ui/admin/dist. */
+  /** Filesystem path to frontend/admin/dist. */
   rootDir?: string;
   /** URL prefix the admin console is mounted at. */
   prefix?: string;
@@ -19,7 +19,7 @@ export async function registerAdminConsoleStatic(
   app: FastifyInstance,
   options: AdminConsoleStaticOptions = {},
 ): Promise<void> {
-  const rootDir = options.rootDir ?? resolve(process.cwd(), 'bridge-ui/admin/dist');
+  const rootDir = options.rootDir ?? resolve(process.cwd(), 'frontend/admin/dist');
   const prefix = options.prefix ?? '/admin/console/';
 
   if (!existsSync(rootDir)) {

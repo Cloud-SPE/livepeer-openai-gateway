@@ -3,7 +3,7 @@
 // Boots the bridge with TestPg + mocks on a real port, builds (or reuses) the
 // portal SPA, and drives a real Chromium via Playwright through the sign-in
 // flow + create-key flow + sign-out. The cleartext key is asserted to render
-// exactly once. The test SKIPS gracefully if `bridge-ui/portal/dist/` is
+// exactly once. The test SKIPS gracefully if `frontend/portal/dist/` is
 // missing (fresh checkouts haven't built the UI yet) so server-only test
 // runs aren't blocked.
 //
@@ -29,7 +29,7 @@ import { createFastifyServer } from '@cloudspe/livepeer-openai-gateway-core/prov
 import { registerAccountRoutes } from '../account/routes.js';
 import { registerPortalStatic } from './static.js';
 
-const PORTAL_DIST = resolve(process.cwd(), 'bridge-ui/portal/dist');
+const PORTAL_DIST = resolve(process.cwd(), 'frontend/portal/dist');
 const HAS_DIST = existsSync(PORTAL_DIST);
 
 const pepper = 'e2e-portal-pepper-0123456789ab';

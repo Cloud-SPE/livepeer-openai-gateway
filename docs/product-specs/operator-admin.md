@@ -6,7 +6,7 @@ last-reviewed: 2026-04-26
 
 # Operator admin console
 
-Operator-facing web app served at `/admin/console/*`. Authenticated by `X-Admin-Token` (existing) plus an optional `X-Admin-Actor` operator handle (new — see [`admin-endpoints.md`](./admin-endpoints.md)). Built from `bridge-ui/admin/`; consumes `/admin/*` JSON.
+Operator-facing web app served at `/admin/console/*`. Authenticated by `X-Admin-Token` (existing) plus an optional `X-Admin-Actor` operator handle (new — see [`admin-endpoints.md`](./admin-endpoints.md)). Built from `frontend/admin/`; consumes `/admin/*` JSON.
 
 This spec is the canonical UX contract for the console. For the JSON surface it consumes, see [`admin-endpoints.md`](./admin-endpoints.md). For the build/runtime stack (Lit + RxJS + modern CSS, light DOM, npm workspaces), see [`ui-architecture.md`](../design-docs/ui-architecture.md).
 

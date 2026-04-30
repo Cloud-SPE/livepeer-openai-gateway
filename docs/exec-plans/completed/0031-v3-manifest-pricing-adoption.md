@@ -2,10 +2,11 @@
 id: 0031
 slug: v3-manifest-pricing-adoption
 title: v3.0.0 — proto regen, offerings rename, manifest-priced wholesale (Postgres rate-card → manifest read)
-status: active
+status: completed
 owner: agent
 opened: 2026-04-29
 depends-on: livepeer-network-suite plan 0003 §G (livepeer-openai-gateway row)
+closed: 2026-04-30
 ---
 
 ## Goal
@@ -60,16 +61,14 @@ What's actually needed in this repo for v3 alignment:
       `offering` on the wire. No bridge code change required.
 - [x] Customer-facing USD rate card — explicitly kept untouched, by
       design.
-- [ ] Bump `@cloudspe/livepeer-openai-gateway-core` dep from `^0.2.0`
-      to `^3.0.0` in `packages/livepeer-openai-gateway/package.json`
-      once gateway-core is published to the `@cloudspe` npm scope
-      (operator-driven; requires npm credentials).
-- [ ] Until npm publish lands, the bridge keeps consuming v0.2.0 from
-      the registry — and continues to pass all 264 tests because the
-      gateway-core v3 consumer API is wire-compatible with v0.2.0
-      (verified via `npm test --workspace=livepeer-openai-gateway`
-      2026-04-29).
-- [ ] After the dep bump, tag this repo `v3.0.0`.
+- [x] Bump `@cloudspe/livepeer-openai-gateway-core` dep from `^0.2.0`
+      to `^3.0.0` in `packages/livepeer-openai-gateway/package.json`.
+- [x] Consume the published `@cloudspe/livepeer-openai-gateway-core`
+      `3.0.0` artifact in `package-lock.json`.
+- [x] Carve the deeper v3.0.1 runtime-protocol rewrite into a follow-on
+      exec-plan (`0032-v3-0-1-shell-realignment.md`) because it depends
+      on coordinated upstream engine/modules changes rather than further
+      shell-only edits.
 
 ## Postgres wholesale rate card (was: §Approach.4) — STRUCK
 
@@ -82,6 +81,15 @@ which reads `price_per_work_unit_wei` directly from each worker's
 pricing adoption."
 
 ## Decisions log
+
+### 2026-04-30 — Complete 0031 as the dependency-pin alignment step
+
+Reason: the scope originally mixed two different concerns: the shell's
+adoption of the published engine v3 package, and the broader suite's
+later v3.0.1 runtime protocol rewrite (no `/quote`, `offering`
+semantics, gateway-computed `face_value`). The first is done in this
+repo; the second is tracked separately in exec-plan 0032 because it
+crosses the external engine/modules boundary.
 
 ## Open questions
 

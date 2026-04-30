@@ -6,7 +6,8 @@ last-reviewed: 2026-04-25
 
 # PayerDaemon integration
 
-How the bridge talks to `livepeer-payment-library`'s PayerDaemon sidecar to acquire signed payment blobs for WorkerNode requests.
+How the bridge talks to the `payment-daemon` sidecar from `livepeer-modules`
+to acquire signed payment blobs for WorkerNode requests.
 
 ## Topology
 
@@ -29,7 +30,7 @@ How the bridge talks to `livepeer-payment-library`'s PayerDaemon sidecar to acqu
 
 ## Proto source
 
-- Proto lives in the sibling repo `../livepeer-payment-library/proto/`.
+- Proto lives in the sibling repo `../livepeer-modules/payment-daemon/proto/`.
 - `npm run proto:gen` runs `buf generate` with `ts-proto`; output lives under `src/providers/payerDaemon/gen/` and is committed.
 - Regenerate explicitly when the library's `livepeer.payments.v1` proto changes. The generated folder is excluded from coverage (`vitest.config.ts`).
 
@@ -58,7 +59,7 @@ All inputs and outputs use domain types (`bigint`, `0x`-prefixed hex strings). P
 
 In practice: `service/payments/sessions.ts::createSessionCache.getOrStart` reads `quote.priceInfo` (already populated by `wireQuoteToDomain`) and passes `{pricePerUnit: quote.priceInfo.pricePerUnitWei, pixelsPerUnit: quote.priceInfo.pixelsPerUnit}` on every `startSession` call. There is currently no bridge-side affordance for "free / bootstrap" sessions; the daemon expects the canonical-zero `{0, 1}` to indicate that and the bridge always passes a real price (the worker.yaml's `price_per_work_unit_wei` is the source). Tracked library-side as `bootstrap-session-explicit-price`.
 
-Cross-reference: [livepeer-payment-library wire-compat.md](https://github.com/Cloud-SPE/livepeer-modules/blob/main/payment-daemon/docs/design-docs/wire-compat.md#startsessionrequestprice_info-is-required-on-every-non-bootstrap-session) and [redemption-loop.md "Ticket recipientRand derivation"](https://github.com/Cloud-SPE/livepeer-modules/blob/main/payment-daemon/docs/design-docs/redemption-loop.md#ticket-recipientrand-derivation).
+Cross-reference: [payment-daemon wire-compat.md](https://github.com/Cloud-SPE/livepeer-modules/blob/main/payment-daemon/docs/design-docs/wire-compat.md#startsessionrequestprice_info-is-required-on-every-non-bootstrap-session) and [redemption-loop.md "Ticket recipientRand derivation"](https://github.com/Cloud-SPE/livepeer-modules/blob/main/payment-daemon/docs/design-docs/redemption-loop.md#ticket-recipientrand-derivation).
 
 ## Converters
 
@@ -115,5 +116,5 @@ No state is persisted across bridge restarts. Fresh process = fresh session name
 ## What this doc does NOT cover
 
 - How `service/payments.createPaymentForRequest` is stitched into the customer request flow. That's 0007 (non-streaming) and 0008 (streaming).
-- The daemon's own lifecycle (binary deployment, keystore passphrase, escrow funding). See `livepeer-payment-library/docs/`.
+- The daemon's own lifecycle (binary deployment, keystore passphrase, escrow funding). See `livepeer-modules/payment-daemon/docs/`.
 - Reconciliation between CustomerLedger USD, PayerDaemon off-chain EV, and TicketBroker on-chain ETH. A separate design-doc (`reconciliation.md`) will cover this when reconciliation surfaces land.

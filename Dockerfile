@@ -13,21 +13,21 @@ COPY packages/livepeer-openai-gateway/package.json ./packages/livepeer-openai-ga
 RUN npm ci --ignore-scripts
 
 # ------------------------------------------------------------------------------
-# ui: build the bridge-ui workspace members (portal, admin) in one stage. The
-# bridge-ui workspace root hoists lit + rxjs so shared and consumers resolve a
+# ui: build the frontend workspace members (portal, admin) in one stage. The
+# frontend workspace root hoists lit + rxjs so shared and consumers resolve a
 # single instance. devDeps stay in this stage; only dist/ outputs ship to
 # runtime.
 # ------------------------------------------------------------------------------
 FROM node:20-alpine AS ui
 WORKDIR /ui
-COPY bridge-ui/package.json bridge-ui/package-lock.json* ./
-COPY bridge-ui/shared/package.json ./shared/
-COPY bridge-ui/portal/package.json ./portal/
-COPY bridge-ui/admin/package.json ./admin/
+COPY frontend/package.json frontend/package-lock.json* ./
+COPY frontend/shared/package.json ./shared/
+COPY frontend/portal/package.json ./portal/
+COPY frontend/admin/package.json ./admin/
 RUN npm ci --workspaces --include-workspace-root
-COPY bridge-ui/shared ./shared
-COPY bridge-ui/portal ./portal
-COPY bridge-ui/admin ./admin
+COPY frontend/shared ./shared
+COPY frontend/portal ./portal
+COPY frontend/admin ./admin
 RUN npm run build:all
 
 # ------------------------------------------------------------------------------
@@ -57,8 +57,8 @@ COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/packages/livepeer-openai-gateway/package.json ./packages/livepeer-openai-gateway/package.json
 COPY --from=build /app/packages/livepeer-openai-gateway/dist ./packages/livepeer-openai-gateway/dist
 COPY --from=build /app/packages/livepeer-openai-gateway/migrations ./packages/livepeer-openai-gateway/migrations
-COPY --from=ui /ui/portal/dist ./bridge-ui/portal/dist
-COPY --from=ui /ui/admin/dist ./bridge-ui/admin/dist
+COPY --from=ui /ui/portal/dist ./frontend/portal/dist
+COPY --from=ui /ui/admin/dist ./frontend/admin/dist
 EXPOSE 8080
 # Distroless images run as `nonroot` by default (uid 65532).
 CMD ["packages/livepeer-openai-gateway/dist/main.js"]
