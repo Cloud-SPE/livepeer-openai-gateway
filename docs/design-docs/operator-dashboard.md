@@ -62,7 +62,8 @@ engine-extraction-interfaces). Two reference impls ship in this repo:
   `BRIDGE_OPS_USER` / `BRIDGE_OPS_PASS` env vars. For solo / small
   operators without a token-issuing shell.
 - `createAdminAuthResolver({config: AdminConfig})` — wraps the existing
-  shell-side `X-Admin-Token` + `X-Admin-Actor` scheme. Production path.
+  shell-side bearer-admin-auth scheme plus optional `X-Admin-Actor`
+  attribution. Production path.
 
 When `resolve()` returns null, the dashboard sends 401 with a
 `WWW-Authenticate: Basic realm="..."` header so browsers re-prompt.

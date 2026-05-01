@@ -2,7 +2,12 @@
 
 > **Purpose.** This document specifies the HTTP contract every WorkerNode must meet to be admitted to the bridge's node pool. It is the source of truth when the bridge validates a node's response; contract violations fail the request with `503 service_unavailable` and refund the customer.
 >
-> **Scope.** OpenAI-compatible inference endpoints served by the node. The payment-layer contract (TicketParams, PriceInfo, `/quote`) is defined in `docs/references/openai-bridge-architecture.md` and the payments-abstraction doc; this document covers only the inference surface.
+> **Scope.** OpenAI-compatible inference endpoints served by the node.
+> Under the suite v3.0.1 contract, worker pricing is **not** a live
+> HTTP surface: worker `/capabilities`, `/quote`, and `/quotes` are
+> deleted. Route selection and pricing happen upstream through the
+> resolver plus gateway-computed payment. This document covers only the
+> inference surface.
 >
 > **Why the contract is authoritative.** The bridge is a thin router. It does not post-process responses, re-tokenize outputs, truncate vectors, or convert encodings. OpenAI-compatibility is owned by the node. A node that cannot meet a capability's obligations must not advertise that capability in the operator-curated overlay (post-engine-extraction: the service-registry-daemon's static-overlay YAML; pre-stage-3 this was the bridge's local `nodes.yaml`).
 

@@ -1,7 +1,7 @@
 ---
 title: Architecture
 status: accepted
-last-reviewed: 2026-04-26
+last-reviewed: 2026-05-01
 ---
 
 # Architecture
@@ -137,7 +137,7 @@ Per exec-plan 0024 (engine-extraction-interfaces), the engine exposes five adapt
 | `AuthResolver`      | Resolve an inbound HTTP request to a `Caller {id, tier, metadata?}` or null                                  | `createAuthResolver` in `src/service/auth/authResolver.ts` — wraps the existing AuthService                       |
 | `RateLimiter`       | Per-caller rate-limit policy enforcement (optional, opt-in at route registration)                            | `createRateLimiter` in `src/service/rateLimit/index.ts` — Redis sliding-window + concurrent-request semaphore     |
 | `Logger`            | `info` / `warn` / `error` structured log                                                                     | `createConsoleLogger` in `src/providers/logger/console.ts`                                                        |
-| `AdminAuthResolver` | Hook for the engine's optional read-only operator dashboard (lands in stage 2)                               | `createAdminAuthResolver` in `src/service/admin/authResolver.ts` — X-Admin-Token + X-Admin-Actor + IP allowlist   |
+| `AdminAuthResolver` | Hook for the engine's optional read-only operator dashboard (lands in stage 2)                               | `createAdminAuthResolver` in `src/service/admin/authResolver.ts` — bearer admin auth + optional `X-Admin-Actor` + IP allowlist   |
 
 A generic `Caller {id, tier, metadata?}` is the engine's view of "who's calling." `metadata` is operator-defined and opaque to the engine; shell-side route handlers narrow via `caller.metadata as AuthenticatedCaller` to reach the customer row, API key, or other shell-specific fields.
 

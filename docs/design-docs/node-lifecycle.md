@@ -1,7 +1,7 @@
 ---
-title: Node lifecycle (registry-daemon, QuoteRefresher, health + circuit breaker)
+title: Node lifecycle (registry-daemon, current pinned runtime, and v3 target)
 status: accepted
-last-reviewed: 2026-04-28
+last-reviewed: 2026-05-01
 ---
 
 # Node lifecycle
@@ -31,6 +31,23 @@ How WorkerNodes enter, run in, and leave the bridge's routing pool.
 > bridge-side config; that section is preserved below for historical
 > context but does not reflect today's routing.
 
+## Historical pinned-runtime note
+
+The sections below describe the shell's older, still-pinned engine
+behavior for quote refresh and worker probing. They do **not** describe
+the suite v3.0.1 worker contract.
+
+Under the suite v3.0.1 contract:
+
+- worker `/capabilities`, `/quote`, and `/quotes` are deleted
+- the bridge selects a route via `Resolver.Select(...)`
+- the gateway computes `face_value`
+- the worker is price-blind and validates only the attached payment
+
+The historical material is preserved here only to explain the currently
+installed runtime path while this repo still consumes the older engine
+package.
+
 ## (Historical) Source of truth: `nodes.yaml`
 
 Config-driven allowlist. The file path is passed to the bridge process; SIGHUP triggers a safe reload. Shape (Appendix B of `docs/references/openai-bridge-architecture.md`, extended with per-node knobs):
@@ -38,7 +55,7 @@ Config-driven allowlist. The file path is passed to the bridge process; SIGHUP t
 ```yaml
 nodes:
   - id: node-a # stable logical id; also the node_health PK
-    url: https://node-a.example.com # base URL for /health, /capabilities, /quote, /quotes
+    url: https://node-a.example.com # historical pinned-runtime base URL for /health plus legacy worker quote endpoints
     ethAddress: '0xabcd...' # Ethereum address the node receives tickets at
     supportedModels: ['gpt-4o-mini', 'text-embedding-3-small']
     capabilities: ['chat', 'embeddings'] # 0017+; defaults to ['chat'] if omitted
@@ -56,11 +73,14 @@ nodes:
 
 Validation happens through Zod (`NodeConfigSchema` + the per-node knob extensions). Any parse error rejects the whole reload — partial state is never applied.
 
-Bridge-level config (separate from `nodes.yaml`):
+Bridge-level config (separate from `nodes.yaml`, historical pinned path):
 
-- `BRIDGE_ETH_ADDRESS` — the bridge's sender address as configured in the local payer-daemon's keystore. Used as the `?sender=` query param on `/quote` and `/quotes` calls so the worker can return ticket params bound to this payer. See exec-plan 0018.
+- `BRIDGE_ETH_ADDRESS` — the bridge's sender address as configured in
+  the local payer-daemon's keystore. In the historical pinned runtime
+  it was forwarded to legacy worker quote endpoints so ticket params
+  were bound to this payer. See exec-plan 0018.
 
-## Worker HTTP contract (post-0018)
+## Historical worker HTTP contract (pinned runtime only)
 
 The bridge probes four worker endpoints. All emit snake_case JSON; byte-typed fields use `0x`-prefixed hex strings so `BigInt('0x…')` is the canonical decoder. Wei fields use decimal strings.
 
@@ -86,7 +106,7 @@ GET /health
 - `degraded` — node is reachable but self-reports reduced capacity. Router still considers it healthy for admission; operators should monitor the `degraded` count. A dedicated degraded→broken escalation policy is future work.
 - Anything else (non-2xx, body fails the schema, timeout) — treated as a failure; counts against the circuit breaker.
 
-### `/capabilities`
+### Historical `/capabilities`
 
 ```
 GET /capabilities
@@ -105,9 +125,10 @@ GET /capabilities
 }
 ```
 
-Discovery surface. Pre-0020 the bridge consumed this only at config-validation time; post-0020 the refresher cross-checks declared `capabilities` in `nodes.yaml` against what the worker actually advertises and logs a warn on mismatch.
+Discovery surface for the pinned pre-v3 worker path only. This endpoint
+is deleted from the suite v3.0.1 worker contract.
 
-### `/quote?sender=&capability=`
+### Historical `/quote?sender=&capability=`
 
 ```
 GET /quote?sender=0x...&capability=openai:/v1/chat/completions
@@ -131,9 +152,11 @@ GET /quote?sender=0x...&capability=openai:/v1/chat/completions
 }
 ```
 
-Validated by `NodeQuoteResponseSchema` in `src/providers/nodeClient.ts`. The wire shape is projected to the domain-level `Quote` type from `src/types/node.ts`, which carries `ticketParams` plus a `modelPrices: Map<string, bigint>` keyed by model name.
+Validated by `NodeQuoteResponseSchema` in `src/providers/nodeClient.ts`
+for the currently pinned runtime only. This endpoint is deleted from
+the suite v3.0.1 worker contract.
 
-### `/quotes?sender=`
+### Historical `/quotes?sender=`
 
 ```
 GET /quotes?sender=0x...
@@ -148,9 +171,12 @@ GET /quotes?sender=0x...
 }
 ```
 
-Batched form used by `quoteRefresher` since 0018: one round-trip pulls every capability the worker is configured to serve. The refresher splits the response and calls `NodeBook.setAllQuotes(nodeId, perCapability)`.
+Batched form used by `quoteRefresher` in the currently pinned runtime
+only. This endpoint is deleted from the suite v3.0.1 worker contract.
 
-Health probes run on the same cadence as quote refresh (one `/health` and one `/quotes` per node per `quoteRefreshSeconds`), with separate timeouts for each endpoint.
+In the historical pinned runtime, health probes ran on the same cadence
+as quote refresh (one `/health` and one `/quotes` per node per
+`quoteRefreshSeconds`), with separate timeouts for each endpoint.
 
 ## In-memory storage: `NodeEntry.quotes`
 

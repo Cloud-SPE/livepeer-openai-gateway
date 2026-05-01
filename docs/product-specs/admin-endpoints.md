@@ -1,7 +1,7 @@
 ---
 title: Admin / ops endpoints
 status: accepted
-last-reviewed: 2026-04-26
+last-reviewed: 2026-05-01
 ---
 
 # Admin endpoints
@@ -12,7 +12,7 @@ Operator-only surface for inspecting bridge state and performing manual interven
 
 |                 |                                                                         |
 | --------------- | ----------------------------------------------------------------------- |
-| Header          | `X-Admin-Token: <ADMIN_TOKEN>`                                          |
+| Header          | `Authorization: Bearer <ADMIN_TOKEN>`                                   |
 | Compare         | `timingSafeEqual` on `sha256(token)` bytes                              |
 | IP allowlist    | `ADMIN_IP_ALLOWLIST` env (comma-separated exact IPs; empty = allow all) |
 | Operator handle | `X-Admin-Actor: <handle>` — optional, validated `^[a-z0-9._-]{1,64}$`   |
@@ -24,7 +24,11 @@ The token is **never** logged in plaintext.
 
 The audit `actor` column has historically held the first 16 hex chars of `sha256(token)` — fine for "who did this" when there's one operator, opaque when there are many. The optional `X-Admin-Actor` header replaces that with a human handle (`alice`, `bob.k`) when present and well-formed; otherwise the token-hash fallback applies.
 
-This is **attribution, not authentication.** There is still one shared `ADMIN_TOKEN`; anyone with it can claim any handle. Per-operator tokens + RBAC are Phase 2. The validation regex `^[a-z0-9._-]{1,64}$` is bounded free-text — keeps the column searchable and prevents injection without inviting unbounded growth.
+This is **attribution, not authentication.** There is still one shared
+bearer `ADMIN_TOKEN`; anyone with it can claim any handle. Per-operator
+tokens + RBAC are Phase 2. The validation regex
+`^[a-z0-9._-]{1,64}$` is bounded free-text — keeps the column
+searchable and prevents injection without inviting unbounded growth.
 
 The operator console captures the handle at sign-in and attaches it on every request.
 

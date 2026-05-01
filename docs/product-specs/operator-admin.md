@@ -1,12 +1,15 @@
 ---
 title: Operator admin console
 status: accepted
-last-reviewed: 2026-04-26
+last-reviewed: 2026-05-01
 ---
 
 # Operator admin console
 
-Operator-facing web app served at `/admin/console/*`. Authenticated by `X-Admin-Token` (existing) plus an optional `X-Admin-Actor` operator handle (new — see [`admin-endpoints.md`](./admin-endpoints.md)). Built from `frontend/admin/`; consumes `/admin/*` JSON.
+Operator-facing web app served at `/admin/console/*`. Authenticated by
+`Authorization: Bearer <admin-token>` plus an optional `X-Admin-Actor`
+operator handle (see [`admin-endpoints.md`](./admin-endpoints.md)).
+Built from `frontend/admin/`; consumes `/admin/*` JSON.
 
 This spec is the canonical UX contract for the console. For the JSON surface it consumes, see [`admin-endpoints.md`](./admin-endpoints.md). For the build/runtime stack (Lit + RxJS + modern CSS, light DOM, npm workspaces), see [`ui-architecture.md`](../design-docs/ui-architecture.md).
 
@@ -15,7 +18,8 @@ This spec is the canonical UX contract for the console. For the JSON surface it 
 - A single shared `ADMIN_TOKEN`. Per-operator tokens + RBAC are Phase 2.
 - Operators identify themselves at sign-in via a free-text handle (`alice`, `bob.k`, validated `^[a-z0-9._-]{1,64}$`). The handle is **not** auth — anyone with the token can claim any handle. It is **attribution**: the audit log shows handles instead of opaque token-hashes.
 - Auth: paste token + handle → validated by `GET /admin/health` → stored under `sessionStorage["bridge.admin.session"]`. Tab-scoped — closing the tab signs out.
-- All requests carry `X-Admin-Token` and `X-Admin-Actor`. A 401 from any endpoint clears the session.
+- All requests carry `Authorization: Bearer <admin-token>` and may also
+  carry `X-Admin-Actor`. A 401 from any endpoint clears the session.
 
 ## Display rules
 

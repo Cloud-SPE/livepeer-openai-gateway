@@ -74,9 +74,16 @@ still uses. It is not the v3 target interface.
 
 ### Current shipped session bootstrap requires `priceInfo`
 
-`StartSessionInput` carries a REQUIRED `priceInfo` field — the per-capability `cap.maxPrice` the worker used at quote time, surfaced as the max in `/quote.model_prices` and projected onto `Quote.priceInfo` by `wireQuoteToDomain`. The bridge passes it as the matching `StartSessionRequest.price_info` (proto field 3); the sender daemon stamps it into `Payment.expected_price` for every subsequent `CreatePayment`. The receiver re-derives `recipientRand` from the price as part of its HMAC inputs, so the value MUST match the price the worker used to issue the `TicketParams` — anything else 402s with `validator: invalid recipientRand for recipientRandHash`.
+`StartSessionInput` carries a REQUIRED `priceInfo` field in the
+currently pinned runtime. That price came from the legacy worker quote
+path and was threaded into `StartSessionRequest.price_info`; the sender
+daemon then stamped it into `Payment.expected_price`. This is a
+compatibility-path detail only and is not part of the suite v3.0.1
+contract.
 
-In practice: `service/payments/sessions.ts::createSessionCache.getOrStart` reads `quote.priceInfo` (already populated by `wireQuoteToDomain`) and passes `{pricePerUnit: quote.priceInfo.pricePerUnitWei, pixelsPerUnit: quote.priceInfo.pixelsPerUnit}` on every `startSession` call. There is currently no bridge-side affordance for "free / bootstrap" sessions; the daemon expects the canonical-zero `{0, 1}` to indicate that and the bridge always passes a real price (the worker.yaml's `price_per_work_unit_wei` is the source). Tracked library-side as `bootstrap-session-explicit-price`.
+In practice, `service/payments/sessions.ts::createSessionCache.getOrStart`
+reads `quote.priceInfo` and passes it on every `startSession` call.
+Again, that is only the shell's pinned compatibility path.
 
 This section remains relevant only for the shell's currently pinned
 runtime path.
@@ -101,9 +108,16 @@ message CreatePaymentRequest {
 Operationally, the upstream sender daemon now:
 
 1. Accepts exact `face_value` plus `recipient`.
-2. Resolves the recipient worker URL through the local resolver.
-3. Fetches canonical ticket params from the payee-side ticket-params endpoint.
+2. Relies on the gateway having already selected one route via
+   `Resolver.Select(capability, offering, tier, min_weight)`.
+3. Resolves the recipient worker URL through the local resolver and
+   fetches canonical ticket params from the payee-side ticket-params
+   endpoint.
 4. Signs a one-ticket payment blob and returns it to the caller.
+
+Under that v3 flow, the worker is price-blind. Wholesale price comes
+from manifest/resolver selection, the gateway computes `face_value`, and
+the worker only validates the attached payment and reports actual usage.
 
 That means the old public `StartSession(...)` and `CloseSession(...)`
 contract is no longer the target architecture for this shell. The

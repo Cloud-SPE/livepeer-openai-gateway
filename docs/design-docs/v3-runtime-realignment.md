@@ -42,9 +42,10 @@ That is what the code in this repo currently wires in
 
 The updated suite spec requires the follow-on runtime contract below:
 
-1. Gateway calls `Resolver.Select(capability, offering, tier, geo, weight)`.
-2. Resolver returns the selected worker URL, orch eth address, work unit,
-   and manifest wholesale `price_per_work_unit_wei`.
+1. Gateway calls `Resolver.Select(capability, offering, tier, min_weight)`.
+2. Resolver returns one selected route with worker URL, orch eth
+   address, work unit, and manifest wholesale
+   `price_per_work_unit_wei`.
 3. Gateway computes `face_value` itself from wholesale price and the
    request's estimated max units.
 4. Gateway calls `payment-daemon` sender mode:

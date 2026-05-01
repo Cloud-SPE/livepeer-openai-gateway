@@ -149,7 +149,7 @@ npm run start
 | `POST` | `/v1/billing/topup`    | Create a Stripe Checkout Session. See [`topup-prepaid.md`](docs/product-specs/topup-prepaid.md).                                                                                |
 | `POST` | `/v1/stripe/webhook`   | Stripe webhook receiver (signature-verified, no auth header).                                                                                                                   |
 
-### Operator (`X-Admin-Token: <ADMIN_TOKEN>`)
+### Operator (`Authorization: Bearer <ADMIN_TOKEN>`)
 
 Full spec in [`docs/product-specs/admin-endpoints.md`](docs/product-specs/admin-endpoints.md):
 

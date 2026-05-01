@@ -46,8 +46,9 @@ cp .env.example .env
 $EDITOR .env   # fill every REQUIRED-* placeholder + CHAIN_RPC
 
 # Note: BRIDGE_ETH_ADDRESS must match the address derived from the
-# keystore you mount in step 2. The bridge sends it as ?sender= when
-# probing worker /quote + /quotes.
+# keystore you mount in step 2. In the currently pinned runtime it is
+# threaded into the legacy worker quote/session path; the suite v3.0.1
+# target flow removes worker quote probes entirely.
 
 # 2. Keystore (signer) + password
 cp /path/to/your-v3-keystore.json ./keystore.json
@@ -221,9 +222,9 @@ curl -s http://localhost:8080/healthz                       # → {"ok":true}
 curl -s http://localhost:8080/portal/                       # → SPA index.html
 curl -s http://localhost:8080/admin/console/                # → SPA index.html
 
-# Admin endpoints — token + actor are baked into compose.smoke.yaml
+# Admin endpoints — bearer token + optional actor are baked into compose.smoke.yaml
 TOKEN='smoke-admin-token-1234567890ABCDEFGHIJ'
-curl -s -H "X-Admin-Token: $TOKEN" -H 'X-Admin-Actor: smoke' \
+curl -s -H "Authorization: Bearer $TOKEN" -H 'X-Admin-Actor: smoke' \
   http://localhost:8080/admin/health | python3 -m json.tool
 ```
 
@@ -272,7 +273,7 @@ docker compose -f compose.smoke.yaml down --volumes
 | Image builds + boots                                              | `/v1/chat/completions`, `/v1/embeddings`, `/v1/images/*` etc. |
 | Auto-migration runs against an empty DB                           | Real Stripe Checkout (dummy keys 401 against Stripe's API)    |
 | Both UI `dist/`s ship inside the image and serve correctly        | Real payment issuance (needs daemon + worker node + reserve)  |
-| Auth gates: `Authorization: Bearer` + `X-Admin-Token`             |                                                               |
+| Auth gates: customer bearer auth + admin bearer auth             |                                                               |
 | `nodes.yaml` loads at startup; `/admin/nodes` reflects it         |                                                               |
 | USD-only formatting (cents → `$X.YZ`); never wei in customer view |                                                               |
 | 401 on missing/wrong auth                                         |                                                               |
