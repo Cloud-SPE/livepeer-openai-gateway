@@ -27,7 +27,7 @@ Non-negotiables that shape every decision in this repo.
 - [tiers.md](tiers.md) — `accepted` — Free vs Prepaid semantics, reserve/commit/refund, upgrade flow
 - [pricing-model.md](pricing-model.md) — `accepted` — rate card tiers, margin calculation, adjustment policy (covers chat tier-based + embeddings/images model-keyed; audio rate cards land with 0019)
 - [node-lifecycle.md](node-lifecycle.md) — `accepted` — NodeBook config, QuoteRefresher, per-capability quote storage, health/circuit-break, reload semantics
-- [payer-integration.md](payer-integration.md) — `accepted` — PayerDaemon gRPC client, session lifecycle, error mapping, fail-closed semantics
+- [payer-integration.md](payer-integration.md) — `accepted` — current shipped payer client path vs upstream v3 sender contract, error mapping, fail-closed semantics
 - [streaming-semantics.md](streaming-semantics.md) — `accepted` — SSE forwarding, include_usage injection/stripping, disconnect and partial-success
 - [retry-policy.md](retry-policy.md) — `accepted` — retry table for node dispatch (pre-first-token only)
 - [stripe-integration.md](stripe-integration.md) — `accepted` — Checkout top-ups, webhook flow, idempotency, tier upgrade
