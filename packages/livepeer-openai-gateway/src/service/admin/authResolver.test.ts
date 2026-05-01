@@ -11,10 +11,13 @@ function makeConfig(overrides: Partial<AdminConfig> = {}): AdminConfig {
 }
 
 describe('createAdminAuthResolver', () => {
-  it('resolves with actor from X-Admin-Actor when token matches', async () => {
+  it('resolves with actor from X-Admin-Actor when bearer token matches', async () => {
     const resolver = createAdminAuthResolver({ config: makeConfig() });
     const result = await resolver.resolve({
-      headers: { 'x-admin-token': 'admin-token-fixture-123', 'x-admin-actor': 'mike.z' },
+      headers: {
+        authorization: 'Bearer admin-token-fixture-123',
+        'x-admin-actor': 'mike.z',
+      },
       ip: '127.0.0.1',
     });
     expect(result).toEqual({ actor: 'mike.z' });
@@ -23,7 +26,7 @@ describe('createAdminAuthResolver', () => {
   it('falls back to truncated token hash when X-Admin-Actor is missing', async () => {
     const resolver = createAdminAuthResolver({ config: makeConfig() });
     const result = await resolver.resolve({
-      headers: { 'x-admin-token': 'admin-token-fixture-123' },
+      headers: { authorization: 'Bearer admin-token-fixture-123' },
       ip: '127.0.0.1',
     });
     expect(result?.actor).toMatch(/^[0-9a-f]{16}$/);
@@ -32,31 +35,34 @@ describe('createAdminAuthResolver', () => {
   it('falls back to token hash when X-Admin-Actor is malformed', async () => {
     const resolver = createAdminAuthResolver({ config: makeConfig() });
     const result = await resolver.resolve({
-      headers: { 'x-admin-token': 'admin-token-fixture-123', 'x-admin-actor': 'INVALID/CHARS' },
+      headers: {
+        authorization: 'Bearer admin-token-fixture-123',
+        'x-admin-actor': 'INVALID/CHARS',
+      },
       ip: '127.0.0.1',
     });
     expect(result?.actor).toMatch(/^[0-9a-f]{16}$/);
   });
 
-  it('returns null when X-Admin-Token is missing', async () => {
+  it('returns null when Authorization header is missing', async () => {
     const resolver = createAdminAuthResolver({ config: makeConfig() });
     const result = await resolver.resolve({ headers: {}, ip: '127.0.0.1' });
     expect(result).toBeNull();
   });
 
-  it('returns null when X-Admin-Token has wrong length', async () => {
+  it('returns null when bearer token has wrong length', async () => {
     const resolver = createAdminAuthResolver({ config: makeConfig() });
     const result = await resolver.resolve({
-      headers: { 'x-admin-token': 'short' },
+      headers: { authorization: 'Bearer short' },
       ip: '127.0.0.1',
     });
     expect(result).toBeNull();
   });
 
-  it('returns null when X-Admin-Token has correct length but wrong value', async () => {
+  it('returns null when bearer token has correct length but wrong value', async () => {
     const resolver = createAdminAuthResolver({ config: makeConfig() });
     const result = await resolver.resolve({
-      headers: { 'x-admin-token': 'wrong-token-fixture-xyz' },
+      headers: { authorization: 'Bearer wrong-token-fixture-xyz' },
       ip: '127.0.0.1',
     });
     expect(result).toBeNull();
@@ -67,7 +73,7 @@ describe('createAdminAuthResolver', () => {
       config: makeConfig({ ipAllowlist: ['10.0.0.1'] }),
     });
     const result = await resolver.resolve({
-      headers: { 'x-admin-token': 'admin-token-fixture-123' },
+      headers: { authorization: 'Bearer admin-token-fixture-123' },
       ip: '127.0.0.1',
     });
     expect(result).toBeNull();
@@ -78,7 +84,7 @@ describe('createAdminAuthResolver', () => {
       config: makeConfig({ ipAllowlist: ['10.0.0.1', '127.0.0.1'] }),
     });
     const result = await resolver.resolve({
-      headers: { 'x-admin-token': 'admin-token-fixture-123' },
+      headers: { authorization: 'Bearer admin-token-fixture-123' },
       ip: '127.0.0.1',
     });
     expect(result?.actor).toMatch(/^[0-9a-f]{16}$/);

@@ -19,8 +19,7 @@ export function adminAuthPreHandler(deps: AdminAuthDeps): preHandlerAsyncHookHan
   const expectedHash = createHash('sha256').update(deps.config.token).digest();
 
   return async (req: FastifyRequest, reply: FastifyReply): Promise<void> => {
-    const header = req.headers['x-admin-token'];
-    const token = typeof header === 'string' ? header : undefined;
+    const token = bearerTokenFromHeader(req.headers.authorization);
     if (!token || token.length !== deps.config.token.length) {
       await writeAuditAndReject(
         deps.db,
@@ -28,7 +27,7 @@ export function adminAuthPreHandler(deps: AdminAuthDeps): preHandlerAsyncHookHan
         reply,
         'unknown',
         401,
-        'missing or malformed X-Admin-Token',
+        'missing or malformed Authorization header',
       );
       return;
     }
@@ -129,4 +128,10 @@ function safeJson(value: unknown): string | null {
   } catch {
     return null;
   }
+}
+
+function bearerTokenFromHeader(header: string | string[] | undefined): string | null {
+  if (typeof header !== 'string') return null;
+  const match = /^Bearer\s+(.+)$/.exec(header);
+  return match?.[1] ?? null;
 }

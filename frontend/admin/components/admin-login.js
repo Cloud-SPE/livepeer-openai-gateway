@@ -38,7 +38,7 @@ export class AdminLogin extends LitElement {
             type="password"
             autocomplete="off"
             spellcheck="false"
-            placeholder="X-Admin-Token"
+            placeholder="Bearer admin token"
             required
             ?disabled=${this._loading}
             .value=${this._token}

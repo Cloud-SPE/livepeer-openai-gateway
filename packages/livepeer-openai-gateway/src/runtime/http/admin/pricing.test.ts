@@ -52,7 +52,10 @@ async function buildServer() {
   return { server, rateCardService };
 }
 
-const auth = { 'x-admin-token': ADMIN_TOKEN, 'content-type': 'application/json' };
+const auth = {
+  authorization: `Bearer ${ADMIN_TOKEN}`,
+  'content-type': 'application/json',
+};
 
 async function waitFor(assertion: () => void, opts?: { timeoutMs?: number; intervalMs?: number }) {
   const timeoutMs = opts?.timeoutMs ?? 2_000;

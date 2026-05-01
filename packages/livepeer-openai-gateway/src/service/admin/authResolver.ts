@@ -11,15 +11,15 @@ export interface AdminAuthResolverDeps {
 }
 
 /**
- * Default `AdminAuthResolver` impl wrapping the X-Admin-Token (sha256
- * timing-safe compare) + X-Admin-Actor (regex-bounded handle) scheme used
- * by the existing operator-admin middleware. Returns `{actor}` on success
- * (preferring the X-Admin-Actor header when well-formed, otherwise a
- * truncated token-hash) and `null` on failure.
+ * Default `AdminAuthResolver` impl wrapping bearer admin auth (sha256
+ * timing-safe compare) plus X-Admin-Actor (regex-bounded handle)
+ * attribution. Returns `{actor}` on success (preferring the
+ * X-Admin-Actor header when well-formed, otherwise a truncated
+ * token-hash) and `null` on failure.
  *
  * Failure cases:
- *   - missing or wrong-length X-Admin-Token
- *   - X-Admin-Token doesn't match the configured token (timing-safe)
+ *   - missing or malformed Authorization: Bearer header
+ *   - bearer token doesn't match the configured token (timing-safe)
  *   - configured ipAllowlist non-empty AND request IP is not in it
  *
  * The Fastify middleware that consumes this resolver is responsible for
@@ -31,7 +31,7 @@ export function createAdminAuthResolver(deps: AdminAuthResolverDeps): AdminAuthR
 
   return {
     async resolve(req: AdminAuthResolverRequest): Promise<AdminAuthResolverResult | null> {
-      const token = req.headers['x-admin-token'];
+      const token = bearerTokenFromHeader(req.headers.authorization);
       if (!token || token.length !== deps.config.token.length) return null;
 
       const provided = createHash('sha256').update(token).digest();
@@ -58,4 +58,10 @@ const ADMIN_ACTOR_PATTERN = /^[a-z0-9._-]{1,64}$/;
 
 function actorFromToken(token: string): string {
   return createHash('sha256').update(token).digest('hex').slice(0, 16);
+}
+
+function bearerTokenFromHeader(header: string | undefined): string | null {
+  if (!header) return null;
+  const match = /^Bearer\s+(.+)$/.exec(header);
+  return match?.[1] ?? null;
 }

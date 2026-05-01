@@ -72,7 +72,7 @@ async function buildServer() {
 }
 
 const authHeaders = (actor?: string) => ({
-  'x-admin-token': ADMIN_TOKEN,
+  authorization: `Bearer ${ADMIN_TOKEN}`,
   ...(actor ? { 'x-admin-actor': actor } : {}),
 });
 

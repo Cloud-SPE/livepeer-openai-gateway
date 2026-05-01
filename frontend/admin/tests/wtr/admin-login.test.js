@@ -80,7 +80,7 @@ describe('admin-login', () => {
 
     // Validate auth headers were attached on the validation request
     const req = fetchStub.firstCall.args[1];
-    expect(req.headers['x-admin-token']).to.equal('admin-token');
+    expect(req.headers.authorization).to.equal('Bearer admin-token');
     expect(req.headers['x-admin-actor']).to.equal('alice');
   });
 

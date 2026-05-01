@@ -112,7 +112,7 @@ async function countAuditRows(): Promise<number> {
 }
 
 describe('admin auth', () => {
-  it('401s when X-Admin-Token is missing', async () => {
+  it('401s when Authorization header is missing', async () => {
     const server = await buildServer();
     try {
       const res = await server.app.inject({ method: 'GET', url: '/admin/health' });
@@ -129,7 +129,7 @@ describe('admin auth', () => {
       const res = await server.app.inject({
         method: 'GET',
         url: '/admin/health',
-        headers: { 'x-admin-token': 'b'.repeat(40) },
+        headers: { authorization: `Bearer ${'b'.repeat(40)}` },
       });
       expect(res.statusCode).toBe(401);
     } finally {
@@ -143,7 +143,7 @@ describe('admin auth', () => {
       const res = await server.app.inject({
         method: 'GET',
         url: '/admin/health',
-        headers: { 'x-admin-token': ADMIN_TOKEN },
+        headers: { authorization: `Bearer ${ADMIN_TOKEN}` },
       });
       expect(res.statusCode).toBe(403);
     } finally {
@@ -159,7 +159,7 @@ describe('admin endpoints', () => {
       const res = await server.app.inject({
         method: 'GET',
         url: '/admin/health',
-        headers: { 'x-admin-token': ADMIN_TOKEN },
+        headers: { authorization: `Bearer ${ADMIN_TOKEN}` },
       });
       expect(res.statusCode).toBe(200);
       const body = res.json() as {
@@ -186,7 +186,7 @@ describe('admin endpoints', () => {
       const res = await server.app.inject({
         method: 'GET',
         url: '/admin/nodes',
-        headers: { 'x-admin-token': ADMIN_TOKEN },
+        headers: { authorization: `Bearer ${ADMIN_TOKEN}` },
       });
       expect(res.statusCode).toBe(200);
       const body = res.json() as { nodes: Array<{ id: string }> };
@@ -202,7 +202,7 @@ describe('admin endpoints', () => {
       const res = await server.app.inject({
         method: 'GET',
         url: '/admin/nodes/node-admin',
-        headers: { 'x-admin-token': ADMIN_TOKEN },
+        headers: { authorization: `Bearer ${ADMIN_TOKEN}` },
       });
       expect(res.statusCode).toBe(200);
       const body = res.json() as { id: string; recentEvents: unknown[] };
@@ -219,7 +219,7 @@ describe('admin endpoints', () => {
       const res = await server.app.inject({
         method: 'GET',
         url: '/admin/nodes/does-not-exist',
-        headers: { 'x-admin-token': ADMIN_TOKEN },
+        headers: { authorization: `Bearer ${ADMIN_TOKEN}` },
       });
       expect(res.statusCode).toBe(404);
     } finally {
@@ -244,7 +244,7 @@ describe('admin endpoints', () => {
       const res = await server.app.inject({
         method: 'GET',
         url: `/admin/customers/${customer.id}`,
-        headers: { 'x-admin-token': ADMIN_TOKEN },
+        headers: { authorization: `Bearer ${ADMIN_TOKEN}` },
       });
       expect(res.statusCode).toBe(200);
       const body = res.json() as {
@@ -277,7 +277,7 @@ describe('admin endpoints', () => {
       const res = await server.app.inject({
         method: 'POST',
         url: `/admin/customers/${customer.id}/refund`,
-        headers: { 'x-admin-token': ADMIN_TOKEN, 'content-type': 'application/json' },
+        headers: { authorization: `Bearer ${ADMIN_TOKEN}`, 'content-type': 'application/json' },
         payload: JSON.stringify({
           stripeSessionId: 'cs_refund_1',
           reason: 'customer requested via support',
@@ -298,7 +298,7 @@ describe('admin endpoints', () => {
       const res = await server.app.inject({
         method: 'POST',
         url: '/admin/customers/anything/refund',
-        headers: { 'x-admin-token': ADMIN_TOKEN, 'content-type': 'application/json' },
+        headers: { authorization: `Bearer ${ADMIN_TOKEN}`, 'content-type': 'application/json' },
         payload: JSON.stringify({ stripeSessionId: 'cs_refund_X', reason: '' }),
       });
       expect(res.statusCode).toBe(400);
@@ -317,7 +317,7 @@ describe('admin endpoints', () => {
       const res1 = await server.app.inject({
         method: 'POST',
         url: `/admin/customers/${customer.id}/suspend`,
-        headers: { 'x-admin-token': ADMIN_TOKEN, 'content-type': 'application/json' },
+        headers: { authorization: `Bearer ${ADMIN_TOKEN}`, 'content-type': 'application/json' },
         payload: '{}',
       });
       expect(res1.statusCode).toBe(200);
@@ -328,7 +328,7 @@ describe('admin endpoints', () => {
       const res2 = await server.app.inject({
         method: 'POST',
         url: `/admin/customers/${customer.id}/unsuspend`,
-        headers: { 'x-admin-token': ADMIN_TOKEN, 'content-type': 'application/json' },
+        headers: { authorization: `Bearer ${ADMIN_TOKEN}`, 'content-type': 'application/json' },
         payload: '{}',
       });
       expect(res2.statusCode).toBe(200);
@@ -346,7 +346,7 @@ describe('admin endpoints', () => {
       const res = await server.app.inject({
         method: 'GET',
         url: '/admin/escrow',
-        headers: { 'x-admin-token': ADMIN_TOKEN },
+        headers: { authorization: `Bearer ${ADMIN_TOKEN}` },
       });
       expect(res.statusCode).toBe(200);
       const body = res.json() as { depositWei: string; reserveWei: string; source: string };
@@ -364,7 +364,7 @@ describe('admin endpoints', () => {
       const res = await server.app.inject({
         method: 'POST',
         url: '/admin/customers',
-        headers: { 'x-admin-token': ADMIN_TOKEN, 'content-type': 'application/json' },
+        headers: { authorization: `Bearer ${ADMIN_TOKEN}`, 'content-type': 'application/json' },
         payload: JSON.stringify({
           email: 'create@x.io',
           tier: 'prepaid',
@@ -401,7 +401,7 @@ describe('admin endpoints', () => {
       const res = await server.app.inject({
         method: 'POST',
         url: '/admin/customers',
-        headers: { 'x-admin-token': ADMIN_TOKEN, 'content-type': 'application/json' },
+        headers: { authorization: `Bearer ${ADMIN_TOKEN}`, 'content-type': 'application/json' },
         payload: JSON.stringify({
           email: 'free@x.io',
           tier: 'free',
@@ -434,7 +434,7 @@ describe('admin endpoints', () => {
       const res = await server.app.inject({
         method: 'POST',
         url: '/admin/customers',
-        headers: { 'x-admin-token': ADMIN_TOKEN, 'content-type': 'application/json' },
+        headers: { authorization: `Bearer ${ADMIN_TOKEN}`, 'content-type': 'application/json' },
         payload: JSON.stringify({ email: 'dupe@x.io', tier: 'prepaid' }),
       });
       expect(res.statusCode).toBe(409);
@@ -451,7 +451,7 @@ describe('admin endpoints', () => {
       const res = await server.app.inject({
         method: 'POST',
         url: '/admin/customers',
-        headers: { 'x-admin-token': ADMIN_TOKEN, 'content-type': 'application/json' },
+        headers: { authorization: `Bearer ${ADMIN_TOKEN}`, 'content-type': 'application/json' },
         payload: JSON.stringify({ email: 'not-an-email', tier: 'prepaid' }),
       });
       expect(res.statusCode).toBe(400);
@@ -468,7 +468,7 @@ describe('admin endpoints', () => {
       const res = await server.app.inject({
         method: 'GET',
         url: '/admin/health',
-        headers: { 'x-admin-token': ADMIN_TOKEN },
+        headers: { authorization: `Bearer ${ADMIN_TOKEN}` },
       });
       expect(res.statusCode).toBe(200);
       const body = res.json() as { serviceRegistryHealthy: boolean };
@@ -491,7 +491,7 @@ describe('admin endpoints', () => {
       const res = await server.app.inject({
         method: 'GET',
         url: '/admin/registry/probe',
-        headers: { 'x-admin-token': ADMIN_TOKEN },
+        headers: { authorization: `Bearer ${ADMIN_TOKEN}` },
       });
       expect(res.statusCode).toBe(200);
       const body = res.json() as {
@@ -524,7 +524,7 @@ describe('admin endpoints', () => {
       const res = await server.app.inject({
         method: 'GET',
         url: '/admin/registry/probe',
-        headers: { 'x-admin-token': ADMIN_TOKEN },
+        headers: { authorization: `Bearer ${ADMIN_TOKEN}` },
       });
       expect(res.statusCode).toBe(503);
       const body = res.json() as { healthy: boolean; liveCount: null; error: { message: string } };
@@ -542,7 +542,7 @@ describe('admin endpoints', () => {
       const res = await server.app.inject({
         method: 'GET',
         url: '/admin/config/nodes',
-        headers: { 'x-admin-token': ADMIN_TOKEN },
+        headers: { authorization: `Bearer ${ADMIN_TOKEN}` },
       });
       expect(res.statusCode).toBe(200);
       const body = res.json() as {

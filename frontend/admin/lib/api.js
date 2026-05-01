@@ -4,10 +4,8 @@ import { getActor, getToken, session } from './session.js';
 import { parseResponse } from './schemas.js';
 
 /**
- * Admin API singleton. Auth strategy: X-Admin-Token + (optional) X-Admin-Actor
- * — distinct from the portal's Bearer-key strategy. This validates that
- * shared/lib/api-base.js's createApi factory accepts arbitrary header
- * strategies via the getAuthHeaders callback.
+ * Admin API singleton. Auth strategy: bearer admin token plus optional
+ * X-Admin-Actor attribution.
  */
 export const api = createApi({
   baseUrl: '',
@@ -15,7 +13,7 @@ export const api = createApi({
     const headers = {};
     const token = getToken();
     const actor = getActor();
-    if (token) headers['x-admin-token'] = token;
+    if (token) headers.authorization = `Bearer ${token}`;
     if (actor) headers['x-admin-actor'] = actor;
     return headers;
   },
@@ -39,7 +37,7 @@ export async function signIn(token, actor) {
   }
   const res = await fetch('/admin/health', {
     headers: {
-      'x-admin-token': token,
+      authorization: `Bearer ${token}`,
       'x-admin-actor': actor,
       accept: 'application/json',
     },

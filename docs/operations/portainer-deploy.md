@@ -230,12 +230,12 @@ export H='your.public.host'                         # whatever you set BRIDGE_PU
 curl -sS https://$H/healthz                         # → {"ok":true}
 
 # Composed health — admin auth
-curl -sS -H "x-admin-token: $ADMIN_TOKEN" https://$H/admin/health | jq .
+curl -sS -H "Authorization: Bearer $ADMIN_TOKEN" https://$H/admin/health | jq .
 # expect: ok=true, payerDaemonHealthy=true, dbOk=true, redisOk=true,
 #         serviceRegistryHealthy=true, nodeCount > 0
 
 # Live registry probe — bypasses bridge cache, hits the daemon directly
-curl -sS -H "x-admin-token: $ADMIN_TOKEN" https://$H/admin/registry/probe | jq .
+curl -sS -H "Authorization: Bearer $ADMIN_TOKEN" https://$H/admin/registry/probe | jq .
 # expect: liveCount > 0, live[0] is your worker
 ```
 
@@ -281,11 +281,11 @@ The same pattern works for the other capabilities — Embeddings, Images (compos
 
 ```bash
 # Verify the rate-card surface from outside
-curl -sS -H "x-admin-token: $ADMIN_TOKEN" \
+curl -sS -H "Authorization: Bearer $ADMIN_TOKEN" \
   https://$H/admin/pricing/chat/tiers | jq .
 # expect 4 tiers with seeded prices
 
-curl -sS -H "x-admin-token: $ADMIN_TOKEN" \
+curl -sS -H "Authorization: Bearer $ADMIN_TOKEN" \
   https://$H/admin/pricing/chat/models | jq '.entries | length'
 # expect 5+ (the seeded V1 models + whatever you added)
 
@@ -314,7 +314,7 @@ docker logs $(docker ps --format '{{.Names}}' | grep service-registry-daemon) \
   --tail 30 | grep -iE 'overlay|loaded'
 
 # 3. Live probe — does the daemon think the address is reachable?
-curl -sS -H "x-admin-token: $ADMIN_TOKEN" https://$H/admin/registry/probe | jq .
+curl -sS -H "Authorization: Bearer $ADMIN_TOKEN" https://$H/admin/registry/probe | jq .
 # liveCount > 0 + cachedCount = 0 → just restart the bridge container
 # liveCount = 0                  → daemon's overlay is empty or unreadable
 # error.message in response      → daemon socket isn't reachable
