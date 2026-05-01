@@ -67,7 +67,6 @@ services:
       # will log unhealthy + retry forever; the bridge stays up. /v1/chat
       # and friends will return 503 (Invariant 6 — correct fail-closed).
       PAYER_DAEMON_SOCKET: /tmp/no-payer-daemon.sock
-      BRIDGE_ETH_ADDRESS: '0x0000000000000000000000000000000000000001'
 
       # Stripe — dummy values; webhook signature verification will reject any
       # real Stripe call, but the bridge starts and /v1/billing/topup will

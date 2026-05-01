@@ -13,10 +13,11 @@ currently published shell/runtime combination
 `tztcloud/livepeer-service-registry-daemon:v3.0.2`,
 bridge image `tztcloud/livepeer-openai-gateway:3.0.1`).
 
-> **Runtime note:** the shell image described here still uses the
-> engine's current quote-refresh/session-bootstrap flow. The suite's
-> later v3.0.1 quote-free protocol cut is tracked separately in
-> [`../design-docs/v3-runtime-realignment.md`](../design-docs/v3-runtime-realignment.md).
+> **Runtime note:** the shell image described here is on the v3
+> route-first payment flow: resolver `Select(...)`, bridge-computed
+> `face_value`, payment-daemon `CreatePayment(...)`, and direct worker
+> `/v1/*` requests. Worker `/quote`, `/quotes`, and `/capabilities` are
+> not part of this deploy.
 
 The full feature surface — admin SPA, customer portal, operator-managed rate card, customer onboarding, registry-driven node pool, Stripe billing, Prometheus metrics — is in this image. Everything operators need is reachable from `/admin/console/`.
 
@@ -30,7 +31,7 @@ Before touching Portainer, gather:
 | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Arbitrum One RPC URL**                   | Any provider — Alchemy, Infura, your own node. Set as `CHAIN_RPC`. The bridge passes it through to the payment-daemon and the service-registry-daemon.                                                                                                           |
 | **Resolver registry contract**             | Set as `SERVICE_REGISTRY_CONTRACT_ADDRESS`. This gateway defaults to the Arbitrum One **AI service registry** (`0x04C0b249740175999E5BF5c9ac1dA92431EF34C5`). One resolver deployment targets exactly one registry contract.                                     |
-| **Ethereum keystore (V3 JSON) + password** | The signing wallet for the bridge. The eth_address derived from this keystore must match `BRIDGE_ETH_ADDRESS`. Generated via `geth account new` if you don't have one.                                                                                           |
+| **Ethereum keystore (V3 JSON) + password** | The signing wallet used by the payment-daemon sender sidecar. Generated via `geth account new` if you don't have one.                                                                                                                                            |
 | **Stripe secret + webhook signing keys**   | `sk_live_...` (or `sk_test_...` for staging). Webhook secret from your Stripe Dashboard → Developers → Webhooks → endpoint signing secret.                                                                                                                       |
 | **Public hostname for the bridge**         | Set as `BRIDGE_PUBLIC_HOST`. Traefik or your reverse proxy routes `Host(${BRIDGE_PUBLIC_HOST})` → the bridge container.                                                                                                                                          |
 | **Service-registry overlay YAML**          | One file describing the worker pool the bridge should route to. Format below.                                                                                                                                                                                    |
@@ -183,7 +184,6 @@ services:
       API_KEY_ENV_PREFIX: ${API_KEY_ENV_PREFIX:-test}
       PAYER_DAEMON_SOCKET: /var/run/livepeer/payment.sock
       SERVICE_REGISTRY_SOCKET: /var/run/livepeer/service-registry.sock
-      BRIDGE_ETH_ADDRESS: ${BRIDGE_ETH_ADDRESS:?set BRIDGE_ETH_ADDRESS (must match keystore)}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:?set STRIPE_SECRET_KEY}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:?set STRIPE_WEBHOOK_SECRET}
       STRIPE_SUCCESS_URL: https://${BRIDGE_PUBLIC_HOST}/portal/billing/success
@@ -216,7 +216,7 @@ networks:
     external: true
 ```
 
-In the **Environment variables** panel below the editor, set every `${...}` value: `CHAIN_RPC`, `SERVICE_REGISTRY_CONTRACT_ADDRESS`, `BRIDGE_ETH_ADDRESS`, `BRIDGE_PUBLIC_HOST`, `PGPASSWORD`, `API_KEY_PEPPER`, `ADMIN_TOKEN`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`. Optional defaults work for `PGUSER` (`bridge`), `PGDATABASE` (`bridge`), `API_KEY_ENV_PREFIX` (`test`).
+In the **Environment variables** panel below the editor, set every `${...}` value: `CHAIN_RPC`, `SERVICE_REGISTRY_CONTRACT_ADDRESS`, `BRIDGE_PUBLIC_HOST`, `PGPASSWORD`, `API_KEY_PEPPER`, `ADMIN_TOKEN`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`. Optional defaults work for `PGUSER` (`bridge`), `PGDATABASE` (`bridge`), `API_KEY_ENV_PREFIX` (`test`).
 
 For AI gateway deployments, `SERVICE_REGISTRY_CONTRACT_ADDRESS` should be the Arbitrum One AI service registry:
 

@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import { loadAdminConfig } from './config/admin.js';
 import { loadAuthConfig } from './config/auth.js';
+import { loadPayerDaemonConfig } from './config/payerDaemon.js';
 import { loadDatabaseConfig } from '@cloudspe/livepeer-openai-gateway-core/config/database.js';
 import { loadMetricsConfig } from '@cloudspe/livepeer-openai-gateway-core/config/metrics.js';
-import { loadPayerDaemonConfig } from '@cloudspe/livepeer-openai-gateway-core/config/payerDaemon.js';
 import {
   createPricingConfigProvider,
   loadPricingEnvConfig,
@@ -21,12 +21,9 @@ import { NoopRecorder } from '@cloudspe/livepeer-openai-gateway-core/providers/m
 import { PrometheusRecorder } from '@cloudspe/livepeer-openai-gateway-core/providers/metrics/prometheus.js';
 import type { Recorder } from '@cloudspe/livepeer-openai-gateway-core/providers/metrics/recorder.js';
 import { withMetrics as withNodeClientMetrics } from '@cloudspe/livepeer-openai-gateway-core/providers/nodeClient/metered.js';
-import { withMetrics as withPayerDaemonMetrics } from '@cloudspe/livepeer-openai-gateway-core/providers/payerDaemon/metered.js';
 import { withMetrics as withStripeMetrics } from './providers/stripe/metered.js';
 import { createFetchNodeClient } from '@cloudspe/livepeer-openai-gateway-core/providers/nodeClient/fetch.js';
-import { createGrpcPayerDaemonClient } from '@cloudspe/livepeer-openai-gateway-core/providers/payerDaemon/grpc.js';
 import { createIoRedisClient } from '@cloudspe/livepeer-openai-gateway-core/providers/redis/ioredis.js';
-import { createGrpcServiceRegistryClient } from '@cloudspe/livepeer-openai-gateway-core/providers/serviceRegistry/grpc.js';
 import { createSdkStripeClient } from './providers/stripe/sdk.js';
 import { createTiktokenProvider } from '@cloudspe/livepeer-openai-gateway-core/providers/tokenizer/tiktoken.js';
 import { createConsoleLogger } from '@cloudspe/livepeer-openai-gateway-core/providers/logger/console.js';
@@ -39,11 +36,11 @@ import { registerAdminPricingRoutes } from './runtime/http/admin/pricing.js';
 import { registerTopupRoute } from './runtime/http/billing/topup.js';
 import { idempotencyOnSend, idempotencyPreHandler } from './runtime/http/middleware/idempotency.js';
 import { registerPortalStatic } from './runtime/http/portal/static.js';
-import { registerChatCompletionsRoute } from '@cloudspe/livepeer-openai-gateway-core/runtime/http/chat/completions.js';
-import { registerEmbeddingsRoute } from '@cloudspe/livepeer-openai-gateway-core/runtime/http/embeddings/index.js';
-import { registerImagesGenerationsRoute } from '@cloudspe/livepeer-openai-gateway-core/runtime/http/images/generations.js';
-import { registerSpeechRoute } from '@cloudspe/livepeer-openai-gateway-core/runtime/http/audio/speech.js';
-import { registerTranscriptionsRoute } from '@cloudspe/livepeer-openai-gateway-core/runtime/http/audio/transcriptions.js';
+import { registerChatCompletionsRoute } from './runtime/http/chat/completions.js';
+import { registerEmbeddingsRoute } from './runtime/http/embeddings/index.js';
+import { registerImagesGenerationsRoute } from './runtime/http/images/generations.js';
+import { registerSpeechRoute } from './runtime/http/audio/speech.js';
+import { registerTranscriptionsRoute } from './runtime/http/audio/transcriptions.js';
 import { registerHealthzRoute } from '@cloudspe/livepeer-openai-gateway-core/runtime/http/healthz.js';
 import { registerStripeWebhookRoute } from './runtime/http/stripe/webhook.js';
 import { metricsHook } from '@cloudspe/livepeer-openai-gateway-core/runtime/http/metricsHook.js';
@@ -56,15 +53,15 @@ import { createEngineAdminService } from '@cloudspe/livepeer-openai-gateway-core
 import { registerOperatorDashboard } from '@cloudspe/livepeer-openai-gateway-core/dashboard/index.js';
 import { createPrepaidQuotaWallet } from './service/billing/wallet.js';
 import { createMetricsSampler } from '@cloudspe/livepeer-openai-gateway-core/service/metrics/sampler.js';
-import { createPaymentsService } from '@cloudspe/livepeer-openai-gateway-core/service/payments/createPayment.js';
-import { createSessionCache } from '@cloudspe/livepeer-openai-gateway-core/service/payments/sessions.js';
 import { CircuitBreaker } from '@cloudspe/livepeer-openai-gateway-core/service/routing/circuitBreaker.js';
 import { createNodeIndex } from '@cloudspe/livepeer-openai-gateway-core/service/routing/nodeIndex.js';
-import { QuoteCache } from '@cloudspe/livepeer-openai-gateway-core/service/routing/quoteCache.js';
-import { createQuoteRefresher } from '@cloudspe/livepeer-openai-gateway-core/service/routing/quoteRefresher.js';
 import { realScheduler } from '@cloudspe/livepeer-openai-gateway-core/service/routing/scheduler.js';
 import { createRateLimiter } from '@cloudspe/livepeer-openai-gateway-core/service/rateLimit/index.js';
 import { createTokenAuditService } from '@cloudspe/livepeer-openai-gateway-core/service/tokenAudit/index.js';
+import { createGrpcPayerDaemonClient } from './providers/payerDaemon/grpc.js';
+import { withMetrics as withPayerDaemonMetrics } from './providers/payerDaemon/metered.js';
+import { createGrpcServiceRegistryClient } from './providers/serviceRegistry/grpc.js';
+import { createPaymentsService } from './service/payments/createPayment.js';
 
 const MainEnvSchema = z.object({
   HOST: z.string().default('0.0.0.0'),
@@ -176,8 +173,7 @@ async function main(): Promise<void> {
 
   // Initial node-pool enumeration. A failure here is non-fatal — the
   // pool stays empty until a successful enumeration, which the caller
-  // can trigger via process restart. Dispatchers fail fast with
-  // NoHealthyNodesError when the registry returns nothing for a query.
+  // can trigger via process restart.
   try {
     const initial = await serviceRegistry.listKnown();
     nodeIndex.replaceAll(initial);
@@ -190,26 +186,12 @@ async function main(): Promise<void> {
 
   // Routing primitives.
   const circuitBreaker = new CircuitBreaker(routingConfig.circuitBreaker);
-  const quoteCache = new QuoteCache();
-  const refresher = createQuoteRefresher({
-    db,
-    serviceRegistry,
-    nodeClient,
-    circuitBreaker,
-    quoteCache,
-    scheduler,
-    config: routingConfig,
-    bridgeEthAddress: payerDaemonConfig.bridgeEthAddress,
-    recorder,
-  });
-  await refresher.start();
 
   // Services.
   const authService = createAuthService({ db, config: authConfig });
   const authResolver = createAuthResolver({ authService });
   const wallet = createPrepaidQuotaWallet({ db, recorder });
-  const sessionCache = createSessionCache({ payerDaemon });
-  const paymentsService = createPaymentsService({ payerDaemon, sessions: sessionCache });
+  const paymentsService = createPaymentsService({ payerDaemon });
   const rateLimiter = createRateLimiter({ redis, config: rateLimitConfig, recorder });
   // The tokenAudit service uses the recorder ALSO as a MetricsSink. Both
   // PrometheusRecorder and NoopRecorder implement BOTH interfaces, but the
@@ -270,8 +252,8 @@ async function main(): Promise<void> {
   registerChatCompletionsRoute(server.app, {
     db,
     serviceRegistry,
+    nodeIndex,
     circuitBreaker,
-    quoteCache,
     nodeClient,
     paymentsService,
     authResolver,
@@ -284,8 +266,8 @@ async function main(): Promise<void> {
   registerEmbeddingsRoute(server.app, {
     db,
     serviceRegistry,
+    nodeIndex,
     circuitBreaker,
-    quoteCache,
     nodeClient,
     paymentsService,
     authResolver,
@@ -296,8 +278,8 @@ async function main(): Promise<void> {
   registerImagesGenerationsRoute(server.app, {
     db,
     serviceRegistry,
+    nodeIndex,
     circuitBreaker,
-    quoteCache,
     nodeClient,
     paymentsService,
     authResolver,
@@ -308,8 +290,8 @@ async function main(): Promise<void> {
   registerSpeechRoute(server.app, {
     db,
     serviceRegistry,
+    nodeIndex,
     circuitBreaker,
-    quoteCache,
     nodeClient,
     paymentsService,
     authResolver,
@@ -320,8 +302,8 @@ async function main(): Promise<void> {
   await registerTranscriptionsRoute(server.app, {
     db,
     serviceRegistry,
+    nodeIndex,
     circuitBreaker,
-    quoteCache,
     nodeClient,
     paymentsService,
     authResolver,
@@ -367,7 +349,9 @@ async function main(): Promise<void> {
       }),
       engineAdminService: createEngineAdminService({
         db,
-        payerDaemon,
+        payerDaemon: payerDaemon as unknown as Parameters<
+          typeof createEngineAdminService
+        >[0]['payerDaemon'],
         redis,
         nodeIndex,
         circuitBreaker,
@@ -393,7 +377,6 @@ async function main(): Promise<void> {
     hardKillTimer.unref();
     try {
       sampler.stop();
-      refresher.stop();
       payerDaemon.stopHealthLoop();
       serviceRegistry.close();
       await server.close();

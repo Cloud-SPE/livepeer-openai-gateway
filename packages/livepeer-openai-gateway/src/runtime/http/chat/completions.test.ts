@@ -1,38 +1,22 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
 import { sql } from 'drizzle-orm';
 import Fastify, { type FastifyInstance } from 'fastify';
 import OpenAI from 'openai';
-import { Server, ServerCredentials } from '@grpc/grpc-js';
 import { startTestPg, type TestPg } from '../../../service/billing/testPg.js';
 import * as customersRepo from '../../../repo/customers.js';
 import * as apiKeysRepo from '../../../repo/apiKeys.js';
 import { createAuthService, issueKey } from '../../../service/auth/index.js';
 import { createAuthResolver } from '../../../service/auth/authResolver.js';
 import { createPrepaidQuotaWallet } from '../../../service/billing/wallet.js';
+import { createPaymentsService } from '../../../service/payments/createPayment.js';
 import { idempotencyOnSend, idempotencyPreHandler } from '../middleware/idempotency.js';
-import { createFakeServiceRegistry } from '@cloudspe/livepeer-openai-gateway-core/providers/serviceRegistry/fake.js';
-import { createQuoteRefresher } from '@cloudspe/livepeer-openai-gateway-core/service/routing/quoteRefresher.js';
 import { CircuitBreaker } from '@cloudspe/livepeer-openai-gateway-core/service/routing/circuitBreaker.js';
-import { QuoteCache } from '@cloudspe/livepeer-openai-gateway-core/service/routing/quoteCache.js';
-import { ManualScheduler } from '@cloudspe/livepeer-openai-gateway-core/service/routing/scheduler.js';
 import { createFetchNodeClient } from '@cloudspe/livepeer-openai-gateway-core/providers/nodeClient/fetch.js';
-import {
-  TEST_BRIDGE_ETH,
-  fakeHealthResponse,
-  fakeQuoteResponse,
-  fakeQuotesResponse,
-} from '@cloudspe/livepeer-openai-gateway-core/providers/nodeClient/testFakes.js';
+import { createNodeIndex } from '@cloudspe/livepeer-openai-gateway-core/service/routing/nodeIndex.js';
 import { createFastifyServer } from '@cloudspe/livepeer-openai-gateway-core/providers/http/fastify.js';
-import { createGrpcPayerDaemonClient } from '@cloudspe/livepeer-openai-gateway-core/providers/payerDaemon/grpc.js';
-import { PayerDaemonService } from '@cloudspe/livepeer-openai-gateway-core/providers/payerDaemon/gen/livepeer/payments/v1/payer_daemon.js';
-import { bigintToBigEndianBytes } from '@cloudspe/livepeer-openai-gateway-core/providers/payerDaemon/convert.js';
-import { createPaymentsService } from '@cloudspe/livepeer-openai-gateway-core/service/payments/createPayment.js';
-import { createSessionCache } from '@cloudspe/livepeer-openai-gateway-core/service/payments/sessions.js';
 import { testPricingProvider } from '@cloudspe/livepeer-openai-gateway-core/service/pricing/testFixtures.js';
-import { registerChatCompletionsRoute } from '@cloudspe/livepeer-openai-gateway-core/runtime/http/chat/completions.js';
+import { registerChatCompletionsRoute } from './completions.js';
+import { createFakeV3PayerDaemon, createFakeV3ServiceRegistry } from '../testSupport/v3Harness.js';
 
 let pg: TestPg;
 
@@ -46,17 +30,6 @@ interface FakeWorkerNode {
 async function startFakeWorkerNode(): Promise<FakeWorkerNode> {
   let mode: 'ok' | 'fail-500' | 'no-usage' = 'ok';
   const app = Fastify({ logger: false, disableRequestLogging: true });
-  app.get('/health', async () => fakeHealthResponse());
-  app.get('/quote', async () =>
-    fakeQuoteResponse({ model: 'model-small', pricePerWorkUnitWei: '1' }),
-  );
-  app.get('/quotes', async () =>
-    fakeQuotesResponse({
-      capabilities: [
-        { capability: 'openai:/v1/chat/completions', model: 'model-small', priceWei: '1' },
-      ],
-    }),
-  );
   app.post('/v1/chat/completions', async (_req, reply) => {
     if (mode === 'fail-500') {
       return reply.code(500).send({ error: 'node down' });
@@ -105,59 +78,6 @@ async function startFakeWorkerNode(): Promise<FakeWorkerNode> {
   };
 }
 
-interface FakePayerDaemon {
-  server: Server;
-  socketPath: string;
-  stop(): Promise<void>;
-}
-
-async function startFakePayerDaemon(): Promise<FakePayerDaemon> {
-  const dir = mkdtempSync(path.join(tmpdir(), 'payer-'));
-  const socketPath = path.join(dir, 'daemon.sock');
-  let nextWorkId = 0;
-  const sessions = new Set<string>();
-  const server = new Server();
-  server.addService(PayerDaemonService, {
-    startSession(_call, cb) {
-      nextWorkId++;
-      const workId = `wrk-${nextWorkId}`;
-      sessions.add(workId);
-      cb(null, { workId });
-    },
-    createPayment(_call, cb) {
-      cb(null, {
-        paymentBytes: Buffer.from([0x01, 0x02]),
-        ticketsCreated: 1,
-        expectedValue: bigintToBigEndianBytes(5n),
-      });
-    },
-    closeSession(call, cb) {
-      sessions.delete(call.request.workId);
-      cb(null, {});
-    },
-    getDepositInfo(_call, cb) {
-      cb(null, {
-        deposit: bigintToBigEndianBytes(1_000_000n),
-        reserve: bigintToBigEndianBytes(500_000n),
-        withdrawRound: 0n,
-      });
-    },
-  });
-  await new Promise<void>((resolve, reject) => {
-    server.bindAsync(`unix://${socketPath}`, ServerCredentials.createInsecure(), (err) => {
-      if (err) reject(err);
-      else resolve();
-    });
-  });
-  return {
-    server,
-    socketPath,
-    async stop() {
-      await new Promise<void>((resolve) => server.tryShutdown(() => resolve()));
-    },
-  };
-}
-
 interface RunningBridge {
   url: string;
   customerId: string;
@@ -165,7 +85,6 @@ interface RunningBridge {
   stop(): Promise<void>;
   state: {
     worker: FakeWorkerNode;
-    daemon: FakePayerDaemon;
   };
 }
 
@@ -175,7 +94,6 @@ async function startBridge(opts: {
   quotaTokens?: bigint;
 }): Promise<RunningBridge> {
   const worker = await startFakeWorkerNode();
-  const daemon = await startFakePayerDaemon();
 
   // Seed customer + api key.
   const customer = await customersRepo.insertCustomer(pg.db, {
@@ -193,52 +111,20 @@ async function startBridge(opts: {
   });
 
   const workerUrl = `http://127.0.0.1:${worker.port}`;
-  const serviceRegistry = createFakeServiceRegistry({
-    nodes: [
-      {
-        id: 'node-e2e',
-        url: workerUrl,
-        capabilities: ['chat'],
-        weight: 100,
-        supportedModels: ['model-small'],
-        tierAllowed: ['free', 'prepaid'],
-      },
-    ],
+  const serviceRegistry = createFakeV3ServiceRegistry({
+    id: 'node-e2e',
+    url: workerUrl,
+    capability: 'chat',
+    offering: 'model-small',
+    ethAddress: '0x00000000000000000000000000000000000000e2',
   });
-
-  const scheduler = new ManualScheduler();
-  scheduler.setNow(new Date());
   const nodeClient = createFetchNodeClient();
   const circuitBreaker = new CircuitBreaker({ failureThreshold: 3, coolDownSeconds: 60 });
-  const quoteCache = new QuoteCache();
-  const refresher = createQuoteRefresher({
-    db: pg.db,
-    serviceRegistry,
-    nodeClient,
-    circuitBreaker,
-    quoteCache,
-    scheduler,
-    config: {
-      quoteRefreshSeconds: 30,
-      healthTimeoutMs: 5_000,
-      quoteTimeoutMs: 10_000,
-      circuitBreaker: { failureThreshold: 3, coolDownSeconds: 60 },
-    },
-    bridgeEthAddress: TEST_BRIDGE_ETH,
-  });
-  await refresher.tickNode('node-e2e', workerUrl, ['openai:/v1/chat/completions']);
-
-  const payerDaemon = createGrpcPayerDaemonClient({
-    config: {
-      socketPath: daemon.socketPath,
-      healthIntervalMs: 10_000,
-      healthFailureThreshold: 2,
-      callTimeoutMs: 5_000,
-    },
-    scheduler,
-  });
-  const sessionCache = createSessionCache({ payerDaemon });
-  const paymentsService = createPaymentsService({ payerDaemon, sessions: sessionCache });
+  const payerDaemon = createFakeV3PayerDaemon();
+  const paymentsService = createPaymentsService({ payerDaemon });
+  const nodeIndex = createNodeIndex([
+    { id: 'node-e2e', url: workerUrl, capabilities: ['chat'], weight: 100 },
+  ]);
 
   const authService = createAuthService({
     db: pg.db,
@@ -250,8 +136,8 @@ async function startBridge(opts: {
   registerChatCompletionsRoute(server.app, {
     db: pg.db,
     serviceRegistry,
+    nodeIndex,
     circuitBreaker,
-    quoteCache,
     nodeClient,
     paymentsService,
     authResolver: createAuthResolver({ authService }),
@@ -264,11 +150,10 @@ async function startBridge(opts: {
     url,
     customerId: customer.id,
     apiKey: plaintext,
-    state: { worker, daemon },
+    state: { worker },
     async stop() {
       await server.close();
       await payerDaemon.close();
-      await daemon.stop();
       await worker.close();
     },
   };

@@ -6,9 +6,8 @@ last-reviewed: 2026-05-01
 
 # v3 runtime realignment
 
-This note records the gap between the shell's current shipped runtime
-and the suite-level v3.0.1 protocol now defined in the updated network,
-gateway, and worker specs.
+This note records the v3 runtime cut that landed in the shell on
+2026-05-01.
 
 ## Why this doc exists
 
@@ -23,22 +22,7 @@ The repo docs had drifted into an ambiguous state:
 
 This doc makes that boundary explicit.
 
-## Current shipped runtime
-
-Today this shell runs on the published
-`@cloudspe/livepeer-openai-gateway-core@3.0.0` package and still uses
-the engine's existing routing/payment path:
-
-- bridge-local quote refresh and quote cache
-- worker `/quote` and `/quotes` probes
-- resolver selection input still named `model` in the consumer-facing
-  interface
-- payment bootstrap still coupled to quote-derived session/payment data
-
-That is what the code in this repo currently wires in
-[`packages/livepeer-openai-gateway/src/main.ts`](../../packages/livepeer-openai-gateway/src/main.ts).
-
-## Suite v3.0.1 target runtime
+## Landed runtime
 
 The updated suite spec requires the follow-on runtime contract below:
 
@@ -56,39 +40,16 @@ The updated suite spec requires the follow-on runtime contract below:
 7. Gateway commits customer billing from retail USD pricing only after
    the worker call succeeds.
 
-Under that target contract:
+Under the landed contract:
 
 - worker `/capabilities`, `/quote`, and `/quotes` are deleted
 - `model` becomes `offering` across resolver-facing interfaces
 - wholesale price becomes manifest/resolver-owned, not worker-quote-owned
 
-## What is repo-local vs external
+## Follow-ons
 
-### External dependencies
+The remaining repo-local work is narrower now:
 
-The main remaining external dependency is the engine/runtime release
-this shell consumes:
-
-- `livepeer-openai-gateway-core` removes quote-refreshing and adopts the
-  new resolver/payment flow
-
-The `payment-daemon` sender contract revision is already landed upstream:
-
-- sender mode now exposes `CreatePayment(face_value, recipient)`
-- the shared `worker.yaml` `Model -> Offering` rename is already landed
-- bridge-facing deployment docs in `livepeer-modules-project` now
-  describe the v3 flow explicitly
-
-For this repo, the remaining gap is consuming that shipped daemon
-contract through an updated `@cloudspe/livepeer-openai-gateway-core`
-release and then cutting the shell over to it.
-
-### Repo-local follow-ons
-
-Once the external boundary is ready, this shell still needs:
-
-- retail pricing schema migration toward
-  `(capability, offering, tier) -> retail_usd_per_unit`
 - final route coverage for the complete OpenAI surface, including any
   engine-provided `/v1/images/edits` handler once upstream exists
 - doc and UX verification for hot-wallet degraded mode

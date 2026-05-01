@@ -11,7 +11,7 @@ import * as customersRepo from '../../../repo/customers.js';
 import * as nodeHealthRepo from '@cloudspe/livepeer-openai-gateway-core/repo/nodeHealth.js';
 import * as reservationsRepo from '../../../repo/reservations.js';
 import * as topupsRepo from '../../../repo/topups.js';
-import type { ServiceRegistryClient } from '@cloudspe/livepeer-openai-gateway-core/providers/serviceRegistry.js';
+import type { ServiceRegistryClient } from '../../../providers/serviceRegistry.js';
 
 /**
  * Operator-facing probe of the live registry. The bridge's nodeIndex is

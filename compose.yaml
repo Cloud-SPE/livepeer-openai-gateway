@@ -104,10 +104,6 @@ services:
       # PayerDaemon — socket lives on the shared payment-socket volume
       PAYER_DAEMON_SOCKET: /var/run/livepeer/payment.sock
 
-      # Bridge's own ETH address (must match the payer-daemon keystore).
-      # Sent as ?sender= when probing worker /quote + /quotes.
-      BRIDGE_ETH_ADDRESS: ${BRIDGE_ETH_ADDRESS:?set BRIDGE_ETH_ADDRESS (0x-prefixed 40-hex; must match payer-daemon keystore)}
-
       # Stripe (use test-mode keys for local dev)
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:?set STRIPE_SECRET_KEY}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:?set STRIPE_WEBHOOK_SECRET}

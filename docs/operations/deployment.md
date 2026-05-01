@@ -46,11 +46,6 @@ docker compose -f compose.smoke.yaml up -d
 cp .env.example .env
 $EDITOR .env   # fill every REQUIRED-* placeholder + CHAIN_RPC
 
-# Note: BRIDGE_ETH_ADDRESS must match the address derived from the
-# keystore you mount in step 2. In the currently pinned runtime it is
-# threaded into the legacy worker quote/session path; the suite v3.0.1
-# target flow removes worker quote probes entirely.
-
 # 2. Keystore (signer) + password
 cp /path/to/your-v3-keystore.json ./keystore.json
 printf '%s' 'your-keystore-password' > ./keystore-password

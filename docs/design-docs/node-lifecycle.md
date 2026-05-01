@@ -1,5 +1,5 @@
 ---
-title: Node lifecycle (registry-daemon, current pinned runtime, and v3 target)
+title: Node lifecycle
 status: accepted
 last-reviewed: 2026-05-01
 ---
@@ -33,9 +33,9 @@ How WorkerNodes enter, run in, and leave the bridge's routing pool.
 
 ## Historical pinned-runtime note
 
-The sections below describe the shell's older, still-pinned engine
-behavior for quote refresh and worker probing. They do **not** describe
-the suite v3.0.1 worker contract.
+The historical sections below are preserved for context only. They do
+**not** describe the shell's current runtime. The current shell is on
+the v3 route-first flow described in the bullets below.
 
 Under the suite v3.0.1 contract:
 
@@ -44,9 +44,8 @@ Under the suite v3.0.1 contract:
 - the gateway computes `face_value`
 - the worker is price-blind and validates only the attached payment
 
-The historical material is preserved here only to explain the currently
-installed runtime path while this repo still consumes the older engine
-package.
+The historical material below is preserved only to document previous
+bridge behavior and older completed exec plans.
 
 ## (Historical) Source of truth: `nodes.yaml`
 

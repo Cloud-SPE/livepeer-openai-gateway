@@ -6,11 +6,9 @@ last-reviewed: 2026-05-01
 
 # Architecture
 
-> **2026-04-30 note:** this doc describes the currently shipped shell
-> architecture. The suite's later v3.0.1 protocol cut (no worker
-> `/quote`/`/quotes`, `offering`-named resolver inputs, gateway-computed
-> `face_value`) is tracked separately in
-> [v3-runtime-realignment.md](./v3-runtime-realignment.md).
+> **2026-05-01 note:** this doc reflects the v3 route-first runtime:
+> no worker `/quote` or `/quotes`, resolver selection keyed by
+> `offering`, and bridge-computed `face_value`.
 
 ## Layer stack
 
@@ -36,9 +34,8 @@ The TypeScript server lives under `src/`. Browser UIs (customer portal, operator
 │  dashboard/         engine's optional read-only operator UI │  ← may import service, providers, interfaces
 │                     mounted via registerOperatorDashboard at /admin/ops
 ├─────────────────────────────────────────────────────────┤
-│  dispatch/          framework-free request orchestration (per exec-plan 0025;
-│                     current pinned engine path still threads QuoteCache)
-│    ├─ chatCompletion.ts       ← current pinned path takes Wallet+Caller+ServiceRegistryClient+CircuitBreaker+QuoteCache
+│  dispatch/          framework-free request orchestration
+│    ├─ chatCompletion.ts       ← route selected via resolver; payment created via payer-daemon
 │    ├─ streamingChatCompletion.ts
 │    ├─ embeddings.ts                                     │
 │    ├─ images.ts                                         │
@@ -48,7 +45,7 @@ The TypeScript server lives under `src/`. Browser UIs (customer portal, operator
 │  service/           business logic                      │  ← may import repo, providers, config, types, interfaces
 │    ├─ auth/                                             │
 │    ├─ billing/        (incl. inMemoryWallet for tests)  │
-│    ├─ routing/        (current pinned path: router, retry, circuitBreaker class, quoteCache, scheduler, quoteRefresher)
+│    ├─ routing/        (route selection helpers + circuit breaker)
 │    ├─ (NodeBook + nodes.yaml retired in stage 3 — see node-lifecycle.md)
 │    ├─ pricing/                                          │
 │    ├─ tokenAudit/                                       │
@@ -79,16 +76,15 @@ Enforced by the custom ESLint rules in `lint/` (`layer-check`, `no-cross-cutting
 
 ## Domain inventory
 
-| Path                      | Purpose                                                                                                   |
-| ------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `src/service/auth/`       | API-key validation, customer record lookup, tier resolution                                               |
-| `src/service/billing/`    | CustomerLedger reads/writes, top-up orchestration, refund on failure                                      |
-| `src/service/routing/`    | Router: node selection, failover/retry, request dispatch                                                  |
-| `src/service/routing/`    | Current pinned engine path: resolver selection, quote refresh/cache, circuit breaker, retry orchestration |
-| `src/service/pricing/`    | Rate card lookup, margin calculation, drift metrics                                                       |
-| `src/service/tokenAudit/` | LocalTokenizer coordination — v1 emits drift metrics only                                                 |
-| `src/service/rateLimit/`  | Redis sliding window + concurrent-request semaphore                                                       |
-| `src/service/payments/`   | Wraps payment-daemon gRPC calls (current session bootstrap + CreatePayment flow)                          |
+| Path                      | Purpose                                                              |
+| ------------------------- | -------------------------------------------------------------------- |
+| `src/service/auth/`       | API-key validation, customer record lookup, tier resolution          |
+| `src/service/billing/`    | CustomerLedger reads/writes, top-up orchestration, refund on failure |
+| `src/service/routing/`    | Resolver-backed route selection + node/circuit bookkeeping           |
+| `src/service/pricing/`    | Rate card lookup, margin calculation, drift metrics                  |
+| `src/service/tokenAudit/` | LocalTokenizer coordination — v1 emits drift metrics only            |
+| `src/service/rateLimit/`  | Redis sliding window + concurrent-request semaphore                  |
+| `src/service/payments/`   | Wraps payment-daemon gRPC calls (`CreatePayment` + health)           |
 
 ## Runtime surfaces
 
@@ -114,17 +110,17 @@ Enforced by the custom ESLint rules in `lint/` (`layer-check`, `no-cross-cutting
 
 All cross-cutting concerns enter through `src/providers/`. One interface per concern; one or more implementations.
 
-| Provider                | Interface role                                                                          | Default implementation                                    |
-| ----------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| `PayerDaemonClient`     | gRPC client to local payment-daemon (`livepeer.payments.v1`)                            | `@grpc/grpc-js` with generated stubs                      |
-| `NodeClient`            | HTTP client to WorkerNode `/health`, `/v1/*`, and the current pinned quote-refresh path | `fetch`-based impl in `src/providers/nodeClient/`         |
-| `StripeClient`          | Top-ups, webhooks, disputes                                                             | `stripe` SDK                                              |
-| `RedisClient`           | Rate-limit state, ephemeral counters                                                    | `ioredis`                                                 |
-| `Database`              | Postgres connection pool                                                                | `pg` + Drizzle ORM                                        |
-| `Tokenizer`             | Model-aware token counting (drift audit only — no enforcement in v1)                    | `tiktoken` default; per-model-family plugins              |
-| `ChainInfo`             | Read-only Eth for admin views (escrow status)                                           | `viem`                                                    |
-| `MetricsSink`           | Counter / Gauge / Histogram                                                             | No-op default; Prometheus later                           |
-| `ServiceRegistryClient` | Engine-internal node discovery + selection (NOT operator-overridable)                   | gRPC client to `livepeer-modules/service-registry-daemon` |
+| Provider                | Interface role                                                        | Default implementation                                    |
+| ----------------------- | --------------------------------------------------------------------- | --------------------------------------------------------- |
+| `PayerDaemonClient`     | gRPC client to local payment-daemon (`livepeer.payments.v1`)          | `@grpc/grpc-js` with generated stubs                      |
+| `NodeClient`            | HTTP client to WorkerNode `/health` and `/v1/*` inference endpoints   | `fetch`-based impl in `src/providers/nodeClient/`         |
+| `StripeClient`          | Top-ups, webhooks, disputes                                           | `stripe` SDK                                              |
+| `RedisClient`           | Rate-limit state, ephemeral counters                                  | `ioredis`                                                 |
+| `Database`              | Postgres connection pool                                              | `pg` + Drizzle ORM                                        |
+| `Tokenizer`             | Model-aware token counting (drift audit only — no enforcement in v1)  | `tiktoken` default; per-model-family plugins              |
+| `ChainInfo`             | Read-only Eth for admin views (escrow status)                         | `viem`                                                    |
+| `MetricsSink`           | Counter / Gauge / Histogram                                           | No-op default; Prometheus later                           |
+| `ServiceRegistryClient` | Engine-internal node discovery + selection (NOT operator-overridable) | gRPC client to `livepeer-modules/service-registry-daemon` |
 
 Providers are wired in `src/runtime/` entry points and injected into `service/` and `repo/`.
 

@@ -1,5 +1,5 @@
 import type { Db } from '../../repo/db.js';
-import type { PayerDaemonClient } from '@cloudspe/livepeer-openai-gateway-core/providers/payerDaemon.js';
+import type { PayerDaemonClient } from '../../providers/payerDaemon.js';
 import type { RedisClient } from '@cloudspe/livepeer-openai-gateway-core/providers/redis.js';
 import type { CircuitBreaker } from '@cloudspe/livepeer-openai-gateway-core/service/routing/circuitBreaker.js';
 import type { NodeIndex } from '@cloudspe/livepeer-openai-gateway-core/service/routing/nodeIndex.js';
@@ -36,7 +36,9 @@ export interface AdminServiceDeps {
 }
 
 export function createAdminService(deps: AdminServiceDeps): AdminService {
-  const engine = createEngineAdminService(deps);
+  const engine = createEngineAdminService(
+    deps as unknown as Parameters<typeof createEngineAdminService>[0],
+  );
   const shell = createShellAdminService({ db: deps.db });
   return { ...engine, ...shell };
 }

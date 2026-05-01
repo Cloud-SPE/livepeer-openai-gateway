@@ -1,26 +1,28 @@
 ---
-title: Retry policy (node dispatch)
+title: Retry policy (route dispatch)
 status: accepted
-last-reviewed: 2026-04-24
+last-reviewed: 2026-05-01
 ---
 
 # Retry policy
 
 When the bridge dispatches a customer request to a WorkerNode and the dispatch fails, this table governs whether we retry, how many times, and on which node.
 
-Implementation: `src/service/routing/retry.ts` (`runWithRetry` + `classifyNodeError`). Consumed by the streaming handler today; retrofit to the non-streaming handler is tracked in tech-debt.
+Implementation: route selection is resolver-first. The current shell
+does not keep a worker-quote refresh loop, so retries re-run route
+selection rather than forcing worker quote refresh.
 
 ## Table
 
-| Error class                                                 | Retry? | Max | Where          | Notes                                                  |
-| ----------------------------------------------------------- | ------ | --- | -------------- | ------------------------------------------------------ |
-| Network error / timeout contacting node, pre-first-token    | Yes    | 2   | Different node | Short backoff (caller's choice; default 0 ms)          |
-| 5xx from node, pre-first-token                              | Yes    | 2   | Different node | Same                                                   |
-| "Inference failure" 5xx (OOM, model crash), pre-first-token | Yes    | 1   | Different node | Node-specific; informed by metrics later               |
-| 4xx from node (validation, auth, context-length)            | **No** | —   | —              | Surface as-is to customer                              |
-| Payment insufficient (node rejects payment)                 | Yes    | 1   | —              | Force quote refresh, then retry once                   |
-| **Streaming: any error after first token delivered**        | **No** | —   | —              | Partial-success response; see `streaming-semantics.md` |
-| `ErrTicketParamsExpired` from PayeeDaemon                   | Yes    | 1   | Same node      | Force quote refresh, retry once                        |
+| Error class                                                 | Retry? | Max | Where           | Notes                                                   |
+| ----------------------------------------------------------- | ------ | --- | --------------- | ------------------------------------------------------- |
+| Network error / timeout contacting node, pre-first-token    | Yes    | 2   | Different node  | Short backoff (caller's choice; default 0 ms)           |
+| 5xx from node, pre-first-token                              | Yes    | 2   | Different node  | Same                                                    |
+| "Inference failure" 5xx (OOM, model crash), pre-first-token | Yes    | 1   | Different node  | Node-specific; informed by metrics later                |
+| 4xx from node (validation, auth, context-length)            | **No** | —   | —               | Surface as-is to customer                               |
+| Payment insufficient (node rejects payment)                 | Yes    | 1   | Different route | Re-select route, recompute payment, retry once          |
+| **Streaming: any error after first token delivered**        | **No** | —   | —               | Partial-success response; see `streaming-semantics.md`  |
+| `ErrTicketParamsExpired` from PayeeDaemon                   | Yes    | 1   | Same route      | Recreate payment against the selected route, retry once |
 
 "First token delivered" is the **hard** boundary. Once a chunk with non-empty `choices[0].delta.content` has crossed the wire to the customer, there are no retries — the bridge commits to the node and settles based on what's actually delivered.
 

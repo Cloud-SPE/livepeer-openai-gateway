@@ -23,7 +23,7 @@ import { createFastifyServer } from '@cloudspe/livepeer-openai-gateway-core/prov
 import { createAdminService } from '../../../../service/admin/index.js';
 import { registerAdminRoutes } from '../routes.js';
 import { registerAdminConsoleStatic } from './static.js';
-import type { PayerDaemonClient } from '@cloudspe/livepeer-openai-gateway-core/providers/payerDaemon.js';
+import type { PayerDaemonClient } from '../../../../providers/payerDaemon.js';
 
 const ADMIN_DIST = resolve(process.cwd(), 'frontend/admin/dist');
 const HAS_DIST = existsSync(ADMIN_DIST);
@@ -48,14 +48,8 @@ afterAll(async () => {
 
 function mockPayerDaemon(): PayerDaemonClient {
   return {
-    async startSession() {
-      return { workId: 'wrk' };
-    },
     async createPayment() {
       return { paymentBytes: new Uint8Array([1]), ticketsCreated: 1, expectedValueWei: 10n };
-    },
-    async closeSession() {
-      /* noop */
     },
     async getDepositInfo() {
       return { depositWei: 1n, reserveWei: 1n, withdrawRound: 0n };
