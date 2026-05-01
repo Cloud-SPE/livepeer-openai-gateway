@@ -70,6 +70,7 @@ export function createRateCardService(deps: RateCardServiceDeps): RateCardServic
   let snapshot: RateCardSnapshot | null = null;
   let loadedAt = 0;
   let inflight: Promise<RateCardSnapshot> | null = null;
+  let refreshQueued = false;
 
   async function loadFromDb(): Promise<RateCardSnapshot> {
     const retailRows = await deps.db
@@ -264,6 +265,10 @@ export function createRateCardService(deps: RateCardServiceDeps): RateCardServic
       return snapshot;
     } finally {
       inflight = null;
+      if (refreshQueued) {
+        refreshQueued = false;
+        void refresh();
+      }
     }
   }
 
@@ -288,6 +293,10 @@ export function createRateCardService(deps: RateCardServiceDeps): RateCardServic
 
     invalidate(): void {
       loadedAt = 0; // forces a reload on next current() through TTL check
+      if (inflight) {
+        refreshQueued = true;
+        return;
+      }
       void refresh(); // also kick off an immediate background load
     },
 

@@ -65,6 +65,26 @@ async function buildServer() {
   return server;
 }
 
+async function waitFor(
+  assertion: () => void | Promise<void>,
+  opts?: { timeoutMs?: number; intervalMs?: number },
+) {
+  const timeoutMs = opts?.timeoutMs ?? 2_000;
+  const intervalMs = opts?.intervalMs ?? 25;
+  const deadline = Date.now() + timeoutMs;
+  let lastError: unknown;
+  while (Date.now() < deadline) {
+    try {
+      await assertion();
+      return;
+    } catch (error) {
+      lastError = error;
+      await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    }
+  }
+  throw lastError;
+}
+
 const authHeaders = (actor?: string) => ({
   authorization: `Bearer ${ADMIN_TOKEN}`,
   ...(actor ? { 'x-admin-actor': actor } : {}),
@@ -94,11 +114,11 @@ describe('X-Admin-Actor middleware', () => {
         headers: authHeaders('alice'),
       });
       expect(res.statusCode).toBe(200);
-      // Audit row written on response close — wait briefly for it.
-      await new Promise((r) => setTimeout(r, 50));
-      const rows = await adminAuditEventsRepo.search(pg.db, { limit: 10 });
-      const last = rows.find((r) => r.action.includes('/admin/health'));
-      expect(last?.actor).toBe('alice');
+      await waitFor(async () => {
+        const rows = await adminAuditEventsRepo.search(pg.db, { limit: 10 });
+        const last = rows.find((r) => r.action.includes('/admin/health'));
+        expect(last?.actor).toBe('alice');
+      });
     } finally {
       await server.close();
     }
@@ -113,11 +133,12 @@ describe('X-Admin-Actor middleware', () => {
         headers: authHeaders('Capital Letters!'),
       });
       expect(res.statusCode).toBe(200);
-      await new Promise((r) => setTimeout(r, 50));
-      const rows = await adminAuditEventsRepo.search(pg.db, { limit: 10 });
-      const last = rows.find((r) => r.action.includes('/admin/health'));
-      // Token hash is 16 hex chars
-      expect(last?.actor).toMatch(/^[0-9a-f]{16}$/);
+      await waitFor(async () => {
+        const rows = await adminAuditEventsRepo.search(pg.db, { limit: 10 });
+        const last = rows.find((r) => r.action.includes('/admin/health'));
+        // Token hash is 16 hex chars
+        expect(last?.actor).toMatch(/^[0-9a-f]{16}$/);
+      });
     } finally {
       await server.close();
     }
