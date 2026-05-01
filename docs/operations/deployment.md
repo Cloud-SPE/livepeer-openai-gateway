@@ -17,6 +17,7 @@ How to run the bridge + payment daemon + postgres + redis stack end-to-end, for 
 - Docker 20.10+ with Buildkit (Compose v2).
 - A V3 JSON Ethereum keystore for the signer wallet. If you don't have one, the payment-daemon docker guide in `livepeer-modules` explains how to generate one with `geth account new`.
 - A funded EVM RPC endpoint for the chain you're running on. Arbitrum One is the default (only `CHAIN_RPC` needs to be set); any other chain requires the full override block (see `.env.example`).
+- Resolver contract selection for chain-discovery deployments. This gateway defaults to the Arbitrum One AI service registry via `SERVICE_REGISTRY_CONTRACT_ADDRESS=0x04C0b249740175999E5BF5c9ac1dA92431EF34C5`. One resolver deployment targets exactly one registry contract.
 - Stripe test keys (for dev) or live keys (for prod), plus a webhook signing secret.
 
 ## Layout

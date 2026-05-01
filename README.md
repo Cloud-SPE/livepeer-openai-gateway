@@ -12,6 +12,7 @@ ETH via the `payment-daemon` sidecar from
 - **OpenAI-compatible `/v1/chat/completions`** — streaming (SSE) + non-streaming. Drop-in compatible with the official `openai` SDK via a custom `base_url` + an API key the bridge issues.
 - **Two customer tiers**: **Free** (100K-token monthly quota) and **Prepaid** (USD balance, topped up via Stripe Checkout). First top-up auto-upgrades a free customer atomically with the credit.
 - **Routes every request** to a Livepeer WorkerNode from a config-driven pool, builds a micropayment via `payment-daemon`, forwards the call, commits billing from the node's reported usage.
+- **Consumes one resolver deployment per registry contract.** This shell talks to a single `service-registry-daemon` socket; AI gateway deployments should point that resolver at the AI service registry contract.
 - **Fail-closed on payment-daemon outage.** Never proceeds without payment.
 - **Observation-only token audit**: `tiktoken`-based local counts cross-checked against node-reported counts; drift is metered, not enforced.
 - **Optional `Idempotency-Key` support** on supported customer POSTs. The shell persists completed responses and replays them on duplicate requests for non-streaming JSON POSTs. Unsafe current-runtime cases are explicitly rejected today: streaming chat completions and multipart transcription uploads.
@@ -124,7 +125,7 @@ cp .env.example .env
 docker compose up --build
 ```
 
-Stands up `postgres:16-alpine` + `redis:7-alpine` + `tztcloud/livepeer-payment-daemon:v1.4.0` (sender mode) + `tztcloud/livepeer-service-registry-daemon:v1.4.0` (resolver mode, overlay-only) + the bridge (built from `Dockerfile`). All five services share a `socket-dir` (or `payment-socket`) named volume at `/var/run/livepeer/` so the bridge can reach both daemons over their unix sockets.
+Stands up `postgres:16-alpine` + `redis:7-alpine` + `tztcloud/livepeer-payment-daemon:v1.4.0` (sender mode) + `tztcloud/livepeer-service-registry-daemon:v1.4.0` (resolver mode, overlay-only) + the bridge (built from `Dockerfile`). All five services share a `socket-dir` (or `payment-socket`) named volume at `/var/run/livepeer/` so the bridge can reach both daemons over their unix sockets. Chain-discovery deployments should set `SERVICE_REGISTRY_CONTRACT_ADDRESS`; this repo defaults it to the Arbitrum One AI service registry address.
 
 See [`docs/operations/deployment.md`](docs/operations/deployment.md) for the full walkthrough including the production override (`compose.prod.yaml`) with pinned image, restart policies, log rotation, resource limits, read-only hardening, and the one-shot migration job.
 

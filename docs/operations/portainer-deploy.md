@@ -29,6 +29,7 @@ Before touching Portainer, gather:
 | Required                                   | Description                                                                                                                                                                                                                                                      |
 | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Arbitrum One RPC URL**                   | Any provider — Alchemy, Infura, your own node. Set as `CHAIN_RPC`. The bridge passes it through to the payment-daemon and the service-registry-daemon.                                                                                                           |
+| **Resolver registry contract**             | Set as `SERVICE_REGISTRY_CONTRACT_ADDRESS`. This gateway defaults to the Arbitrum One **AI service registry** (`0x04C0b249740175999E5BF5c9ac1dA92431EF34C5`). One resolver deployment targets exactly one registry contract.                                     |
 | **Ethereum keystore (V3 JSON) + password** | The signing wallet for the bridge. The eth_address derived from this keystore must match `BRIDGE_ETH_ADDRESS`. Generated via `geth account new` if you don't have one.                                                                                           |
 | **Stripe secret + webhook signing keys**   | `sk_live_...` (or `sk_test_...` for staging). Webhook secret from your Stripe Dashboard → Developers → Webhooks → endpoint signing secret.                                                                                                                       |
 | **Public hostname for the bridge**         | Set as `BRIDGE_PUBLIC_HOST`. Traefik or your reverse proxy routes `Host(${BRIDGE_PUBLIC_HOST})` → the bridge container.                                                                                                                                          |
@@ -131,6 +132,7 @@ services:
       - --discovery=overlay-only
       - --socket=/var/run/livepeer/service-registry.sock
       - --static-overlay=/etc/livepeer/service-registry.yaml
+      - --service-registry-address=${SERVICE_REGISTRY_CONTRACT_ADDRESS:-0x04C0b249740175999E5BF5c9ac1dA92431EF34C5}
       - --store-path=/var/lib/livepeer/registry-cache.db
       - --chain-rpc=${CHAIN_RPC}
       - --log-level=${DAEMON_LOG_LEVEL:-info}
@@ -214,7 +216,13 @@ networks:
     external: true
 ```
 
-In the **Environment variables** panel below the editor, set every `${...}` value: `CHAIN_RPC`, `BRIDGE_ETH_ADDRESS`, `BRIDGE_PUBLIC_HOST`, `PGPASSWORD`, `API_KEY_PEPPER`, `ADMIN_TOKEN`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`. Optional defaults work for `PGUSER` (`bridge`), `PGDATABASE` (`bridge`), `API_KEY_ENV_PREFIX` (`test`).
+In the **Environment variables** panel below the editor, set every `${...}` value: `CHAIN_RPC`, `SERVICE_REGISTRY_CONTRACT_ADDRESS`, `BRIDGE_ETH_ADDRESS`, `BRIDGE_PUBLIC_HOST`, `PGPASSWORD`, `API_KEY_PEPPER`, `ADMIN_TOKEN`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`. Optional defaults work for `PGUSER` (`bridge`), `PGDATABASE` (`bridge`), `API_KEY_ENV_PREFIX` (`test`).
+
+For AI gateway deployments, `SERVICE_REGISTRY_CONTRACT_ADDRESS` should be the Arbitrum One AI service registry:
+
+```text
+0x04C0b249740175999E5BF5c9ac1dA92431EF34C5
+```
 
 Click **Deploy the stack**. First run pulls all five images (~2-3 min), runs `bridge-migrate` to apply schemas (engine + app + rate-card + seed defaults), then starts the bridge.
 

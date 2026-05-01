@@ -49,6 +49,12 @@ and `livepeer-modules` boundaries.
       shapes to offerings - synthesize the installed engine's older rate-card snapshot from
       the `prepaid` retail view so the current runtime keeps working - switch the admin SPA pricing page to the shell-native retail
       model and document the compatibility boundary
+- [x] Align bridge deployment docs/config with the single-target AI
+      service-registry rollout: - confirm the modules resolver still
+      exposes the same `ResolveByAddress` / `ListKnown` / `Select`
+      consumer RPCs - keep registry targeting in deployment config, not
+      bridge app logic - default local/prod deploy artifacts to the
+      Arbitrum One AIServiceRegistry contract address
 
 ## Decisions log
 
@@ -78,6 +84,17 @@ engine rate-card snapshot from the `prepaid` rows. Chat remains a
 special case while the installed engine still expects separate
 input/output pricing and at most four distinct price pairs.
 
+### 2026-05-01 — Keep AI registry selection in deployment config, not bridge app logic
+
+Reason: `livepeer-modules-project/service-registry-daemon` still
+exposes the same resolver consumer RPCs (`ResolveByAddress`,
+`ListKnown`, `Select`), so this shell does not need app-layer changes to
+understand AI registry entries. The integration point remains one
+resolver socket; operators choose the target registry contract per
+deployment. This repo therefore defaults resolver deploy artifacts to
+the Arbitrum One AIServiceRegistry contract instead of adding
+bridge-side registry branching.
+
 ## Open questions
 
 - Which upstream `livepeer-openai-gateway-core` release removes the
@@ -97,3 +114,9 @@ input/output pricing and at most four distinct price pairs.
 - `packages/livepeer-openai-gateway/migrations/0004_retail_pricing.sql`
 - `packages/livepeer-openai-gateway/src/repo/idempotency.ts`
 - `packages/livepeer-openai-gateway/src/runtime/http/middleware/idempotency.ts`
+- `.env.example`
+- `compose.yaml`
+- `compose.prod.yaml`
+- `README.md`
+- `docs/operations/deployment.md`
+- `docs/operations/portainer-deploy.md`

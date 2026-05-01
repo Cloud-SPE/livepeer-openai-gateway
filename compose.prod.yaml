@@ -105,10 +105,12 @@ services:
       - --mode=resolver
       # Static-overlay-only: skip chain discovery; pool comes solely from
       # the YAML below. Drop this flag (and add --chain-rpc) once you
-      # want orchestrators auto-discovered from the BondingManager.
+      # want orchestrators auto-discovered from the BondingManager. The
+      # registry contract default below is the AI service registry.
       - --discovery=overlay-only
       - --socket=/var/run/livepeer/service-registry.sock
       - --static-overlay=/etc/livepeer/service-registry.yaml
+      - --service-registry-address=${SERVICE_REGISTRY_CONTRACT_ADDRESS:-0x04C0b249740175999E5BF5c9ac1dA92431EF34C5}
       - --log-level=${DAEMON_LOG_LEVEL:-info}
     volumes:
       - ${SERVICE_REGISTRY_CONFIG_PATH:-./service-registry-config.yaml}:/etc/livepeer/service-registry.yaml:ro
