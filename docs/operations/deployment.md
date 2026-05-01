@@ -273,7 +273,7 @@ docker compose -f compose.smoke.yaml down --volumes
 | Image builds + boots                                              | `/v1/chat/completions`, `/v1/embeddings`, `/v1/images/*` etc. |
 | Auto-migration runs against an empty DB                           | Real Stripe Checkout (dummy keys 401 against Stripe's API)    |
 | Both UI `dist/`s ship inside the image and serve correctly        | Real payment issuance (needs daemon + worker node + reserve)  |
-| Auth gates: customer bearer auth + admin bearer auth             |                                                               |
+| Auth gates: customer bearer auth + admin bearer auth              |                                                               |
 | `nodes.yaml` loads at startup; `/admin/nodes` reflects it         |                                                               |
 | USD-only formatting (cents → `$X.YZ`); never wei in customer view |                                                               |
 | 401 on missing/wrong auth                                         |                                                               |

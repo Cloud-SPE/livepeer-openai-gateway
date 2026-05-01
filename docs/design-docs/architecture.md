@@ -79,16 +79,16 @@ Enforced by the custom ESLint rules in `lint/` (`layer-check`, `no-cross-cutting
 
 ## Domain inventory
 
-| Path                      | Purpose                                                                          |
-| ------------------------- | -------------------------------------------------------------------------------- |
-| `src/service/auth/`       | API-key validation, customer record lookup, tier resolution                      |
-| `src/service/billing/`    | CustomerLedger reads/writes, top-up orchestration, refund on failure             |
-| `src/service/routing/`    | Router: node selection, failover/retry, request dispatch                         |
+| Path                      | Purpose                                                                                                   |
+| ------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `src/service/auth/`       | API-key validation, customer record lookup, tier resolution                                               |
+| `src/service/billing/`    | CustomerLedger reads/writes, top-up orchestration, refund on failure                                      |
+| `src/service/routing/`    | Router: node selection, failover/retry, request dispatch                                                  |
 | `src/service/routing/`    | Current pinned engine path: resolver selection, quote refresh/cache, circuit breaker, retry orchestration |
-| `src/service/pricing/`    | Rate card lookup, margin calculation, drift metrics                              |
-| `src/service/tokenAudit/` | LocalTokenizer coordination — v1 emits drift metrics only                        |
-| `src/service/rateLimit/`  | Redis sliding window + concurrent-request semaphore                              |
-| `src/service/payments/`   | Wraps payment-daemon gRPC calls (current session bootstrap + CreatePayment flow) |
+| `src/service/pricing/`    | Rate card lookup, margin calculation, drift metrics                                                       |
+| `src/service/tokenAudit/` | LocalTokenizer coordination — v1 emits drift metrics only                                                 |
+| `src/service/rateLimit/`  | Redis sliding window + concurrent-request semaphore                                                       |
+| `src/service/payments/`   | Wraps payment-daemon gRPC calls (current session bootstrap + CreatePayment flow)                          |
 
 ## Runtime surfaces
 
@@ -114,17 +114,17 @@ Enforced by the custom ESLint rules in `lint/` (`layer-check`, `no-cross-cutting
 
 All cross-cutting concerns enter through `src/providers/`. One interface per concern; one or more implementations.
 
-| Provider                | Interface role                                                                   | Default implementation                                    |
-| ----------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| `PayerDaemonClient`     | gRPC client to local payment-daemon (`livepeer.payments.v1`)                     | `@grpc/grpc-js` with generated stubs                      |
+| Provider                | Interface role                                                                          | Default implementation                                    |
+| ----------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `PayerDaemonClient`     | gRPC client to local payment-daemon (`livepeer.payments.v1`)                            | `@grpc/grpc-js` with generated stubs                      |
 | `NodeClient`            | HTTP client to WorkerNode `/health`, `/v1/*`, and the current pinned quote-refresh path | `fetch`-based impl in `src/providers/nodeClient/`         |
-| `StripeClient`          | Top-ups, webhooks, disputes                                                      | `stripe` SDK                                              |
-| `RedisClient`           | Rate-limit state, ephemeral counters                                             | `ioredis`                                                 |
-| `Database`              | Postgres connection pool                                                         | `pg` + Drizzle ORM                                        |
-| `Tokenizer`             | Model-aware token counting (drift audit only — no enforcement in v1)             | `tiktoken` default; per-model-family plugins              |
-| `ChainInfo`             | Read-only Eth for admin views (escrow status)                                    | `viem`                                                    |
-| `MetricsSink`           | Counter / Gauge / Histogram                                                      | No-op default; Prometheus later                           |
-| `ServiceRegistryClient` | Engine-internal node discovery + selection (NOT operator-overridable)            | gRPC client to `livepeer-modules/service-registry-daemon` |
+| `StripeClient`          | Top-ups, webhooks, disputes                                                             | `stripe` SDK                                              |
+| `RedisClient`           | Rate-limit state, ephemeral counters                                                    | `ioredis`                                                 |
+| `Database`              | Postgres connection pool                                                                | `pg` + Drizzle ORM                                        |
+| `Tokenizer`             | Model-aware token counting (drift audit only — no enforcement in v1)                    | `tiktoken` default; per-model-family plugins              |
+| `ChainInfo`             | Read-only Eth for admin views (escrow status)                                           | `viem`                                                    |
+| `MetricsSink`           | Counter / Gauge / Histogram                                                             | No-op default; Prometheus later                           |
+| `ServiceRegistryClient` | Engine-internal node discovery + selection (NOT operator-overridable)                   | gRPC client to `livepeer-modules/service-registry-daemon` |
 
 Providers are wired in `src/runtime/` entry points and injected into `service/` and `repo/`.
 
@@ -132,13 +132,13 @@ Providers are wired in `src/runtime/` entry points and injected into `service/` 
 
 Per exec-plan 0024 (engine-extraction-interfaces), the engine exposes five adapter contracts that operators implement to plug their own billing, auth, rate-limit, logging, and admin-auth into the engine. Distinct from `providers/` (which is engine-internal); operators replace these to integrate, not to extend.
 
-| Adapter             | Role                                                                                                         | Default impl in this repo                                                                                         |
-| ------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| `Wallet`            | reserve/commit/refund against the operator's billing model (USD-prepaid, free-quota, postpaid, crypto, etc.) | `createPrepaidQuotaWallet` in `src/service/billing/wallet.ts` — wraps the existing reserve/commit/refund branches |
-| `AuthResolver`      | Resolve an inbound HTTP request to a `Caller {id, tier, metadata?}` or null                                  | `createAuthResolver` in `src/service/auth/authResolver.ts` — wraps the existing AuthService                       |
-| `RateLimiter`       | Per-caller rate-limit policy enforcement (optional, opt-in at route registration)                            | `createRateLimiter` in `src/service/rateLimit/index.ts` — Redis sliding-window + concurrent-request semaphore     |
-| `Logger`            | `info` / `warn` / `error` structured log                                                                     | `createConsoleLogger` in `src/providers/logger/console.ts`                                                        |
-| `AdminAuthResolver` | Hook for the engine's optional read-only operator dashboard (lands in stage 2)                               | `createAdminAuthResolver` in `src/service/admin/authResolver.ts` — bearer admin auth + optional `X-Admin-Actor` + IP allowlist   |
+| Adapter             | Role                                                                                                         | Default impl in this repo                                                                                                      |
+| ------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| `Wallet`            | reserve/commit/refund against the operator's billing model (USD-prepaid, free-quota, postpaid, crypto, etc.) | `createPrepaidQuotaWallet` in `src/service/billing/wallet.ts` — wraps the existing reserve/commit/refund branches              |
+| `AuthResolver`      | Resolve an inbound HTTP request to a `Caller {id, tier, metadata?}` or null                                  | `createAuthResolver` in `src/service/auth/authResolver.ts` — wraps the existing AuthService                                    |
+| `RateLimiter`       | Per-caller rate-limit policy enforcement (optional, opt-in at route registration)                            | `createRateLimiter` in `src/service/rateLimit/index.ts` — Redis sliding-window + concurrent-request semaphore                  |
+| `Logger`            | `info` / `warn` / `error` structured log                                                                     | `createConsoleLogger` in `src/providers/logger/console.ts`                                                                     |
+| `AdminAuthResolver` | Hook for the engine's optional read-only operator dashboard (lands in stage 2)                               | `createAdminAuthResolver` in `src/service/admin/authResolver.ts` — bearer admin auth + optional `X-Admin-Actor` + IP allowlist |
 
 A generic `Caller {id, tier, metadata?}` is the engine's view of "who's calling." `metadata` is operator-defined and opaque to the engine; shell-side route handlers narrow via `caller.metadata as AuthenticatedCaller` to reach the customer row, API key, or other shell-specific fields.
 
