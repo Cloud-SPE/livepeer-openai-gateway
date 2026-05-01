@@ -1,7 +1,7 @@
 ---
 title: v3 runtime realignment
 status: accepted
-last-reviewed: 2026-04-30
+last-reviewed: 2026-05-01
 ---
 
 # v3 runtime realignment
@@ -65,19 +65,22 @@ Under that target contract:
 
 ### External dependencies
 
-These changes must land upstream before this shell can complete the
-runtime cut cleanly:
+The main remaining external dependency is the engine/runtime release
+this shell consumes:
 
 - `livepeer-openai-gateway-core` removes quote-refreshing and adopts the
   new resolver/payment flow
-- `payment-daemon` exposes and documents the sender/receiver contract the
-  new flow depends on, replacing the current sender-side
-  `StartSession(...) + CreatePayment(work_id, work_units)` flow with the
-  v3 target `CreatePayment(face_value, recipient)`
 
-The shared `worker.yaml` `Model -> Offering` rename in `payment-daemon`
-is already landed. The remaining external gap is the sender payment
-contract revision plus the engine/runtime changes needed to consume it.
+The `payment-daemon` sender contract revision is already landed upstream:
+
+- sender mode now exposes `CreatePayment(face_value, recipient)`
+- the shared `worker.yaml` `Model -> Offering` rename is already landed
+- bridge-facing deployment docs in `livepeer-modules-project` now
+  describe the v3 flow explicitly
+
+For this repo, the remaining gap is consuming that shipped daemon
+contract through an updated `@cloudspe/livepeer-openai-gateway-core`
+release and then cutting the shell over to it.
 
 ### Repo-local follow-ons
 

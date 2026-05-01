@@ -49,10 +49,12 @@ The engine has since been carved out and published as the public OSS package [`@
 - Daemons (sidecars): `tztcloud/livepeer-payment-daemon:v1.4.0`, `tztcloud/livepeer-service-registry-daemon:v1.4.0`
 
 **Important runtime note:** the current shell still consumes the engine's
-existing quote-refresh/session-bootstrap path. The suite v3.0.1 spec now
-requires a follow-on protocol cut (`offering` semantics, no worker
-`/quote`/`/quotes`, gateway-computed `face_value`). That gap is documented
-in [docs/design-docs/v3-runtime-realignment.md](docs/design-docs/v3-runtime-realignment.md).
+existing quote-refresh/session-bootstrap path. Upstream
+`payment-daemon` sender mode now already exposes
+`CreatePayment(face_value, recipient)`, but this repo is still pinned to
+an older `@cloudspe/livepeer-openai-gateway-core` runtime that has not
+cut over to it yet. The remaining gap is documented in
+[docs/design-docs/v3-runtime-realignment.md](docs/design-docs/v3-runtime-realignment.md).
 
 ## Where things live
 

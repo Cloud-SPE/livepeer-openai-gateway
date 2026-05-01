@@ -5,7 +5,7 @@ title: v3.0.1 shell realignment — docs sweep, external-boundary reset, and rep
 status: active
 owner: agent
 opened: 2026-04-30
-depends-on: livepeer-openai-gateway-core v3.0.1 protocol realignment; livepeer-modules payment-daemon sender/receiver contract update
+depends-on: livepeer-openai-gateway-core v3.0.1 protocol realignment
 ---
 
 ## Goal
@@ -80,12 +80,12 @@ input/output pricing and at most four distinct price pairs.
 
 ## Open questions
 
-- Which upstream release first exposes the new `payment-daemon`
-  `CreatePayment(face_value, recipient)` contract the shell can consume
-  without quote-derived session bootstrap?
 - Which upstream `livepeer-openai-gateway-core` release removes the
   quote-refresh path and `model`-named resolver inputs from its public
   consumer surface?
+- Which upstream `livepeer-openai-gateway-core` release consumes the
+  already-landed `payment-daemon` sender contract
+  `CreatePayment(face_value, recipient)` end to end?
 - When the upstream runtime cut lands, how quickly should the legacy
   prepaid adapter be deleted after the shell switches to native
   offering-based pricing end to end?

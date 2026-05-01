@@ -1,13 +1,29 @@
 ---
-title: PayerDaemon integration (gRPC client, sessions, payments)
+title: PayerDaemon integration (current shipped shell vs v3 target)
 status: accepted
-last-reviewed: 2026-04-25
+last-reviewed: 2026-05-01
 ---
 
 # PayerDaemon integration
 
-How the bridge talks to the `payment-daemon` sidecar from `livepeer-modules`
-to acquire signed payment blobs for WorkerNode requests.
+How this shell talks to the `payment-daemon` sidecar from
+`livepeer-modules` to acquire signed payment blobs for WorkerNode
+requests, and how that differs from the newer upstream v3 sender
+contract.
+
+## Scope note
+
+This document describes two states:
+
+- the **current shipped shell/runtime path** in this repo today, which
+  still flows through `@cloudspe/livepeer-openai-gateway-core@3.0.0`
+  and its session-oriented payer interface
+- the **upstream v3 sender contract** already landed in
+  `livepeer-modules-project`, where sender mode now exposes only
+  `CreatePayment(face_value, recipient)` plus `GetDepositInfo`
+
+The shell has not consumed that new contract yet because the pinned core
+package in this repo still expects the older session bootstrap path.
 
 ## Topology
 
@@ -34,7 +50,7 @@ to acquire signed payment blobs for WorkerNode requests.
 - `npm run proto:gen` runs `buf generate` with `ts-proto`; output lives under `src/providers/payerDaemon/gen/` and is committed.
 - Regenerate explicitly when the library's `livepeer.payments.v1` proto changes. The generated folder is excluded from coverage (`vitest.config.ts`).
 
-## Provider interface
+## Current shipped shell interface
 
 `src/providers/payerDaemon.ts` declares the bridge's domain-level client:
 
@@ -53,13 +69,46 @@ interface PayerDaemonClient {
 
 All inputs and outputs use domain types (`bigint`, `0x`-prefixed hex strings). Protobuf wire types never leak past `providers/payerDaemon/`.
 
-### `startSession` requires `priceInfo` (since payment-daemon v0.8.10)
+This is the compatibility surface the currently pinned engine package
+still uses. It is not the v3 target interface.
+
+### Current shipped session bootstrap requires `priceInfo`
 
 `StartSessionInput` carries a REQUIRED `priceInfo` field — the per-capability `cap.maxPrice` the worker used at quote time, surfaced as the max in `/quote.model_prices` and projected onto `Quote.priceInfo` by `wireQuoteToDomain`. The bridge passes it as the matching `StartSessionRequest.price_info` (proto field 3); the sender daemon stamps it into `Payment.expected_price` for every subsequent `CreatePayment`. The receiver re-derives `recipientRand` from the price as part of its HMAC inputs, so the value MUST match the price the worker used to issue the `TicketParams` — anything else 402s with `validator: invalid recipientRand for recipientRandHash`.
 
 In practice: `service/payments/sessions.ts::createSessionCache.getOrStart` reads `quote.priceInfo` (already populated by `wireQuoteToDomain`) and passes `{pricePerUnit: quote.priceInfo.pricePerUnitWei, pixelsPerUnit: quote.priceInfo.pixelsPerUnit}` on every `startSession` call. There is currently no bridge-side affordance for "free / bootstrap" sessions; the daemon expects the canonical-zero `{0, 1}` to indicate that and the bridge always passes a real price (the worker.yaml's `price_per_work_unit_wei` is the source). Tracked library-side as `bootstrap-session-explicit-price`.
 
-Cross-reference: [payment-daemon wire-compat.md](https://github.com/Cloud-SPE/livepeer-modules/blob/main/payment-daemon/docs/design-docs/wire-compat.md#startsessionrequestprice_info-is-required-on-every-non-bootstrap-session) and [redemption-loop.md "Ticket recipientRand derivation"](https://github.com/Cloud-SPE/livepeer-modules/blob/main/payment-daemon/docs/design-docs/redemption-loop.md#ticket-recipientrand-derivation).
+This section remains relevant only for the shell's currently pinned
+runtime path.
+
+## Upstream v3 sender contract
+
+Upstream `payment-daemon` sender mode now exposes this public gRPC
+shape:
+
+```proto
+service PayerDaemon {
+  rpc CreatePayment(CreatePaymentRequest) returns (CreatePaymentResponse);
+  rpc GetDepositInfo(GetDepositInfoRequest) returns (GetDepositInfoResponse);
+}
+
+message CreatePaymentRequest {
+  bytes face_value = 1;
+  bytes recipient = 2;
+}
+```
+
+Operationally, the upstream sender daemon now:
+
+1. Accepts exact `face_value` plus `recipient`.
+2. Resolves the recipient worker URL through the local resolver.
+3. Fetches canonical ticket params from the payee-side ticket-params endpoint.
+4. Signs a one-ticket payment blob and returns it to the caller.
+
+That means the old public `StartSession(...)` and `CloseSession(...)`
+contract is no longer the target architecture for this shell. The
+remaining work here is consuming the new daemon contract through a newer
+`@cloudspe/livepeer-openai-gateway-core` release.
 
 ## Converters
 
@@ -91,7 +140,7 @@ Background loop (scheduler-injected, same pattern as 0005 QuoteRefresher):
 
 `service/payments.createPaymentForRequest` consults `isHealthy()` before every call; false short-circuits to `PayerDaemonNotHealthyError` without touching the network. The runtime layer maps that to 503.
 
-## Session lifecycle
+## Current shipped session lifecycle
 
 `src/service/payments/sessions.ts` amortizes sessions across requests. Cache key is `(nodeId, recipient, ticketParams.expirationBlock)` — distinct `expirationBlock` values mean the node's quote rotated, so the old session is no longer usable.
 
@@ -111,7 +160,12 @@ Every call synthesizes `AbortSignal.any([callerSignal, AbortSignal.timeout(callT
 
 ## Restart semantics
 
-No state is persisted across bridge restarts. Fresh process = fresh session namespace. The daemon survives naturally — its BoltDB/SQLite store holds balances, winning tickets, and the escrow watcher state. A restarted bridge reopens sessions via `startSession` on the next customer request.
+No state is persisted across bridge restarts. Fresh process = fresh
+session namespace. The daemon survives naturally — its BoltDB/SQLite
+store holds balances, winning tickets, and the escrow watcher state. A
+restarted bridge reopens sessions via `startSession` on the next
+customer request while this repo remains on the older engine/runtime
+path.
 
 ## What this doc does NOT cover
 
