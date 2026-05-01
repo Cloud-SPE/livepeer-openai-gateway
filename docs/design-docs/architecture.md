@@ -36,8 +36,9 @@ The TypeScript server lives under `src/`. Browser UIs (customer portal, operator
 │  dashboard/         engine's optional read-only operator UI │  ← may import service, providers, interfaces
 │                     mounted via registerOperatorDashboard at /admin/ops
 ├─────────────────────────────────────────────────────────┤
-│  dispatch/          framework-free request orchestration (per exec-plan 0025)
-│    ├─ chatCompletion.ts       ← takes Wallet+Caller+ServiceRegistryClient+CircuitBreaker+QuoteCache
+│  dispatch/          framework-free request orchestration (per exec-plan 0025;
+│                     current pinned engine path still threads QuoteCache)
+│    ├─ chatCompletion.ts       ← current pinned path takes Wallet+Caller+ServiceRegistryClient+CircuitBreaker+QuoteCache
 │    ├─ streamingChatCompletion.ts
 │    ├─ embeddings.ts                                     │
 │    ├─ images.ts                                         │
@@ -47,7 +48,7 @@ The TypeScript server lives under `src/`. Browser UIs (customer portal, operator
 │  service/           business logic                      │  ← may import repo, providers, config, types, interfaces
 │    ├─ auth/                                             │
 │    ├─ billing/        (incl. inMemoryWallet for tests)  │
-│    ├─ routing/        (router, retry, circuitBreaker class, quoteCache, scheduler, quoteRefresher)
+│    ├─ routing/        (current pinned path: router, retry, circuitBreaker class, quoteCache, scheduler, quoteRefresher)
 │    ├─ (NodeBook + nodes.yaml retired in stage 3 — see node-lifecycle.md)
 │    ├─ pricing/                                          │
 │    ├─ tokenAudit/                                       │
@@ -83,7 +84,7 @@ Enforced by the custom ESLint rules in `lint/` (`layer-check`, `no-cross-cutting
 | `src/service/auth/`       | API-key validation, customer record lookup, tier resolution                      |
 | `src/service/billing/`    | CustomerLedger reads/writes, top-up orchestration, refund on failure             |
 | `src/service/routing/`    | Router: node selection, failover/retry, request dispatch                         |
-| `src/service/routing/`    | Resolver selection, quote refresh/cache, circuit breaker, retry orchestration    |
+| `src/service/routing/`    | Current pinned engine path: resolver selection, quote refresh/cache, circuit breaker, retry orchestration |
 | `src/service/pricing/`    | Rate card lookup, margin calculation, drift metrics                              |
 | `src/service/tokenAudit/` | LocalTokenizer coordination — v1 emits drift metrics only                        |
 | `src/service/rateLimit/`  | Redis sliding window + concurrent-request semaphore                              |
@@ -116,7 +117,7 @@ All cross-cutting concerns enter through `src/providers/`. One interface per con
 | Provider                | Interface role                                                                   | Default implementation                                    |
 | ----------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------- |
 | `PayerDaemonClient`     | gRPC client to local payment-daemon (`livepeer.payments.v1`)                     | `@grpc/grpc-js` with generated stubs                      |
-| `NodeClient`            | HTTP client to WorkerNode `/health`, `/v1/*`, and the current quote-refresh path | `fetch`-based impl in `src/providers/nodeClient/`         |
+| `NodeClient`            | HTTP client to WorkerNode `/health`, `/v1/*`, and the current pinned quote-refresh path | `fetch`-based impl in `src/providers/nodeClient/`         |
 | `StripeClient`          | Top-ups, webhooks, disputes                                                      | `stripe` SDK                                              |
 | `RedisClient`           | Rate-limit state, ephemeral counters                                             | `ioredis`                                                 |
 | `Database`              | Postgres connection pool                                                         | `pg` + Drizzle ORM                                        |
