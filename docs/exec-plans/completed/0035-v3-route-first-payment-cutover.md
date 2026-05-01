@@ -5,6 +5,7 @@ title: v3 route-first payment cutover
 status: completed
 owner: agent
 opened: 2026-05-01
+closed: 2026-05-01
 depends-on: 0032-v3-0-1-shell-realignment
 ---
 
