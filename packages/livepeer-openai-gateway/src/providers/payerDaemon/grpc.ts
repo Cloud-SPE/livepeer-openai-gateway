@@ -27,6 +27,8 @@ const GET_DEPOSIT_INFO_PATH = '/livepeer.payments.v1.PayerDaemon/GetDepositInfo'
 interface CreatePaymentRequestWire {
   faceValue: Uint8Array;
   recipient: Uint8Array;
+  capability: string;
+  offering: string;
 }
 
 interface CreatePaymentResponseWire {
@@ -109,6 +111,8 @@ export function createGrpcPayerDaemonClient(deps: GrpcPayerDaemonDeps): PayerDae
           {
             faceValue: bigintToBigEndianBytes(input.faceValueWei),
             recipient: hexToBytes(input.recipientEthAddress),
+            capability: input.capability,
+            offering: input.offering,
           } satisfies CreatePaymentRequestWire,
           new Metadata(),
           { deadline },
@@ -159,8 +163,14 @@ function serializeCreatePaymentRequest(message: CreatePaymentRequestWire): Buffe
   const writer = new BinaryWriter();
   if (message.faceValue.length > 0) writer.uint32(10).bytes(message.faceValue);
   if (message.recipient.length > 0) writer.uint32(18).bytes(message.recipient);
+  if (message.capability !== '') writer.uint32(26).string(message.capability);
+  if (message.offering !== '') writer.uint32(34).string(message.offering);
   return Buffer.from(writer.finish());
 }
+
+export const __test__ = {
+  serializeCreatePaymentRequest,
+};
 
 function deserializeCreatePaymentResponse(bytes: Buffer): CreatePaymentResponseWire {
   const reader = new BinaryReader(bytes);

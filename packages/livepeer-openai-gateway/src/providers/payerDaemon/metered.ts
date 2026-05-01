@@ -37,7 +37,7 @@ export function withMetrics(client: PayerDaemonClient, recorder: Recorder): Paye
       const output = await measured(PAYER_DAEMON_CREATE_PAYMENT, () => client.createPayment(input));
       recorder.addNodeCostWei(
         input.capability,
-        input.model,
+        input.offering,
         input.nodeId,
         output.expectedValueWei.toString(),
       );

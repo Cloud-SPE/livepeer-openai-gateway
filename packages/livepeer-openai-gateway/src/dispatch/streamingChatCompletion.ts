@@ -87,7 +87,7 @@ export async function dispatchStreamingChatCompletion(
       pricePerWorkUnitWei: route.pricePerWorkUnitWei,
       workUnits: BigInt(estimate.maxCompletionTokens),
       capability: route.capability,
-      model: deps.body.model,
+      offering: route.offering,
       signal: deps.signal,
     });
     const paymentHeaderB64 = Buffer.from(payment.paymentBytes).toString('base64');

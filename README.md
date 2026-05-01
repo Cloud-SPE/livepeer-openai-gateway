@@ -52,9 +52,8 @@ The engine has since been carved out and published as the public OSS package [`@
 **Important runtime note:** the current shell still consumes the engine's
 existing quote-refresh/session-bootstrap path. Upstream
 `payment-daemon` sender mode now already exposes
-`CreatePayment(face_value, recipient)`, but this repo is still pinned to
-an older `@cloudspe/livepeer-openai-gateway-core` runtime that has not
-cut over to it yet. The remaining gap is documented in
+`CreatePayment(face_value, recipient, capability, offering)`. The
+remaining cross-repo gap is documented in
 [docs/design-docs/v3-runtime-realignment.md](docs/design-docs/v3-runtime-realignment.md).
 
 ## Where things live

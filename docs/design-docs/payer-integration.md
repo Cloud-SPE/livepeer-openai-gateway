@@ -17,7 +17,7 @@ This document describes the current shell/runtime path in this repo:
 - resolver `Select(capability, offering, tier)` picks one route
 - the bridge computes `face_value`
 - the payer daemon sender sidecar signs one payment via
-  `CreatePayment(face_value, recipient)`
+  `CreatePayment(face_value, recipient, capability, offering)`
 - the worker validates the attached payment during the real `/v1/*`
   request
 
@@ -77,17 +77,19 @@ service PayerDaemon {
 message CreatePaymentRequest {
   bytes face_value = 1;
   bytes recipient = 2;
+  string capability = 3;
+  string offering = 4;
 }
 ```
 
 Operationally, the upstream sender daemon now:
 
-1. Accepts exact `face_value` plus `recipient`.
+1. Accepts exact `face_value`, `recipient`, `capability`, and `offering`.
 2. Relies on the gateway having already selected one route via
    `Resolver.Select(capability, offering, tier, min_weight)`.
 3. Resolves the recipient worker URL through the local resolver and
    fetches canonical ticket params from the payee-side ticket-params
-   endpoint.
+   endpoint using the selected capability/offering.
 4. Signs a one-ticket payment blob and returns it to the caller.
 
 Under that v3 flow, the worker is price-blind. Wholesale price comes

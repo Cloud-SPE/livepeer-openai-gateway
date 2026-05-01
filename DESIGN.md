@@ -14,11 +14,8 @@ This repo currently consumes the published
 `@cloudspe/livepeer-openai-gateway-core@3.0.0` package. The suite's
 later v3.0.1 protocol cut removes worker `/quote` and `/quotes`,
 switches resolver input naming to `offering`, and moves ticket sizing to
-the gateway (`CreatePayment(face_value, recipient)` based on manifest
-wholesale price). That sender contract is already landed upstream in
-`livepeer-modules-project`, but this shell has not consumed it yet
-because the pinned engine package still follows the older quote/session
-path. See
+the gateway (`CreatePayment(face_value, recipient, capability,
+offering)` based on manifest wholesale price). See
 [docs/design-docs/v3-runtime-realignment.md](docs/design-docs/v3-runtime-realignment.md).
 
 ## Layer stack

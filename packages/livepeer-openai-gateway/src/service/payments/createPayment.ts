@@ -7,7 +7,7 @@ export interface CreatePaymentForRequestInput {
   pricePerWorkUnitWei: bigint;
   workUnits: bigint;
   capability: string;
-  model: string;
+  offering: string;
   signal?: AbortSignal;
 }
 
@@ -38,7 +38,7 @@ export function createPaymentsService(deps: PaymentsServiceDeps): PaymentsServic
         faceValueWei,
         recipientEthAddress: input.recipientEthAddress,
         capability: input.capability,
-        model: input.model,
+        offering: input.offering,
         nodeId: input.nodeId,
         ...(input.signal !== undefined ? { signal: input.signal } : {}),
       });

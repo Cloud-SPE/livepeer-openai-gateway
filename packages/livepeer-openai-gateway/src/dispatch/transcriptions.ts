@@ -96,7 +96,7 @@ export async function dispatchTranscriptions(
       pricePerWorkUnitWei: route.pricePerWorkUnitWei,
       workUnits: BigInt(estimate.estimatedSeconds),
       capability: route.capability,
-      model: deps.fields.model,
+      offering: route.offering,
       signal: deps.signal,
     });
     const paymentHeaderB64 = Buffer.from(payment.paymentBytes).toString('base64');

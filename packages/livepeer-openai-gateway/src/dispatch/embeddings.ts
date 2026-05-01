@@ -84,7 +84,7 @@ export async function dispatchEmbeddings(
       pricePerWorkUnitWei: route.pricePerWorkUnitWei,
       workUnits: BigInt(estimate.promptEstimateTokens),
       capability: route.capability,
-      model: deps.body.model,
+      offering: route.offering,
     });
 
     const paymentHeaderB64 = Buffer.from(payment.paymentBytes).toString('base64');

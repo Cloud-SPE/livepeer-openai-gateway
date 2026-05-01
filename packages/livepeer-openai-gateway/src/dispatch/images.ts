@@ -88,7 +88,7 @@ export async function dispatchImages(deps: ImagesDispatchDeps): Promise<ImagesRe
       pricePerWorkUnitWei: route.pricePerWorkUnitWei,
       workUnits: BigInt(n),
       capability: route.capability,
-      model: deps.body.model,
+      offering: route.offering,
     });
 
     const paymentHeaderB64 = Buffer.from(payment.paymentBytes).toString('base64');

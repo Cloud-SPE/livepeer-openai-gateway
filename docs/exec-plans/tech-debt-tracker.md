@@ -103,7 +103,7 @@ Append-only list of known debt. Strike through when resolved; include the PR or 
 - Severity: medium
 - Area: providers/payerDaemon
 - Description: 0006 tests the client against a fake `@grpc/grpc-js` server that implements the same `PayerDaemonService` descriptor. A full smoke test — start the actual daemon binary from `livepeer-payment-library` and have the bridge exercise startSession / createPayment against it — would catch wire-format regressions that the fake server cannot. Requires standing up the daemon + its deps (BoltDB keystore, maybe a local Eth node or mock) in CI.
-- Update 2026-05-01: the upstream `payment-daemon` sender API has since moved to `CreatePayment(face_value, recipient)` with no public `StartSession` / `CloseSession`. This debt item still applies in spirit, but the smoke target needs to be reframed around the currently pinned shell/runtime compatibility surface versus the newer upstream daemon contract when this repo upgrades `@cloudspe/livepeer-openai-gateway-core`.
+- Update 2026-05-01: the upstream `payment-daemon` sender API has since moved to `CreatePayment(face_value, recipient, capability, offering)` with no public `StartSession` / `CloseSession`. This debt item still applies in spirit, but the smoke target needs to be reframed around the currently pinned shell/runtime compatibility surface versus the newer upstream daemon contract when this repo upgrades `@cloudspe/livepeer-openai-gateway-core`.
 - Remediation: ops/deployment plan that scripts the daemon binary startup and wires a bridge-side integration test.
 - Resolved: _(open)_
 

@@ -4,7 +4,7 @@ export interface CreatePaymentInput {
   faceValueWei: bigint;
   recipientEthAddress: string;
   capability: string;
-  model: string;
+  offering: string;
   nodeId: string;
   signal?: AbortSignal;
 }

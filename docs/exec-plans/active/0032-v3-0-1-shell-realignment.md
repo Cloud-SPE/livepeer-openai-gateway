@@ -102,7 +102,8 @@ bridge-side registry branching.
   consumer surface?
 - Which upstream `livepeer-openai-gateway-core` release consumes the
   already-landed `payment-daemon` sender contract
-  `CreatePayment(face_value, recipient)` end to end?
+  `CreatePayment(face_value, recipient, capability, offering)` end to
+  end?
 - When the upstream runtime cut lands, how quickly should the legacy
   prepaid adapter be deleted after the shell switches to native
   offering-based pricing end to end?

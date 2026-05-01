@@ -84,7 +84,7 @@ export async function dispatchSpeech(deps: SpeechDispatchDeps): Promise<SpeechDi
       pricePerWorkUnitWei: route.pricePerWorkUnitWei,
       workUnits: BigInt(charCount),
       capability: route.capability,
-      model: deps.body.model,
+      offering: route.offering,
       signal: deps.signal,
     });
     const paymentHeaderB64 = Buffer.from(payment.paymentBytes).toString('base64');

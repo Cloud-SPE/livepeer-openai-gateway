@@ -33,7 +33,7 @@ The updated suite spec requires the follow-on runtime contract below:
 3. Gateway computes `face_value` itself from wholesale price and the
    request's estimated max units.
 4. Gateway calls `payment-daemon` sender mode:
-   `CreatePayment(face_value, recipient)`.
+   `CreatePayment(face_value, recipient, capability, offering)`.
 5. Gateway calls the worker workload endpoint with the ticket header.
 6. Worker validates the ticket via its local receiver-mode
    `payment-daemon` and reports `actual_units_used`.
