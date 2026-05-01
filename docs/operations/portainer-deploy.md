@@ -9,8 +9,8 @@ last-reviewed: 2026-04-30
 Step-by-step deploy of the bridge stack on a Portainer-managed host. Reflects the
 currently published shell/runtime combination
 (`@cloudspe/livepeer-openai-gateway-core@3.0.0`,
-`tztcloud/livepeer-payment-daemon:v1.4.0`,
-`tztcloud/livepeer-service-registry-daemon:v1.4.0`,
+`tztcloud/livepeer-payment-daemon:v3.0.2`,
+`tztcloud/livepeer-service-registry-daemon:v3.0.2`,
 bridge image `tztcloud/livepeer-openai-gateway:3.0.1`).
 
 > **Runtime note:** the shell image described here still uses the
@@ -63,14 +63,14 @@ overlay:
         capabilities:
           - name: 'openai:/v1/chat/completions'
             work_unit: token
-            models:
+            offerings:
               - id: 'Qwen3-32B'
                 price_per_work_unit_wei: '25000000'
                 warm: true
         tier_allowed: [free, prepaid]
 ```
 
-**Authoritative reference:** `livepeer-modules/service-registry-daemon/registry.example.yaml` and `examples/static-overlay-only/nodes.yaml`. The shape above mirrors that example.
+**Authoritative reference:** `livepeer-modules/service-registry-daemon/registry.example.yaml` and `examples/static-overlay-only/nodes.yaml`. The required nested list is `offerings[]`; `models[]` is no longer a valid overlay field.
 
 ## Step 2 — Create the Portainer stack
 
@@ -105,7 +105,7 @@ services:
       retries: 20
 
   payment-daemon:
-    image: tztcloud/livepeer-payment-daemon:v1.4.0
+    image: tztcloud/livepeer-payment-daemon:v3.0.2
     restart: unless-stopped
     command:
       - --mode=sender
@@ -125,7 +125,7 @@ services:
       - no-new-privileges:true
 
   service-registry-daemon:
-    image: tztcloud/livepeer-service-registry-daemon:v1.4.0
+    image: tztcloud/livepeer-service-registry-daemon:v3.0.2
     restart: unless-stopped
     command:
       - --mode=resolver

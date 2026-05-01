@@ -22,7 +22,7 @@ How to run the bridge + payment daemon + postgres + redis stack end-to-end, for 
 
 ## Layout
 
-- `compose.yaml` — dev stack: bridge (inline build), postgres, redis, `tztcloud/livepeer-payment-daemon:v1.4.0`, `tztcloud/livepeer-service-registry-daemon:v1.4.0`.
+- `compose.yaml` — dev stack: bridge (inline build), postgres, redis, `tztcloud/livepeer-payment-daemon:v3.0.2`, `tztcloud/livepeer-service-registry-daemon:v3.0.2`.
 - `compose.prod.yaml` — prod override: pinned bridge image, restart policies, log rotation, resource limits, read-only hardening on the daemon, one-shot migration job.
 - `compose.smoke.yaml` — minimum-deps standalone smoke: postgres + redis + bridge only. No payment daemon, dummy Stripe values, all secrets inline. Use to verify the image + UIs + non-payment HTTP surface without standing up an EVM keystore / RPC / Stripe account. See "Smoke a built image" below.
 
@@ -56,9 +56,9 @@ cp /path/to/your-v3-keystore.json ./keystore.json
 printf '%s' 'your-keystore-password' > ./keystore-password
 chmod 600 ./keystore-password
 
-# 3. Nodes allowlist (start from the annotated example)
-cp nodes.example.yaml nodes.yaml
-$EDITOR nodes.yaml   # edit URLs, ETH addresses, supportedModels, capabilities
+# 3. Resolver overlay (start from the annotated example)
+cp service-registry-config.example.yaml service-registry-config.yaml
+$EDITOR service-registry-config.yaml   # edit worker URLs, orchestrator addresses, offerings, tiers
 
 # 4. Boot
 docker compose up --build
@@ -211,7 +211,6 @@ then publishes:
 
 ```bash
 npm run docker:build                                       # if you haven't yet
-[ -f nodes.yaml ] || cp nodes.example.yaml nodes.yaml      # smoke needs at least one node
 docker compose -f compose.smoke.yaml up -d
 docker compose -f compose.smoke.yaml ps                    # all three should be healthy in ~15s
 ```
@@ -229,7 +228,7 @@ curl -s -H "Authorization: Bearer $TOKEN" -H 'X-Admin-Actor: smoke' \
   http://localhost:8080/admin/health | python3 -m json.tool
 ```
 
-`payerDaemonHealthy: false` is expected (the daemon is intentionally absent). `dbOk` + `redisOk` should be `true` and `nodeCount` should match `nodes.yaml`.
+`payerDaemonHealthy: false` is expected (the daemon is intentionally absent). `dbOk` + `redisOk` should be `true`.
 
 ### Seed a customer + key, exercise `/v1/account`
 
@@ -275,7 +274,6 @@ docker compose -f compose.smoke.yaml down --volumes
 | Auto-migration runs against an empty DB                           | Real Stripe Checkout (dummy keys 401 against Stripe's API)    |
 | Both UI `dist/`s ship inside the image and serve correctly        | Real payment issuance (needs daemon + worker node + reserve)  |
 | Auth gates: customer bearer auth + admin bearer auth              |                                                               |
-| `nodes.yaml` loads at startup; `/admin/nodes` reflects it         |                                                               |
 | USD-only formatting (cents → `$X.YZ`); never wei in customer view |                                                               |
 | 401 on missing/wrong auth                                         |                                                               |
 
@@ -404,7 +402,7 @@ to disable. Tune up before tuning off.
 The bridge ships two browser apps from `frontend/`:
 
 - `frontend/portal/` → mounted at `/portal/*` (customer self-service: balance, API keys, top-up, usage, settings).
-- `frontend/admin/` → mounted at `/admin/console/*` (operator: health, nodes, customers, refund/suspend/issue-key, audit, reservations, top-ups, nodes.yaml view).
+- `frontend/admin/` → mounted at `/admin/console/*` (operator: health, nodes, customers, refund/suspend/issue-key, audit, reservations, top-ups, config snapshot view).
 
 Both are static SPAs served by `@fastify/static` from inside the same Fastify instance that hosts `/v1/*` and `/admin/*` JSON. `existsSync(<dist>)` guards each registration — if a UI's `dist/` is missing the bridge logs a warn and skips the mount; HTTP routes still serve.
 

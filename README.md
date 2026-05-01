@@ -47,7 +47,7 @@ The engine has since been carved out and published as the public OSS package [`@
 
 - npm: `@cloudspe/livepeer-openai-gateway-core@3.0.0`
 - Docker Hub: `tztcloud/livepeer-openai-gateway:3.0.1` plus `3.0` and `latest` on tag-triggered releases
-- Daemons (sidecars): `tztcloud/livepeer-payment-daemon:v1.4.0`, `tztcloud/livepeer-service-registry-daemon:v1.4.0`
+- Daemons (sidecars): `tztcloud/livepeer-payment-daemon:v3.0.2`, `tztcloud/livepeer-service-registry-daemon:v3.0.2`
 
 **Important runtime note:** the current shell still consumes the engine's
 existing quote-refresh/session-bootstrap path. Upstream
@@ -125,7 +125,7 @@ cp .env.example .env
 docker compose up --build
 ```
 
-Stands up `postgres:16-alpine` + `redis:7-alpine` + `tztcloud/livepeer-payment-daemon:v1.4.0` (sender mode) + `tztcloud/livepeer-service-registry-daemon:v1.4.0` (resolver mode, overlay-only) + the bridge (built from `Dockerfile`). All five services share a `socket-dir` (or `payment-socket`) named volume at `/var/run/livepeer/` so the bridge can reach both daemons over their unix sockets. Chain-discovery deployments should set `SERVICE_REGISTRY_CONTRACT_ADDRESS`; this repo defaults it to the Arbitrum One AI service registry address.
+Stands up `postgres:16-alpine` + `redis:7-alpine` + `tztcloud/livepeer-payment-daemon:v3.0.2` (sender mode) + `tztcloud/livepeer-service-registry-daemon:v3.0.2` (resolver mode, overlay-only) + the bridge (built from `Dockerfile`). All five services share a `socket-dir` (or `payment-socket`) named volume at `/var/run/livepeer/` so the bridge can reach both daemons over their unix sockets. Chain-discovery deployments should set `SERVICE_REGISTRY_CONTRACT_ADDRESS`; this repo defaults it to the Arbitrum One AI service registry address.
 
 See [`docs/operations/deployment.md`](docs/operations/deployment.md) for the full walkthrough including the production override (`compose.prod.yaml`) with pinned image, restart policies, log rotation, resource limits, read-only hardening, and the one-shot migration job.
 
