@@ -49,11 +49,11 @@ The engine has since been carved out and published as the public OSS package [`@
 - Docker Hub: `tztcloud/livepeer-openai-gateway:3.0.2` plus `3.0` and `latest` on tag-triggered releases
 - Daemons (sidecars): `tztcloud/livepeer-payment-daemon:v3.0.2`, `tztcloud/livepeer-service-registry-daemon:v3.0.2`
 
-**Important runtime note:** the current shell still consumes the engine's
-existing quote-refresh/session-bootstrap path. Upstream
-`payment-daemon` sender mode now already exposes
-`CreatePayment(face_value, recipient, capability, offering)`. The
-remaining cross-repo gap is documented in
+**Important runtime note:** the current shell is on the route-first
+payment flow: resolver `Select(...)`, gateway-computed `face_value`,
+`CreatePayment(face_value, recipient, capability, offering)`, and
+direct worker `/v1/*` requests. Remaining cross-repo follow-ons are
+documented in
 [docs/design-docs/v3-runtime-realignment.md](docs/design-docs/v3-runtime-realignment.md).
 
 ## Where things live

@@ -11,11 +11,11 @@ Full architectural reference: [docs/references/openai-bridge-architecture.md](do
 ## Current runtime note
 
 This repo currently consumes the published
-`@cloudspe/livepeer-openai-gateway-core@3.0.0` package. The suite's
-later v3.0.1 protocol cut removes worker `/quote` and `/quotes`,
-switches resolver input naming to `offering`, and moves ticket sizing to
-the gateway (`CreatePayment(face_value, recipient, capability,
-offering)` based on manifest wholesale price). See
+`@cloudspe/livepeer-openai-gateway-core@3.0.0` package and ships the
+v3 route-first payment flow: no worker `/quote` or `/quotes`, resolver
+selection keyed by `offering`, and gateway-side ticket sizing via
+`CreatePayment(face_value, recipient, capability, offering)` based on
+manifest wholesale price. See
 [docs/design-docs/v3-runtime-realignment.md](docs/design-docs/v3-runtime-realignment.md).
 
 ## Layer stack
@@ -75,7 +75,7 @@ Dependency rule: each layer may import only layers **below** it, plus `providers
 | Provider            | Interface role                                                                    | Default implementation                            |
 | ------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------- |
 | `PayerDaemonClient` | gRPC client to local payment-daemon                                               | `@grpc/grpc-js` stub                              |
-| `NodeClient`        | HTTP client to WorkerNode `/health`, `/v1/*`, plus the current quote-refresh path | `fetch`-based impl in `src/providers/nodeClient/` |
+| `NodeClient`        | HTTP client to WorkerNode `/health` and `/v1/*` routes                             | `fetch`-based impl in `src/providers/nodeClient/` |
 | `StripeClient`      | Top-ups, webhooks, disputes, refunds                                              | `stripe` SDK                                      |
 | `RedisClient`       | Rate-limit state                                                                  | `ioredis`                                         |
 | `Database`          | Postgres pool                                                                     | `pg` + Drizzle                                    |
