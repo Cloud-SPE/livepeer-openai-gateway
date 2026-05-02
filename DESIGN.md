@@ -72,17 +72,17 @@ Dependency rule: each layer may import only layers **below** it, plus `providers
 
 ## Providers
 
-| Provider            | Interface role                                                                    | Default implementation                            |
-| ------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------- |
-| `PayerDaemonClient` | gRPC client to local payment-daemon                                               | `@grpc/grpc-js` stub                              |
-| `NodeClient`        | HTTP client to WorkerNode `/health` and `/v1/*` routes                             | `fetch`-based impl in `src/providers/nodeClient/` |
-| `StripeClient`      | Top-ups, webhooks, disputes, refunds                                              | `stripe` SDK                                      |
-| `RedisClient`       | Rate-limit state                                                                  | `ioredis`                                         |
-| `Database`          | Postgres pool                                                                     | `pg` + Drizzle                                    |
-| `Tokenizer`         | Model-aware token counting (drift audit)                                          | `tiktoken` for OpenAI-compat; per-family plugins  |
-| `ChainInfo`         | Read-only Eth for admin views                                                     | `viem`                                            |
-| `MetricsSink`       | Counter / Gauge / Histogram                                                       | No-op default; Prometheus later                   |
-| `Logger`            | Structured log                                                                    | `pino`                                            |
+| Provider            | Interface role                                         | Default implementation                            |
+| ------------------- | ------------------------------------------------------ | ------------------------------------------------- |
+| `PayerDaemonClient` | gRPC client to local payment-daemon                    | `@grpc/grpc-js` stub                              |
+| `NodeClient`        | HTTP client to WorkerNode `/health` and `/v1/*` routes | `fetch`-based impl in `src/providers/nodeClient/` |
+| `StripeClient`      | Top-ups, webhooks, disputes, refunds                   | `stripe` SDK                                      |
+| `RedisClient`       | Rate-limit state                                       | `ioredis`                                         |
+| `Database`          | Postgres pool                                          | `pg` + Drizzle                                    |
+| `Tokenizer`         | Model-aware token counting (drift audit)               | `tiktoken` for OpenAI-compat; per-family plugins  |
+| `ChainInfo`         | Read-only Eth for admin views                          | `viem`                                            |
+| `MetricsSink`       | Counter / Gauge / Histogram                            | No-op default; Prometheus later                   |
+| `Logger`            | Structured log                                         | `pino`                                            |
 
 ## What this does NOT do
 
