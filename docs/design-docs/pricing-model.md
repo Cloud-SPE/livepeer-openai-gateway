@@ -220,19 +220,105 @@ The customer-facing semantics: **every billable event rounds up to the nearest c
 
 ## Ticket-EV granularity floor
 
-The probabilistic ticket protocol has a hard floor independent of the rate cards: **1 ticket's expected value (EV)** is the smallest unit of payment that can flow on-chain. The receiver daemon targets a per-ticket EV of `--receiver-ev-wei` (default `1e12` wei ≈ $0.004 EV/ticket at $4k/ETH) and sizes `face_value × winProb` accordingly. Each request the bridge sends through the `PayerDaemon` includes 1+ tickets — for very small requests the per-ticket EV strictly exceeds what the customer paid.
+The probabilistic ticket protocol has a hard floor independent of the
+rate cards: **1 ticket's expected value (EV)** is the smallest unit of
+payment that can flow on-chain. The receiver daemon targets a per-ticket
+EV of `--receiver-ev-wei` (default `1e12` wei ≈ $0.004 EV/ticket at
+$4k/ETH) and sizes `face_value × winProb` accordingly.
 
-**Worked example.** A 5-token chat request at the starter rate costs 1 cent (≈ $0.01). A single ticket is worth ~$0.004 EV. The bridge must include at least one ticket per request, so the protocol-level cost is `~$0.004` against a customer payment of `$0.01` — the bridge "overpays" relative to a hypothetical fractional-ticket world by the difference. For a 1k-token request the customer pays ~$0.0001 (Starter input rate); the protocol cost is still ~$0.004 / ticket, the math inverts and the daemon would either need to include sub-1 tickets (impossible) or the bridge subsidizes the ticket cost against future requests in the same session.
+Under the v3 route-first flow, the bridge computes:
 
-**The v2 rate cards assume amortization** across many requests per session. A long-running chat conversation (e.g., a coding agent making thousands of completions through one API key) amortizes the per-ticket EV cost down to negligible. Sub-1k-token one-shot requests don't amortize and the bridge effectively pays slightly more per request than the customer paid.
+```text
+face_value_wei = price_per_work_unit_wei × estimated_work_units
+```
 
-**Solution space (no code fix in v1):**
+That bridge-computed `face_value_wei` still has to satisfy the
+receiver's acceptance rules. In practice the payee side enforces a floor
+that is usually dominated by **redemption profitability**, not by the
+published per-token model price.
 
-1. **Lower `--receiver-ev-wei` further.** But `face_value` then drops below the redemption-profitability floor (`face_value > gasPrice × RedeemGas`), so individually unprofitable tickets accumulate and clog the queue.
-2. **Accept the slight overpayment for tiny requests** as the cost of the protocol's granularity. This is the v1 stance.
-3. **Batch payments across multiple requests per session.** The daemon's session model permits this (one session, many `CreatePayment` calls), but the bridge currently bills per-request via the worker's middleware. A bridge-side change to defer ticket creation across N requests would amortize at the cost of more bookkeeping and stronger session-affinity guarantees.
+Three different numbers are easy to conflate:
 
-Tracked as `per-ticket-ev-vs-request-size` in the library tech-debt tracker. Cross-reference: `--receiver-ev-wei` flag in [payment-daemon/docs/operations/running-the-daemon.md](https://github.com/Cloud-SPE/livepeer-modules/blob/main/payment-daemon/docs/operations/running-the-daemon.md).
+1. `price_per_work_unit_wei`
+   The worker's published wholesale price, for example
+   `25000000 wei/token`.
+2. `face_value_wei`
+   The bridge's total payment sizing for one request, derived from price
+   × estimated units.
+3. Receiver acceptance floor
+   The minimum face value the worker's payment-daemon will accept after
+   EV and gas-profitability checks.
+
+The first number is the model price. The third number is not. If the
+third number is much larger than the second for small requests, those
+requests fail even though route selection and pricing are otherwise
+correct.
+
+### Worked example: cheap model, expensive minimum ticket
+
+Suppose a worker publishes:
+
+```yaml
+price_per_work_unit_wei: "25000000"
+work_unit: token
+```
+
+Then the gateway computes:
+
+- `1,000 tokens  -> 25,000,000,000 wei`
+- `2,000 tokens  -> 50,000,000,000 wei`
+- `4,000 tokens  -> 100,000,000,000 wei`
+- `10,000 tokens -> 250,000,000,000 wei`
+
+If the worker receiver only accepts something around
+`1,500,000,000,000,000 wei`, the issue is **not** that the model price
+is `$3.60/request`. The issue is that the receiver-side minimum
+acceptable ticket economics are far above what the published token price
+produces for small requests.
+
+### Operator implication
+
+If the bridge adds a gateway-side floor such as
+`MIN_FACE_VALUE_WEI=1500000000000000`, requests can be forced through,
+but the bridge then deliberately overpays relative to:
+
+- the worker's own published `price_per_work_unit_wei`, and
+- the customer's retail charge for a small request.
+
+That is a compatibility workaround, not "correct economics."
+
+For correct economics:
+
+- the worker should keep `price_per_work_unit_wei` aligned to its
+  intended wholesale token price, and
+- the receiver-side minimum acceptable face value should be low enough
+  that normal small requests at that price are accepted.
+
+### The v1 stance
+
+The original v1/v2 assumption was that amortization across many
+requests in the same session would hide the EV floor. That assumption is
+too weak once the effective receiver floor is driven by gas
+profitability rather than just nominal EV.
+
+**Solution space (no runtime change made here):**
+
+1. **Lower the receiver-side acceptance floor.** This preserves correct
+   economics if the worker intends to compete on cheap retail traffic.
+2. **Add a gateway-side minimum face value.** This unblocks traffic but
+   subsidizes small requests and should be treated as an operator policy
+   choice, not a protocol default.
+3. **Batch payment economics across multiple requests in one session.**
+   This is the protocol-shape answer, but it needs explicit bridge-side
+   product/runtime work.
+4. **Add profitability guardrails at route selection time.** This
+   protects the bridge from overpaying a legitimate but uneconomic
+   worker route.
+
+Tracked across:
+
+- `per-ticket-ev-vs-request-size` in the library tech-debt tracker.
+- `wholesale-profitability-guardrails` in this repo's tech-debt tracker.
 
 ## Types
 

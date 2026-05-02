@@ -259,6 +259,117 @@ curl -s -H "Authorization: Bearer $KEY" http://localhost:8080/v1/account | pytho
 docker compose -f compose.smoke.yaml down --volumes
 ```
 
+## Troubleshooting: `ticketparamsfetcher: ticket params status 500`
+
+If chat or other paid requests fail with an error like:
+
+```json
+{
+  "error": {
+    "code": "internal_error",
+    "type": "InternalError",
+    "message": "PayerDaemon unavailable: CreatePayment: fetch ticket params: ticketparamsfetcher: ticket params status 500"
+  }
+}
+```
+
+the bridge has already gotten past:
+
+- resolver route selection
+- payer-daemon socket health
+- request-shape validation for `CreatePayment(face_value, recipient, capability, offering)`
+
+The remaining failure is usually on the worker/payee side of:
+
+- `POST /v1/payment/ticket-params`
+
+### First distinction to make
+
+Do **not** assume this means:
+
+- the worker's published `price_per_work_unit_wei` is wrong, or
+- the sender wallet has literally zero funds
+
+In practice this often means the gateway-computed `face_value_wei` is
+below the worker receiver's minimum acceptable profitability floor.
+
+### Direct worker probe
+
+Check the worker directly with the same sender and route details the
+gateway is using:
+
+```bash
+curl -i https://<worker-host>/v1/payment/ticket-params \
+  -H 'content-type: application/json' \
+  -d '{
+    "sender_eth_address":"<gateway sender/orch address>",
+    "recipient_eth_address":"<worker orch address>",
+    "face_value_wei":"<candidate face value>",
+    "capability":"openai:/v1/chat/completions",
+    "offering":"<offering id>"
+  }'
+```
+
+If that returns:
+
+```json
+{"detail":"... receiver: insufficient sender reserve", "error":"ticket_params_unavailable"}
+```
+
+the worker/payee side is rejecting the request before the gateway can
+send the actual paid inference call.
+
+### Localhost vs public-hostname check
+
+If the worker team says a config change has been deployed, compare:
+
+```bash
+curl -i http://127.0.0.1:<worker-port>/v1/payment/ticket-params ...
+```
+
+vs:
+
+```bash
+curl -i https://<public-worker-host>/v1/payment/ticket-params ...
+```
+
+Interpretation:
+
+- `localhost 200`, public `500`
+  - reverse proxy / DNS / stale backend / wrong origin problem
+- `localhost 500`, public `500`
+  - live worker/payee deployment still has the old effective floor
+
+### Economics explanation
+
+The bridge computes:
+
+```text
+face_value_wei = price_per_work_unit_wei × estimated_work_units
+```
+
+That value must still satisfy the worker receiver's acceptance logic.
+
+For small requests, the binding floor is often not the published model
+price and not `receiver_ev_wei`. It is the worker/payment-daemon's
+redemption-profitability rule. On Arbitrum-class gas, a worker can be
+competitively priced per token and still reject tiny `face_value_wei`
+values if its receiver logic expects every individual ticket to be
+redeemable at a profit.
+
+### Recommended response
+
+If your product goal is **correct economics**, prefer:
+
+- fixing the worker/payment-daemon receiver acceptance logic
+
+over:
+
+- adding a gateway-side minimum face value floor
+
+The gateway-side floor can unblock traffic, but it makes the gateway
+subsidize small requests and hides the real protocol/economics mismatch.
+
 `--volumes` drops the `pgdata` volume so the next smoke starts on a fresh schema.
 
 ### What this smoke verifies vs. doesn't

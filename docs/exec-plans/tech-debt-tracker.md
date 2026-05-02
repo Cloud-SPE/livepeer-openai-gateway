@@ -260,6 +260,15 @@ Append-only list of known debt. Strike through when resolved; include the PR or 
 - Remediation: install `pg_trgm` extension, add a GIN trigram index on `customers.email`, switch the query to `email %% q` with the threshold tuned. Revisit when `customers` row count crosses 50k or when operators report search latency.
 - Resolved: _(open)_
 
+### wholesale-profitability-guardrails
+
+- Opened: 2026-05-01
+- Severity: medium
+- Area: payments / routing / pricing
+- Description: Under the v3 route-first flow, the bridge computes `face_value_wei = price_per_work_unit_wei × estimated_work_units` and asks sender-mode `payment-daemon` to create a payment for that exact amount. Two operator pressures are now explicit but unresolved in bridge policy: (1) some workers can publish economically valid token prices while still rejecting small requests because their receiver-side profitability floor is too high, and (2) the bridge currently lacks a first-class profitability guardrail that rejects routes whose legitimate wholesale cost would wipe out retail margin. A gateway-side `MIN_FACE_VALUE_WEI` clamp would unblock some workers but would also subsidize small requests and hide the underlying worker/payment economics mismatch. We deliberately did not ship that clamp as a default because this gateway is positioned to preserve correct economics, not silently overpay. The missing product/runtime policy is: when should the bridge refuse an uneconomic route, when should it permit a configured subsidy floor, and how should operators see that decision in the admin surface?
+- Remediation: dedicated exec-plan to evaluate three explicit policies: (a) no clamp, fail requests whose worker/payee floor is incompatible with the published price; (b) optional per-capability `MIN_FACE_VALUE_WEI` operator override with admin warnings and accounting visibility; (c) pre-dispatch profitability checks / wholesale caps that compare selected-route cost against the local retail reservation before calling `CreatePayment`. Any chosen policy must update docs, admin observability, and request-failure messaging together.
+- Resolved: _(open)_
+
 ### bridge-portal-console-session-token
 
 - Opened: 2026-04-26

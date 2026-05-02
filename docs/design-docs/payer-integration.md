@@ -98,6 +98,81 @@ the worker only validates the attached payment and reports actual usage.
 
 This is the contract the shell consumes today.
 
+## Face-value economics and failure modes
+
+`CreatePayment(face_value, recipient, capability, offering)` only means
+the sender and bridge agreed on a candidate payment size. It does **not**
+mean the worker will accept that size.
+
+The end-to-end flow is:
+
+1. Resolver selects one route and returns the worker's published
+   wholesale price.
+2. The bridge computes:
+
+   ```text
+   face_value_wei = price_per_work_unit_wei × estimated_work_units
+   ```
+
+3. Sender-mode `payment-daemon` resolves the worker URL and asks the
+   worker/payee side for canonical ticket params.
+4. The worker/payee side validates the requested `face_value_wei`
+   against its own receiver-side acceptance rules.
+
+That last step is where small retail requests can still fail.
+
+### Important distinction
+
+These numbers are different:
+
+- `price_per_work_unit_wei`
+  - the worker's published wholesale model price
+- `face_value_wei`
+  - the bridge's computed total payment size for one request
+- receiver acceptance floor
+  - the minimum face value the worker's payment-daemon will admit after
+    EV / sender-reserve / redemption-profitability checks
+
+If the worker's receiver-side floor is high, a route can be perfectly
+valid and competitively priced while still rejecting small requests.
+
+### What the bridge should and should not do
+
+If a worker rejects small requests because of its receiver-side
+profitability rule, there are two possible responses:
+
+1. Gateway workaround:
+   - clamp `face_value_wei` upward with a minimum
+   - pros: traffic flows
+   - cons: the gateway may subsidize small requests and distort
+     economics
+2. Worker/payment fix:
+   - change receiver-side acceptance logic so small requests at the
+     published price are actually admissible
+   - pros: preserves correct economics
+   - cons: requires upstream protocol/runtime work
+
+This repo's current stance is to prefer the second option when the
+product goal is "correct economics."
+
+### Symptom mapping
+
+The most common failure sequence during rollout was:
+
+- route selection works
+- request-shape validation works
+- worker `/v1/payment/ticket-params` still returns `500`
+
+If the response body contains:
+
+```json
+{"detail":"... receiver: insufficient sender reserve", "error":"ticket_params_unavailable"}
+```
+
+that does **not** necessarily mean the sender is unfunded. It can also
+mean the requested `face_value_wei` is below the receiver's practical
+profitability floor for that network and gas regime.
+
 ## Converters
 
 `src/providers/payerDaemon/convert.ts`:
