@@ -150,7 +150,7 @@ Three npm scripts wrap the `docker build / tag / push` cycle so the recipe is in
 
 ```bash
 npm run docker:build       # → livepeer-openai-gateway:local
-npm run docker:tag         # → tztcloud/livepeer-openai-gateway:3.0.1
+npm run docker:tag         # → tztcloud/livepeer-openai-gateway:3.0.2
 npm run docker:push        # pushes the tag above
 ```
 
@@ -162,7 +162,7 @@ npm run docker:release     # build + tag + push, in order
 
 ### Overriding the version
 
-Two equivalent ways to override the default `3.0.1`:
+Two equivalent ways to override the default `3.0.2`:
 
 ```bash
 # Positional arg (repeats — pass to both tag and push)
@@ -189,10 +189,10 @@ The push assumes you're already authenticated to the registry (`docker login` fo
 
 GitHub Actions now publishes on semver tag push via
 [`../../.github/workflows/release.yml`](../../.github/workflows/release.yml).
-Pushing `v3.0.1` re-runs format, lint, typecheck, docs, and test gates,
+Pushing `v3.0.2` re-runs format, lint, typecheck, docs, and test gates,
 then publishes:
 
-- `tztcloud/livepeer-openai-gateway:3.0.1`
+- `tztcloud/livepeer-openai-gateway:3.0.2`
 - `tztcloud/livepeer-openai-gateway:3.0`
 - `tztcloud/livepeer-openai-gateway:latest`
 
@@ -387,7 +387,7 @@ subsidize small requests and hides the real protocol/economics mismatch.
 
 Additional prerequisites:
 
-- A tagged, pushed bridge image — see "Building the production image" above. Set `BRIDGE_IMAGE` in `.env` to whatever you tagged (`tztcloud/livepeer-openai-gateway:3.0.1` by default).
+- A tagged, pushed bridge image — see "Building the production image" above. Set `BRIDGE_IMAGE` in `.env` to whatever you tagged (`tztcloud/livepeer-openai-gateway:3.0.2` by default).
 - Rotate every `REQUIRED-*` placeholder in `.env` to a live value (especially `API_KEY_PEPPER`, `ADMIN_TOKEN`, Stripe live keys).
 
 Boot:

@@ -135,7 +135,7 @@ services:
   # One-shot migration job. Runs and exits; the bridge service gates on
   # its successful completion.
   bridge-migrate:
-    image: ${BRIDGE_IMAGE:-tztcloud/livepeer-openai-gateway:3.0.1}
+    image: ${BRIDGE_IMAGE:-tztcloud/livepeer-openai-gateway:3.0.2}
     restart: 'no'
     command: ['packages/livepeer-openai-gateway/dist/scripts/migrate.js']
     depends_on:
@@ -154,7 +154,7 @@ services:
         max-file: '5'
 
   bridge:
-    image: ${BRIDGE_IMAGE:-tztcloud/livepeer-openai-gateway:3.0.1}
+    image: ${BRIDGE_IMAGE:-tztcloud/livepeer-openai-gateway:3.0.2}
     restart: unless-stopped
     depends_on:
       postgres:

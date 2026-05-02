@@ -4,7 +4,7 @@
 # Resolves the target version with this priority:
 #   1. First positional arg (e.g. `npm run docker:tag -- v0.8.11`)
 #   2. $BRIDGE_VERSION env (e.g. `BRIDGE_VERSION=v0.8.11 npm run docker:tag`)
-#   3. Default: 3.0.1
+#   3. Default: 3.0.2
 #
 # The repo path defaults to `tztcloud/livepeer-openai-gateway` (matches
 # compose.prod.yaml's BRIDGE_IMAGE default). Override with $BRIDGE_IMAGE_REPO.
@@ -12,7 +12,7 @@
 set -euo pipefail
 
 REPO="${BRIDGE_IMAGE_REPO:-tztcloud/livepeer-openai-gateway}"
-VERSION="${1:-${BRIDGE_VERSION:-3.0.1}}"
+VERSION="${1:-${BRIDGE_VERSION:-3.0.2}}"
 
 if ! docker image inspect livepeer-openai-gateway:local >/dev/null 2>&1; then
   echo "error: livepeer-openai-gateway:local not found locally." >&2
