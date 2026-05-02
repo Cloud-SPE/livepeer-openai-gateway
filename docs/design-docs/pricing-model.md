@@ -259,7 +259,7 @@ correct.
 Suppose a worker publishes:
 
 ```yaml
-price_per_work_unit_wei: "25000000"
+price_per_work_unit_wei: '25000000'
 work_unit: token
 ```
 

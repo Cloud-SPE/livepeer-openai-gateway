@@ -166,7 +166,7 @@ The most common failure sequence during rollout was:
 If the response body contains:
 
 ```json
-{"detail":"... receiver: insufficient sender reserve", "error":"ticket_params_unavailable"}
+{ "detail": "... receiver: insufficient sender reserve", "error": "ticket_params_unavailable" }
 ```
 
 that does **not** necessarily mean the sender is unfunded. It can also

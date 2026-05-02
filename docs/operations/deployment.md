@@ -313,7 +313,7 @@ curl -i https://<worker-host>/v1/payment/ticket-params \
 If that returns:
 
 ```json
-{"detail":"... receiver: insufficient sender reserve", "error":"ticket_params_unavailable"}
+{ "detail": "... receiver: insufficient sender reserve", "error": "ticket_params_unavailable" }
 ```
 
 the worker/payee side is rejecting the request before the gateway can
