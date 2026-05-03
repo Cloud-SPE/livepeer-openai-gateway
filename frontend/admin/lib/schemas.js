@@ -38,11 +38,7 @@ const node = object({
   eligibleCapabilities: array(string()),
   eligibility: literal('eligible', 'ineligible', 'unknown'),
   ineligibleReason: nullable(
-    literal(
-      'no_recognized_capabilities',
-      'not_in_live_registry',
-      'registry_unavailable',
-    ),
+    literal('no_recognized_capabilities', 'not_in_live_registry', 'registry_unavailable'),
   ),
   weight: number(),
 });

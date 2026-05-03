@@ -69,7 +69,9 @@ export class AdminNodeDetail extends LitElement {
           </dd>
           <dt class="muted text-sm">Eligibility</dt>
           <dd style="margin: 0">
-            <span class="badge" data-status=${eligibilityBadge(d.eligibility)}>${d.eligibility}</span>
+            <span class="badge" data-status=${eligibilityBadge(d.eligibility)}
+              >${d.eligibility}</span
+            >
           </dd>
           <dt class="muted text-sm">Capabilities</dt>
           <dd style="margin: 0">
