@@ -21,9 +21,9 @@ ETH via the `payment-daemon` sidecar from
 ## Status
 
 The shell is production-usable on the currently published
-`@cloudspe/livepeer-openai-gateway-core@3.0.0` dependency, but the
-full suite-level v3.0.1 runtime protocol cut is still in progress.
-Track that work in
+`@cloudspe/livepeer-openai-gateway-core@4.0.1` dependency. The runtime
+still follows the route-first flow documented below, and remaining
+cross-repo runtime follow-ons are tracked in
 [`docs/exec-plans/active/0032-v3-0-1-shell-realignment.md`](docs/exec-plans/active/0032-v3-0-1-shell-realignment.md).
 
 Completed work lives in [`docs/exec-plans/completed/`](docs/exec-plans/completed/).
@@ -45,8 +45,8 @@ The engine has since been carved out and published as the public OSS package [`@
 
 **Current published artifacts:**
 
-- npm: `@cloudspe/livepeer-openai-gateway-core@3.0.0`
-- Docker Hub: `tztcloud/livepeer-openai-gateway:3.0.4` plus `3.0` and `latest` on tag-triggered releases
+- npm: `@cloudspe/livepeer-openai-gateway-core@4.0.1`
+- Docker Hub: `tztcloud/livepeer-openai-gateway:4.0.1` plus `4.0` and `latest` on tag-triggered releases
 - Daemons (sidecars): `tztcloud/livepeer-payment-daemon:v4.0.1`, `tztcloud/livepeer-service-registry-daemon:v4.0.1`
 
 **Important runtime note:** the current shell is on the route-first

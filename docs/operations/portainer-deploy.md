@@ -8,10 +8,10 @@ last-reviewed: 2026-04-30
 
 Step-by-step deploy of the bridge stack on a Portainer-managed host. Reflects the
 currently published shell/runtime combination
-(`@cloudspe/livepeer-openai-gateway-core@3.0.0`,
+(`@cloudspe/livepeer-openai-gateway-core@4.0.1`,
 `tztcloud/livepeer-payment-daemon:v4.0.1`,
 `tztcloud/livepeer-service-registry-daemon:v4.0.1`,
-bridge image `tztcloud/livepeer-openai-gateway:3.0.4`).
+bridge image `tztcloud/livepeer-openai-gateway:4.0.1`).
 
 > **Runtime note:** the shell image described here is on the v3
 > route-first payment flow: resolver `Select(...)`, bridge-computed
@@ -147,7 +147,7 @@ services:
       - no-new-privileges:true
 
   bridge-migrate:
-    image: tztcloud/livepeer-openai-gateway:3.0.4
+    image: tztcloud/livepeer-openai-gateway:4.0.1
     restart: 'no'
     command: ['packages/livepeer-openai-gateway/dist/scripts/migrate.js']
     depends_on:
@@ -161,7 +161,7 @@ services:
       PGDATABASE: ${PGDATABASE:-bridge}
 
   bridge:
-    image: tztcloud/livepeer-openai-gateway:3.0.4
+    image: tztcloud/livepeer-openai-gateway:4.0.1
     container_name: openai-bridge-gateway
     restart: unless-stopped
     depends_on:
@@ -350,11 +350,11 @@ curl -sS -H "Authorization: Bearer $ADMIN_TOKEN" https://$H/admin/registry/probe
 | Investigate a stuck reservation | Admin SPA → Reservations (oldest-first list, age in seconds). The fix is upstream — node health, payer-daemon. There's no "force close" button by design.                         |
 | Rotate `ADMIN_TOKEN`            | Update env in Portainer stack → Update the stack. All open admin sessions are invalidated.                                                                                        |
 | Rotate `API_KEY_PEPPER`         | **Destructive.** Invalidates every `api_key.hash` row. Coordinate with customers; reissue all keys after rotation. Tracked as `api-key-pepper-rotation-runbook` in tech-debt.     |
-| Bump the bridge image           | Update `tztcloud/livepeer-openai-gateway:3.0.4` to a newer tag in the stack editor → Update the stack with **Re-pull image** ticked. Bridge migrations run automatically.         |
+| Bump the bridge image           | Update `tztcloud/livepeer-openai-gateway:4.0.1` to a newer tag in the stack editor → Update the stack with **Re-pull image** ticked. Bridge migrations run automatically.         |
 
 ## Image upgrade — what to expect
 
-The bridge image now ships on semver tags (`3.0.4`, `3.0`) plus `latest`. To pull the exact `3.0.4` digest:
+The bridge image now ships on semver tags (`4.0.1`, `4.0`) plus `latest`. To pull the exact `4.0.1` digest:
 
 1. Portainer → Stacks → click your stack → **Editor** tab
 2. Scroll to the bottom → **Update the stack**
