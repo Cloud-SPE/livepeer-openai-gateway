@@ -5,6 +5,7 @@ title: Surface node eligibility in admin views
 status: completed
 owner: codex
 opened: 2026-05-03
+closed: 2026-05-03
 ---
 
 ## Goal
