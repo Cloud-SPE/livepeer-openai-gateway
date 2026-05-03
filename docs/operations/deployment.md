@@ -22,7 +22,7 @@ How to run the bridge + payment daemon + postgres + redis stack end-to-end, for 
 
 ## Layout
 
-- `compose.yaml` — dev stack: bridge (inline build), postgres, redis, `tztcloud/livepeer-payment-daemon:v3.0.2`, `tztcloud/livepeer-service-registry-daemon:v3.0.2`.
+- `compose.yaml` — dev stack: bridge (inline build), postgres, redis, `tztcloud/livepeer-payment-daemon:v4.0.1`, `tztcloud/livepeer-service-registry-daemon:v4.0.1`.
 - `compose.prod.yaml` — prod override: pinned bridge image, restart policies, log rotation, resource limits, read-only hardening on the daemon, one-shot migration job.
 - `compose.smoke.yaml` — minimum-deps standalone smoke: postgres + redis + bridge only. No payment daemon, dummy Stripe values, all secrets inline. Use to verify the image + UIs + non-payment HTTP surface without standing up an EVM keystore / RPC / Stripe account. See "Smoke a built image" below.
 
@@ -150,7 +150,7 @@ Three npm scripts wrap the `docker build / tag / push` cycle so the recipe is in
 
 ```bash
 npm run docker:build       # → livepeer-openai-gateway:local
-npm run docker:tag         # → tztcloud/livepeer-openai-gateway:3.0.2
+npm run docker:tag         # → tztcloud/livepeer-openai-gateway:3.0.4
 npm run docker:push        # pushes the tag above
 ```
 
@@ -162,16 +162,16 @@ npm run docker:release     # build + tag + push, in order
 
 ### Overriding the version
 
-Two equivalent ways to override the default `3.0.2`:
+Two equivalent ways to override the default `3.0.4`:
 
 ```bash
 # Positional arg (repeats — pass to both tag and push)
-npm run docker:tag -- 3.0.2
-npm run docker:push -- 3.0.2
+npm run docker:tag -- 3.0.4
+npm run docker:push -- 3.0.4
 
 # Or via env (no -- needed; sticks for the whole shell)
-BRIDGE_VERSION=3.0.2 npm run docker:tag
-BRIDGE_VERSION=3.0.2 npm run docker:push
+BRIDGE_VERSION=3.0.4 npm run docker:tag
+BRIDGE_VERSION=3.0.4 npm run docker:push
 ```
 
 ### Overriding the registry
@@ -189,10 +189,10 @@ The push assumes you're already authenticated to the registry (`docker login` fo
 
 GitHub Actions now publishes on semver tag push via
 [`../../.github/workflows/release.yml`](../../.github/workflows/release.yml).
-Pushing `v3.0.2` re-runs format, lint, typecheck, docs, and test gates,
+Pushing `v3.0.4` re-runs format, lint, typecheck, docs, and test gates,
 then publishes:
 
-- `tztcloud/livepeer-openai-gateway:3.0.2`
+- `tztcloud/livepeer-openai-gateway:3.0.4`
 - `tztcloud/livepeer-openai-gateway:3.0`
 - `tztcloud/livepeer-openai-gateway:latest`
 
@@ -387,7 +387,7 @@ subsidize small requests and hides the real protocol/economics mismatch.
 
 Additional prerequisites:
 
-- A tagged, pushed bridge image — see "Building the production image" above. Set `BRIDGE_IMAGE` in `.env` to whatever you tagged (`tztcloud/livepeer-openai-gateway:3.0.2` by default).
+- A tagged, pushed bridge image — see "Building the production image" above. Set `BRIDGE_IMAGE` in `.env` to whatever you tagged (`tztcloud/livepeer-openai-gateway:3.0.4` by default).
 - Rotate every `REQUIRED-*` placeholder in `.env` to a live value (especially `API_KEY_PEPPER`, `ADMIN_TOKEN`, Stripe live keys).
 
 Boot:

@@ -2,7 +2,7 @@
 # Push the registry-tagged bridge image. Same arg-resolution as docker-tag.sh:
 #   1. First positional arg
 #   2. $BRIDGE_VERSION env
-#   3. Default: 3.0.2
+#   3. Default: 3.0.4
 #
 # Repo defaults to tztcloud/livepeer-openai-gateway; override via $BRIDGE_IMAGE_REPO.
 # Operator must be logged in to the registry (`docker login`) before running.
@@ -10,7 +10,7 @@
 set -euo pipefail
 
 REPO="${BRIDGE_IMAGE_REPO:-tztcloud/livepeer-openai-gateway}"
-VERSION="${1:-${BRIDGE_VERSION:-3.0.2}}"
+VERSION="${1:-${BRIDGE_VERSION:-3.0.4}}"
 TARGET="${REPO}:${VERSION}"
 
 if ! docker image inspect "${TARGET}" >/dev/null 2>&1; then

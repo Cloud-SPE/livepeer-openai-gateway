@@ -71,7 +71,7 @@ services:
           memory: 512m
 
   payment-daemon:
-    image: ${PAYMENT_DAEMON_IMAGE:-tztcloud/livepeer-payment-daemon:v3.0.2}
+    image: ${PAYMENT_DAEMON_IMAGE:-tztcloud/livepeer-payment-daemon:v4.0.1}
     restart: unless-stopped
     command:
       - --mode=sender
@@ -99,7 +99,7 @@ services:
           memory: 512m
 
   service-registry-daemon:
-    image: ${SERVICE_REGISTRY_IMAGE:-tztcloud/livepeer-service-registry-daemon:v3.0.2}
+    image: ${SERVICE_REGISTRY_IMAGE:-tztcloud/livepeer-service-registry-daemon:v4.0.1}
     restart: unless-stopped
     command:
       - --mode=resolver
@@ -135,7 +135,7 @@ services:
   # One-shot migration job. Runs and exits; the bridge service gates on
   # its successful completion.
   bridge-migrate:
-    image: ${BRIDGE_IMAGE:-tztcloud/livepeer-openai-gateway:3.0.2}
+    image: ${BRIDGE_IMAGE:-tztcloud/livepeer-openai-gateway:3.0.4}
     restart: 'no'
     command: ['packages/livepeer-openai-gateway/dist/scripts/migrate.js']
     depends_on:
@@ -154,7 +154,7 @@ services:
         max-file: '5'
 
   bridge:
-    image: ${BRIDGE_IMAGE:-tztcloud/livepeer-openai-gateway:3.0.2}
+    image: ${BRIDGE_IMAGE:-tztcloud/livepeer-openai-gateway:3.0.4}
     restart: unless-stopped
     depends_on:
       postgres:
