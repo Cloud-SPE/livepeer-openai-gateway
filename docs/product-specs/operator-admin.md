@@ -48,11 +48,18 @@ The console **does not re-render the metrics in-app and does not embed Grafana v
 
 ### `#nodes`
 
-Table sorted by `circuit-broken → degraded → healthy` so operators see problems first. Columns: ID (link to detail), URL (mono), Status badge, Tier allowed, Enabled, Weight. Container query collapses to a card list under 720px.
+Table sorted by `circuit-broken → degraded → healthy` so operators see problems first. Columns: ID (link to detail), URL (mono), Status badge, Eligibility badge, Eligible capabilities, Tier allowed, Enabled, Weight. Container query collapses to a card list under 720px.
+
+The important distinction is:
+
+- `status` answers "is this node currently healthy from the bridge's point of view?"
+- `eligibility` answers "would this node be considered for work by this gateway if it were healthy?"
+
+This keeps legacy / non-matching nodes visible without implying they are routable.
 
 ### `#nodes/<id>`
 
-Single-node detail. Top card: URL, status badge, enabled, tier allowed, supported models, weight, consecutive failures, last success / failure / circuit-opened timestamps. Below: chronological event timeline (newest first) sourced from `GET /admin/nodes/:id/events`. Each row shows formatted timestamp + event kind (`circuit_opened` / `circuit_half_opened` / `circuit_closed` / `config_reloaded` / `eth_address_changed_rejected`) + optional `detail`. **No state-changing actions in v1** — operators edit the service-registry-daemon's overlay YAML and recreate the daemon container (post-engine-extraction; pre-stage-3 this was a local `nodes.yaml` reload).
+Single-node detail. Top card: URL, status badge, eligibility badge, eligible capabilities, ineligible reason, enabled, tier allowed, supported models, weight, consecutive failures, last success / failure / circuit-opened timestamps. Below: chronological event timeline (newest first) sourced from `GET /admin/nodes/:id/events`. Each row shows formatted timestamp + event kind (`circuit_opened` / `circuit_half_opened` / `circuit_closed` / `config_reloaded` / `eth_address_changed_rejected`) + optional `detail`. **No state-changing actions in v1** — operators edit the service-registry-daemon's overlay YAML and recreate the daemon container (post-engine-extraction; pre-stage-3 this was a local `nodes.yaml` reload).
 
 ### `#customers`
 
@@ -91,7 +98,7 @@ Audit feed with two debounced inputs: actor (exact match) and action (substring)
 
 ### `#config`
 
-Read-only worker-pool view from `GET /admin/config/nodes`. Top card: path (sentinel `<service-registry-daemon>` post-engine-extraction), sha256, mtime (process start time when synthetic), size. Below: loaded-nodes table from the daemon's `Resolver.ListKnown` snapshot. A `Reload` button re-fetches.
+Read-only worker-pool view from `GET /admin/config/nodes`. Top card: path (sentinel `<service-registry-daemon>` post-engine-extraction), sha256, mtime (process start time when synthetic), size. Below: loaded-nodes table from the daemon's `Resolver.ListKnown` snapshot plus eligibility labels derived from the bridge's recognized-capability mapping. A `Reload` button re-fetches.
 
 Editing the worker pool from the UI is **out of scope in v1** — operators edit the service-registry-daemon's overlay YAML on the host and recreate the daemon container (post-engine-extraction; pre-stage-3 the bridge owned a local `nodes.yaml` and the QuoteRefresher hot-reloaded).
 

@@ -88,10 +88,30 @@ ${s.contents}</pre
         header: 'Enabled',
         render: (n) => (n.enabled ? 'yes' : html`<span class="muted">no</span>`),
       },
+      {
+        field: 'eligibility',
+        header: 'Eligibility',
+        render: (n) =>
+          html`<span class="badge" data-status=${eligibilityBadge(n.eligibility)}
+            >${n.eligibility}</span
+          >`,
+      },
+      {
+        field: 'eligibleCapabilities',
+        header: 'Capabilities',
+        render: (n) =>
+          (n.eligibleCapabilities ?? []).join(', ') || html`<span class="muted">none</span>`,
+      },
       { field: 'tierAllowed', header: 'Tier', render: (n) => (n.tierAllowed ?? []).join(', ') },
       { field: 'weight', header: 'Weight' },
     ];
   }
+}
+
+function eligibilityBadge(eligibility) {
+  if (eligibility === 'eligible') return 'healthy';
+  if (eligibility === 'unknown') return 'degraded';
+  return 'circuit_broken';
 }
 
 if (!customElements.get('admin-config')) customElements.define('admin-config', AdminConfig);

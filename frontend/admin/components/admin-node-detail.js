@@ -67,6 +67,16 @@ export class AdminNodeDetail extends LitElement {
           <dd style="margin: 0">
             <span class="badge" data-status=${d.status}>${d.status.replace('_', ' ')}</span>
           </dd>
+          <dt class="muted text-sm">Eligibility</dt>
+          <dd style="margin: 0">
+            <span class="badge" data-status=${eligibilityBadge(d.eligibility)}>${d.eligibility}</span>
+          </dd>
+          <dt class="muted text-sm">Capabilities</dt>
+          <dd style="margin: 0">
+            ${(d.eligibleCapabilities ?? []).join(', ') || html`<span class="muted">none</span>`}
+          </dd>
+          <dt class="muted text-sm">Ineligible reason</dt>
+          <dd style="margin: 0">${formatReason(d.ineligibleReason)}</dd>
           <dt class="muted text-sm">Enabled</dt>
           <dd style="margin: 0">${d.enabled ? 'yes' : 'no'}</dd>
           <dt class="muted text-sm">Tier allowed</dt>
@@ -117,6 +127,17 @@ export class AdminNodeDetail extends LitElement {
 function formatDate(iso) {
   if (!iso) return html`<span class="muted">—</span>`;
   return new Date(iso).toLocaleString();
+}
+
+function formatReason(reason) {
+  if (!reason) return html`<span class="muted">—</span>`;
+  return reason.replaceAll('_', ' ');
+}
+
+function eligibilityBadge(eligibility) {
+  if (eligibility === 'eligible') return 'healthy';
+  if (eligibility === 'unknown') return 'degraded';
+  return 'circuit_broken';
 }
 
 if (!customElements.get('admin-node-detail'))

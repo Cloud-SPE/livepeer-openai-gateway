@@ -34,6 +34,16 @@ const node = object({
   status: literal('healthy', 'degraded', 'circuit_broken'),
   tierAllowed: array(tier),
   supportedModels: array(string()),
+  recognizedCapabilities: array(string()),
+  eligibleCapabilities: array(string()),
+  eligibility: literal('eligible', 'ineligible', 'unknown'),
+  ineligibleReason: nullable(
+    literal(
+      'no_recognized_capabilities',
+      'not_in_live_registry',
+      'registry_unavailable',
+    ),
+  ),
   weight: number(),
 });
 const nodeList = object({ nodes: array(node) });

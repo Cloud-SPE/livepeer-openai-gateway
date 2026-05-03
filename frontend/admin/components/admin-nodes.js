@@ -43,7 +43,7 @@ export class AdminNodes extends LitElement {
       <bridge-table
         .columns=${this._columns()}
         .rows=${this._sortedRows(list)}
-        empty="No nodes loaded — check nodes.yaml."
+        empty="No nodes loaded — check service-registry-daemon."
       ></bridge-table>
     `;
   }
@@ -73,6 +73,20 @@ export class AdminNodes extends LitElement {
           html`<span class="badge" data-status=${r.status}>${r.status.replace('_', ' ')}</span>`,
       },
       {
+        field: 'eligibility',
+        header: 'Eligibility',
+        render: (r) =>
+          html`<span class="badge" data-status=${eligibilityBadge(r.eligibility)}
+            >${r.eligibility}</span
+          >`,
+      },
+      {
+        field: 'eligibleCapabilities',
+        header: 'Capabilities',
+        render: (r) =>
+          (r.eligibleCapabilities ?? []).join(', ') || html`<span class="muted">none</span>`,
+      },
+      {
         field: 'tierAllowed',
         header: 'Tier',
         render: (r) => (r.tierAllowed ?? []).join(', '),
@@ -90,6 +104,12 @@ export class AdminNodes extends LitElement {
     e.preventDefault();
     navigate(`nodes/${id}`);
   }
+}
+
+function eligibilityBadge(eligibility) {
+  if (eligibility === 'eligible') return 'healthy';
+  if (eligibility === 'unknown') return 'degraded';
+  return 'circuit_broken';
 }
 
 if (!customElements.get('admin-nodes')) customElements.define('admin-nodes', AdminNodes);

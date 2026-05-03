@@ -11,7 +11,9 @@ import * as customersRepo from '../../../repo/customers.js';
 import * as nodeHealthRepo from '@cloudspe/livepeer-openai-gateway-core/repo/nodeHealth.js';
 import * as reservationsRepo from '../../../repo/reservations.js';
 import * as topupsRepo from '../../../repo/topups.js';
-import type { ServiceRegistryClient } from '../../../providers/serviceRegistry.js';
+import type { NodeRef, ServiceRegistryClient } from '../../../providers/serviceRegistry.js';
+import type { NodeCapability } from '@cloudspe/livepeer-openai-gateway-core/types/node.js';
+import type { NodeDetail, NodeSummary } from '../../../service/admin/index.js';
 
 /**
  * Operator-facing probe of the live registry. The bridge's nodeIndex is
@@ -28,6 +30,20 @@ export interface AdminRoutesDeps extends AdminAuthDeps {
   adminService: AdminService;
   authConfig: AuthConfig;
   serviceRegistry: ServiceRegistryProbe;
+}
+
+type NodeEligibility = 'eligible' | 'ineligible' | 'unknown';
+type NodeIneligibleReason =
+  | 'no_recognized_capabilities'
+  | 'not_in_live_registry'
+  | 'registry_unavailable'
+  | null;
+
+interface EligibilityFields {
+  recognizedCapabilities: NodeCapability[];
+  eligibleCapabilities: NodeCapability[];
+  eligibility: NodeEligibility;
+  ineligibleReason: NodeIneligibleReason;
 }
 
 const RefundBodySchema = z.object({
@@ -135,7 +151,7 @@ export function registerAdminRoutes(app: FastifyInstance, deps: AdminRoutesDeps)
   });
 
   app.get('/admin/nodes', { preHandler }, async () => ({
-    nodes: deps.adminService.listNodes(),
+    nodes: await enrichNodes(deps.adminService.listNodes(), deps.serviceRegistry),
   }));
 
   // Synthetic config-view. Pre-extraction the bridge owned a local
@@ -144,7 +160,7 @@ export function registerAdminRoutes(app: FastifyInstance, deps: AdminRoutesDeps)
   // a "config" tab that expects a file-shaped envelope, so we return the
   // live node list framed in the legacy schema.
   app.get('/admin/config/nodes', { preHandler }, async () => {
-    const nodes = deps.adminService.listNodes();
+    const nodes = await enrichNodes(deps.adminService.listNodes(), deps.serviceRegistry);
     return {
       path: '<service-registry-daemon>',
       sha256: '',
@@ -166,7 +182,7 @@ export function registerAdminRoutes(app: FastifyInstance, deps: AdminRoutesDeps)
       });
       return;
     }
-    return detail;
+    return enrichNode(detail, await listKnownByNode(deps.serviceRegistry), true);
   });
 
   app.get<{ Params: { id: string } }>(
@@ -523,6 +539,81 @@ export function registerAdminRoutes(app: FastifyInstance, deps: AdminRoutesDeps)
       };
     },
   );
+}
+
+async function enrichNodes<T extends NodeSummary>(
+  nodes: readonly T[],
+  serviceRegistry: ServiceRegistryProbe,
+): Promise<Array<T & EligibilityFields>> {
+  const liveByNode = await listKnownByNode(serviceRegistry);
+  return nodes.map((node) => enrichNode(node, liveByNode, true));
+}
+
+function enrichNode<T extends NodeSummary | NodeDetail>(
+  node: T,
+  liveByNode: Map<string, NodeRef> | null,
+  useUrlFallback: boolean,
+): T & EligibilityFields {
+  if (liveByNode === null) {
+    return {
+      ...node,
+      recognizedCapabilities: [],
+      eligibleCapabilities: [],
+      eligibility: 'unknown',
+      ineligibleReason: 'registry_unavailable',
+    };
+  }
+
+  const live =
+    liveByNode.get(node.id) ?? (useUrlFallback ? liveByNode.get(urlKey(node.url)) : undefined);
+  if (!live) {
+    return {
+      ...node,
+      recognizedCapabilities: [],
+      eligibleCapabilities: [],
+      eligibility: 'ineligible',
+      ineligibleReason: 'not_in_live_registry',
+    };
+  }
+
+  const recognizedCapabilities = [...new Set(live.capabilities)].sort();
+  if (recognizedCapabilities.length === 0) {
+    return {
+      ...node,
+      recognizedCapabilities,
+      eligibleCapabilities: [],
+      eligibility: 'ineligible',
+      ineligibleReason: 'no_recognized_capabilities',
+    };
+  }
+
+  return {
+    ...node,
+    recognizedCapabilities,
+    eligibleCapabilities: recognizedCapabilities,
+    eligibility: 'eligible',
+    ineligibleReason: null,
+  };
+}
+
+async function listKnownByNode(
+  serviceRegistry: ServiceRegistryProbe,
+): Promise<Map<string, NodeRef> | null> {
+  try {
+    const live = await serviceRegistry.listKnown();
+    const byNode = new Map<string, NodeRef>();
+    for (const node of live) {
+      byNode.set(node.id, node);
+      byNode.set(urlKey(node.url), node);
+    }
+    return byNode;
+  } catch {
+    return null;
+  }
+}
+
+function urlKey(url: string): string {
+  return `url:${url}`;
 }
 
 // ── helpers ─────────────────────────────────────────────────────────────────

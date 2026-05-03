@@ -51,15 +51,36 @@ Composed health snapshot.
 
 ### `GET /admin/nodes`
 
-List of all NodeBook entries (admission set + broken ones).
+List of all cached worker entries known to the bridge at startup. This is
+the visibility view, not just the routable subset: nodes stay visible even
+when they have no recognized capabilities for this gateway. Health/circuit
+state and eligibility are reported separately.
 
 ```json
-{ "nodes": [{ "id": "node-a", "url": "...", "status": "healthy", ... }] }
+{
+  "nodes": [
+    {
+      "id": "node-a",
+      "url": "...",
+      "status": "healthy",
+      "eligibility": "eligible",
+      "recognizedCapabilities": ["chat"],
+      "eligibleCapabilities": ["chat"],
+      "ineligibleReason": null
+    }
+  ]
+}
 ```
+
+`eligibility` meanings:
+
+- `eligible` — the node advertises at least one recognized capability for this gateway
+- `ineligible` — the node is visible in the cached fleet view but is not currently usable for gateway work (`no_recognized_capabilities` or `not_in_live_registry`)
+- `unknown` — the bridge could not refresh live registry metadata, so eligibility could not be recomputed (`registry_unavailable`)
 
 ### `GET /admin/nodes/:id`
 
-Single node detail including circuit state and the 20 most-recent `node_health_event` rows.
+Single node detail including circuit state, eligibility metadata, and the 20 most-recent `node_health_event` rows.
 
 ### `GET /admin/customers/:id`
 
@@ -181,7 +202,16 @@ Synthetic file-shaped view of the worker pool. Post-engine-extraction the bridge
   "mtime": "<bridge process start time, ISO>",
   "size_bytes": 0,
   "contents": "# Managed by service-registry-daemon. The bridge no longer maintains a\n# local nodes.yaml — edit the daemon's config to change the worker\n# pool, then restart the bridge to refresh its cached snapshot.\n",
-  "loaded_nodes": [{ "id": "...", "url": "...", "capabilities": [...], ... }]
+  "loaded_nodes": [
+    {
+      "id": "...",
+      "url": "...",
+      "eligibility": "eligible",
+      "eligibleCapabilities": ["chat"],
+      "recognizedCapabilities": ["chat"],
+      "ineligibleReason": null
+    }
+  ]
 }
 ```
 

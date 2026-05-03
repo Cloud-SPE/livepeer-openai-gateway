@@ -55,7 +55,11 @@ function mockServiceRegistry(
     async select() {
       return [];
     },
-    listKnown: opts.listKnown ?? (async () => []),
+    listKnown:
+      opts.listKnown ??
+      (async () => [
+        { id: 'node-admin', url: 'http://127.0.0.1:9999', capabilities: ['chat'], weight: 100 },
+      ]),
     isHealthy: () => opts.healthy ?? true,
   };
 }
@@ -174,7 +178,7 @@ describe('admin endpoints', () => {
     }
   });
 
-  it('GET /admin/nodes lists configured nodes', async () => {
+  it('GET /admin/nodes lists configured nodes with eligibility metadata', async () => {
     const server = await buildServer();
     try {
       const res = await server.app.inject({
@@ -183,8 +187,18 @@ describe('admin endpoints', () => {
         headers: { authorization: `Bearer ${ADMIN_TOKEN}` },
       });
       expect(res.statusCode).toBe(200);
-      const body = res.json() as { nodes: Array<{ id: string }> };
+      const body = res.json() as {
+        nodes: Array<{
+          id: string;
+          eligibility: string;
+          eligibleCapabilities: string[];
+          ineligibleReason: string | null;
+        }>;
+      };
       expect(body.nodes.map((n) => n.id)).toContain('node-admin');
+      expect(body.nodes[0]?.eligibility).toBe('eligible');
+      expect(body.nodes[0]?.eligibleCapabilities).toEqual(['chat']);
+      expect(body.nodes[0]?.ineligibleReason).toBe(null);
     } finally {
       await server.close();
     }
@@ -199,9 +213,16 @@ describe('admin endpoints', () => {
         headers: { authorization: `Bearer ${ADMIN_TOKEN}` },
       });
       expect(res.statusCode).toBe(200);
-      const body = res.json() as { id: string; recentEvents: unknown[] };
+      const body = res.json() as {
+        id: string;
+        recentEvents: unknown[];
+        eligibility: string;
+        eligibleCapabilities: string[];
+      };
       expect(body.id).toBe('node-admin');
       expect(Array.isArray(body.recentEvents)).toBe(true);
+      expect(body.eligibility).toBe('eligible');
+      expect(body.eligibleCapabilities).toEqual(['chat']);
     } finally {
       await server.close();
     }
@@ -545,7 +566,12 @@ describe('admin endpoints', () => {
         mtime: string;
         size_bytes: number;
         contents: string;
-        loaded_nodes: Array<{ id: string; url: string }>;
+        loaded_nodes: Array<{
+          id: string;
+          url: string;
+          eligibility: string;
+          eligibleCapabilities: string[];
+        }>;
       };
       expect(body.path).toBe('<service-registry-daemon>');
       expect(body.sha256).toBe('');
@@ -554,6 +580,8 @@ describe('admin endpoints', () => {
       expect(body.contents).toContain('service-registry-daemon');
       expect(body.loaded_nodes).toHaveLength(1);
       expect(body.loaded_nodes[0]?.id).toBe('node-admin');
+      expect(body.loaded_nodes[0]?.eligibility).toBe('eligible');
+      expect(body.loaded_nodes[0]?.eligibleCapabilities).toEqual(['chat']);
     } finally {
       await server.close();
     }
