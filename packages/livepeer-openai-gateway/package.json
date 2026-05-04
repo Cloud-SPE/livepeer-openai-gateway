@@ -1,6 +1,6 @@
 {
   "name": "livepeer-openai-gateway",
-  "version": "4.0.2",
+  "version": "4.0.3",
   "private": true,
   "description": "Cloud-SPE shell over @cloudspe/livepeer-openai-gateway-core: customer/billing/Stripe layer + admin/portal/console SPAs.",
   "license": "MIT",
@@ -18,7 +18,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@cloudspe/livepeer-openai-gateway-core": "^4.0.1",
+    "@cloudspe/livepeer-openai-gateway-core": "^4.0.2",
     "@fastify/multipart": "^8.3.1",
     "@fastify/sensible": "^5.6.0",
     "@fastify/static": "^7.0.4",

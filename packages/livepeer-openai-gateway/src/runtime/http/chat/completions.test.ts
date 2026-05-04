@@ -23,12 +23,12 @@ let pg: TestPg;
 interface FakeWorkerNode {
   app: FastifyInstance;
   port: number;
-  setChatMode(m: 'ok' | 'fail-500' | 'no-usage'): void;
+  setChatMode(m: 'ok' | 'fail-500' | 'no-usage' | 'tool-calls'): void;
   close(): Promise<void>;
 }
 
 async function startFakeWorkerNode(): Promise<FakeWorkerNode> {
-  let mode: 'ok' | 'fail-500' | 'no-usage' = 'ok';
+  let mode: 'ok' | 'fail-500' | 'no-usage' | 'tool-calls' = 'ok';
   const app = Fastify({ logger: false, disableRequestLogging: true });
   app.post('/v1/chat/completions', async (_req, reply) => {
     if (mode === 'fail-500') {
@@ -47,6 +47,35 @@ async function startFakeWorkerNode(): Promise<FakeWorkerNode> {
             finish_reason: 'stop',
           },
         ],
+      };
+    }
+    if (mode === 'tool-calls') {
+      return {
+        id: 'chatcmpl-1',
+        object: 'chat.completion',
+        created: Math.floor(Date.now() / 1000),
+        model: 'model-small',
+        choices: [
+          {
+            index: 0,
+            message: {
+              role: 'assistant',
+              content: null,
+              tool_calls: [
+                {
+                  id: 'call_123',
+                  type: 'function',
+                  function: {
+                    name: 'lookup_weather',
+                    arguments: '{"city":"Boston"}',
+                  },
+                },
+              ],
+            },
+            finish_reason: 'tool_calls',
+          },
+        ],
+        usage: { prompt_tokens: 5, completion_tokens: 10, total_tokens: 15 },
       };
     }
     return {
@@ -333,6 +362,65 @@ describe('/v1/chat/completions (non-streaming, end-to-end)', () => {
         }),
       });
       expect(res.status).toBe(401);
+    } finally {
+      await bridge.stop();
+    }
+  });
+
+  it('accepts array-form OpenAI message content', async () => {
+    const bridge = await startBridge({ customerTier: 'prepaid', balanceCents: 10_000n });
+    try {
+      const res = await fetch(`${bridge.url}/v1/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${bridge.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'model-small',
+          messages: [
+            {
+              role: 'user',
+              content: [{ type: 'text', text: 'hi' }],
+            },
+          ],
+          max_tokens: 100,
+        }),
+      });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { choices: Array<{ message: { content: string } }> };
+      expect(body.choices[0]!.message.content).toBe('hi back');
+    } finally {
+      await bridge.stop();
+    }
+  });
+
+  it('passes through assistant tool-call responses', async () => {
+    const bridge = await startBridge({ customerTier: 'prepaid', balanceCents: 10_000n });
+    bridge.state.worker.setChatMode('tool-calls');
+    try {
+      const res = await fetch(`${bridge.url}/v1/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${bridge.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'model-small',
+          messages: [{ role: 'user', content: 'hi' }],
+          tools: [{ type: 'function', function: { name: 'lookup_weather' } }],
+        }),
+      });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        choices: Array<{
+          finish_reason: string;
+          message: { content: null; tool_calls: Array<{ function: { name: string } }> };
+        }>;
+      };
+      expect(body.choices[0]!.finish_reason).toBe('tool_calls');
+      expect(body.choices[0]!.message.content).toBeNull();
+      expect(body.choices[0]!.message.tool_calls[0]!.function.name).toBe('lookup_weather');
     } finally {
       await bridge.stop();
     }

@@ -22,6 +22,7 @@ type StreamMode =
   | { kind: 'ok' }
   | { kind: 'ok-no-usage' }
   | { kind: 'fail-500-immediately' }
+  | { kind: 'tool-calls' }
   | { kind: 'slow'; interChunkMs: number };
 
 interface FakeWorkerNode {
@@ -51,17 +52,62 @@ async function startFakeWorkerNode(): Promise<FakeWorkerNode> {
     raw.setHeader('cache-control', 'no-cache');
     raw.flushHeaders();
 
-    const chunks = ['Hello', ' there', '.'];
-    for (const c of chunks) {
-      raw.write(
-        `data: ${JSON.stringify({
-          id: 'chatcmpl-1',
-          object: 'chat.completion.chunk',
-          created: Math.floor(Date.now() / 1000),
-          model: 'model-small',
-          choices: [{ index: 0, delta: { role: 'assistant', content: c }, finish_reason: null }],
-        })}\n\n`,
-      );
+    const chunks =
+      mode.kind === 'tool-calls'
+        ? [
+            {
+              id: 'chatcmpl-1',
+              object: 'chat.completion.chunk',
+              created: Math.floor(Date.now() / 1000),
+              model: 'model-small',
+              choices: [
+                {
+                  index: 0,
+                  delta: {
+                    role: 'assistant',
+                    tool_calls: [
+                      {
+                        index: 0,
+                        id: 'call_123',
+                        type: 'function',
+                        function: { name: 'lookup_weather', arguments: '{"city":"' },
+                      },
+                    ],
+                  },
+                  finish_reason: null,
+                },
+              ],
+            },
+            {
+              id: 'chatcmpl-1',
+              object: 'chat.completion.chunk',
+              created: Math.floor(Date.now() / 1000),
+              model: 'model-small',
+              choices: [
+                {
+                  index: 0,
+                  delta: {
+                    tool_calls: [
+                      {
+                        index: 0,
+                        function: { arguments: 'Boston"}' },
+                      },
+                    ],
+                  },
+                  finish_reason: null,
+                },
+              ],
+            },
+          ]
+        : ['Hello', ' there', '.'].map((content) => ({
+            id: 'chatcmpl-1',
+            object: 'chat.completion.chunk',
+            created: Math.floor(Date.now() / 1000),
+            model: 'model-small',
+            choices: [{ index: 0, delta: { role: 'assistant', content }, finish_reason: null }],
+          }));
+    for (const chunk of chunks) {
+      raw.write(`data: ${JSON.stringify(chunk)}\n\n`);
       if (mode.kind === 'slow') {
         await new Promise((r) => setTimeout(r, mode.interChunkMs));
       }
@@ -312,6 +358,37 @@ describe('/v1/chat/completions streaming', () => {
       const after = await customersRepo.findById(pg.db, bridge.customerId);
       expect(after!.balanceUsdCents).toBe(10_000n);
       expect(after!.reservedUsdCents).toBe(0n);
+    } finally {
+      await bridge.stop();
+    }
+  });
+
+  it('forwards tool-call deltas without treating the stream as empty', async () => {
+    const bridge = await startBridge();
+    bridge.state.worker.setMode({ kind: 'tool-calls' });
+    try {
+      const res = await fetch(`${bridge.url}/v1/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${bridge.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'model-small',
+          messages: [{ role: 'user', content: 'hi' }],
+          stream: true,
+          tools: [{ type: 'function', function: { name: 'lookup_weather' } }],
+          max_tokens: 200,
+        }),
+      });
+      expect(res.status).toBe(200);
+      const { frames } = await collectStream(res);
+      expect(frames[frames.length - 1]).toBe('[DONE]');
+      const payloads = frames
+        .slice(0, -1)
+        .map((frame) => JSON.parse(frame))
+        .filter((payload) => Array.isArray(payload.choices) && payload.choices.length > 0);
+      expect(payloads.some((payload) => payload.choices[0]?.delta?.tool_calls)).toBe(true);
     } finally {
       await bridge.stop();
     }
